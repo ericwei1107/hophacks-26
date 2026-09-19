@@ -1,4 +1,5 @@
 .venv/
+data/igel_2024/
 __pycache__/
 *.pyc
 .DS_Store
@@ -8,3 +9,4 @@ dist-ssr/
 *.local
 playwright-report/
 test-results/
+.env

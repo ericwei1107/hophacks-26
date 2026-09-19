@@ -1,4 +1,5 @@
 from design import MissionConstraints, MissionDesigner
+from emissions import estimate_mission_footprint, print_footprint
 from environment import get_space_weather
 from explanations import print_mission_insights
 from simulate import run_monte_carlo, print_summary
@@ -39,6 +40,10 @@ def main():
     print(f"Solar wind speed: {weather.solar_wind_speed} km/s")
     print(f"Solar wind density: {weather.solar_wind_density} particles/cm^3")
     print(f"Solar wind temperature: {weather.solar_wind_temperature} K")
+
+    print("\nEstimating launch environmental footprint from IGEL 2024...")
+    footprint = estimate_mission_footprint(mission)
+    print_footprint(footprint)
 
     print("\nRunning Monte Carlo analysis...")
     print("Overall robustness: 10,000 simulations")
