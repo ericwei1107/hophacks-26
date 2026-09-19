@@ -1,45 +1,21 @@
 /**
- * Flight screen: 3D scene, HUD readouts, event timeline, playback controls.
- * No piloting controls — the autopilot flies the recorded trajectory.
+ * Flight screen: the launch view plus the HUD, event timeline and playback
+ * controls. No piloting controls — the autopilot flew the recorded trajectory.
+ *
+ * The launch view is whichever renderer `selectRenderer` picked; everything
+ * else on this screen is HTML layered over it, reading from the
+ * PlaybackController rather than from the renderer. That is what makes the
+ * three.js and Unity views interchangeable: swapping them changes the picture
+ * and nothing else.
  */
 
-import { useEffect, useRef, useState } from "react";
-import { EffectComposer, Bloom } from "@react-three/postprocessing";
-import { useFrame, useThree } from "@react-three/fiber";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { SafeCanvas } from "../components/SafeCanvas";
-import { playbackClock, resetPlaybackClock } from "../playbackClock";
+import { IGNITION_HOLD_S, PlaybackController } from "../../playback/PlaybackController";
+import type { LaunchRenderer } from "../../renderers/LaunchRenderer";
+import { selectRenderer } from "../../renderers/selectRenderer";
 import { useAppStore, type CameraMode } from "../store";
-import { PHASE_NAMES, sampleTelemetry, type FlightSample } from "../telemetry";
-import { FlightScene } from "../components/FlightScene";
-
-/** Lowers pixel ratio (and reports sustained low fps) when the frame rate drops. */
-function AdaptiveQuality() {
-  const setDpr = useThree((s) => s.setDpr);
-  const lowEffects = useAppStore((s) => s.settings.lowEffects);
-  const acc = useRef({ frames: 0, time: 0, level: 0 });
-  useFrame((_, delta) => {
-    const a = acc.current;
-    a.frames++;
-    a.time += delta;
-    if (a.time >= 2) {
-      const fps = a.frames / a.time;
-      a.frames = 0;
-      a.time = 0;
-      if (fps < 30 && a.level < 2) {
-        a.level++;
-        setDpr(Math.max(0.75, 1.5 - a.level * 0.25));
-      } else if (fps > 55 && a.level > 0) {
-        a.level--;
-        setDpr(Math.max(0.75, 1.5 - a.level * 0.25));
-      }
-    }
-  });
-  // Bloom cost scales with resolution; nothing to do here when lowEffects
-  // (the composer is already absent).
-  void lowEffects;
-  return null;
-}
+import { PHASE_NAMES, type FlightSample } from "../telemetry";
 
 const SPEEDS = [1, 5, 20];
 const CAMERAS: { id: CameraMode; label: string }[] = [
@@ -49,10 +25,15 @@ const CAMERAS: { id: CameraMode; label: string }[] = [
   { id: "orbit", label: "Orbit" },
 ];
 
+/** Radians of camera swing per pixel dragged. */
+const DRAG_SENSITIVITY = 0.006;
+
 function formatTime(s: number): string {
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return `T+${m}:${sec.toString().padStart(2, "0")}`;
+  const neg = s < 0;
+  const abs = Math.abs(s);
+  const m = Math.floor(abs / 60);
+  const sec = Math.floor(abs % 60);
+  return `${neg ? "T-" : "T+"}${m}:${sec.toString().padStart(2, "0")}`;
 }
 
 function HudReadout({ label, value, unit }: { label: string; value: string; unit?: string }) {
@@ -68,47 +49,163 @@ function HudReadout({ label, value, unit }: { label: string; value: string; unit
 }
 
 export function FlightScreen() {
-  const { flight, playing, playbackSpeed, cameraMode, settings, setPlaying, setPlaybackSpeed, setCameraMode, setScreen } =
-    useAppStore();
+  const {
+    flight,
+    playing,
+    playbackSpeed,
+    cameraMode,
+    cameraZoom,
+    settings,
+    setPlaying,
+    setPlaybackSpeed,
+    setCameraMode,
+    setCameraZoom,
+    setScreen,
+  } = useAppStore();
+
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const controllerRef = useRef<PlaybackController | null>(null);
+  const rendererRef = useRef<LaunchRenderer | null>(null);
+
   const [sample, setSample] = useState<FlightSample | null>(null);
-  const [hidden, setHidden] = useState(document.hidden);
+  const [timeS, setTimeS] = useState(-IGNITION_HOLD_S);
+  const [rendererId, setRendererId] = useState<"three" | "unity" | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
 
-  // Suspend rendering while the tab is hidden.
-  useEffect(() => {
-    const onVisibility = () => setHidden(document.hidden);
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, []);
-
-  // Reset the clock when a new flight loads.
-  useEffect(() => {
-    if (flight) {
-      resetPlaybackClock(flight.totalTimeS);
-    }
-  }, [flight]);
-
-  // Advance the clock and refresh HUD readouts at display rate.
+  // --- controller: owns the clock, feeds the renderer and this HUD ---------
   useEffect(() => {
     if (!flight) {
       return;
     }
-    let raf = 0;
-    let last = performance.now();
-    const tick = (now: number) => {
-      const dt = (now - last) / 1000;
-      last = now;
-      if (useAppStore.getState().playing) {
-        playbackClock.timeS = Math.min(
-          playbackClock.durationS,
-          playbackClock.timeS + dt * useAppStore.getState().playbackSpeed,
-        );
-      }
-      setSample(sampleTelemetry(flight.telemetry, playbackClock.timeS));
-      raf = requestAnimationFrame(tick);
+    const controller = new PlaybackController(flight);
+    controllerRef.current = controller;
+    const unsubscribe = controller.subscribe((nextSample) => {
+      setSample(nextSample);
+      setTimeS(controller.timeS);
+    });
+    controller.setPlaying(useAppStore.getState().playing);
+    controller.setSpeed(useAppStore.getState().playbackSpeed);
+    controller.start();
+    return () => {
+      unsubscribe();
+      controller.dispose();
+      controllerRef.current = null;
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
   }, [flight]);
+
+  // --- renderer: mounted lazily, once a flight exists ----------------------
+  useEffect(() => {
+    const container = viewportRef.current;
+    if (!flight || !container) {
+      return;
+    }
+    let disposed = false;
+    let mounted: LaunchRenderer | null = null;
+
+    void selectRenderer({
+      container,
+      flight,
+      lowEffects: settings.lowEffects,
+      cameraMode: useAppStore.getState().cameraMode,
+      zoom: useAppStore.getState().cameraZoom,
+      onProgress: setProgress,
+    }).then((selection) => {
+      if (disposed) {
+        selection.renderer.dispose();
+        return;
+      }
+      mounted = selection.renderer;
+      rendererRef.current = selection.renderer;
+      setRendererId(selection.id);
+      setNotice(selection.notice);
+      setProgress(1);
+      controllerRef.current?.setRenderer(selection.renderer);
+    });
+
+    return () => {
+      disposed = true;
+      controllerRef.current?.setRenderer(null);
+      rendererRef.current = null;
+      mounted?.dispose();
+    };
+    // The renderer is rebuilt only for a new flight or an effects-quality
+    // change; camera state is pushed into it imperatively.
+  }, [flight, settings.lowEffects]);
+
+  // Suspend playback while the tab is hidden.
+  useEffect(() => {
+    const onVisibility = () => {
+      const controller = controllerRef.current;
+      if (!controller) {
+        return;
+      }
+      if (document.hidden) {
+        controller.stop();
+      } else {
+        controller.start();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
+  useEffect(() => {
+    controllerRef.current?.setPlaying(playing);
+  }, [playing]);
+
+  useEffect(() => {
+    controllerRef.current?.setSpeed(playbackSpeed);
+  }, [playbackSpeed]);
+
+  useEffect(() => {
+    rendererRef.current?.setCameraMode(cameraMode);
+  }, [cameraMode]);
+
+  // --- camera input, captured here so the HUD never blocks it --------------
+  const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+
+  const onPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+    dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }, []);
+
+  const onPointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    const dx = event.clientX - drag.x;
+    const dy = event.clientY - drag.y;
+    drag.x = event.clientX;
+    drag.y = event.clientY;
+    rendererRef.current?.orbitCamera(-dx * DRAG_SENSITIVITY, dy * DRAG_SENSITIVITY);
+  }, []);
+
+  const endDrag = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragRef.current?.pointerId === event.pointerId) {
+      dragRef.current = null;
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }, []);
+
+  const applyZoom = useCallback(
+    (factor: number) => {
+      rendererRef.current?.zoomCamera(factor);
+      setCameraZoom(useAppStore.getState().cameraZoom * factor);
+    },
+    [setCameraZoom],
+  );
+
+  const onWheel = useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      applyZoom(event.deltaY > 0 ? 1 / 1.15 : 1.15);
+    },
+    [applyZoom],
+  );
 
   if (!flight) {
     return (
@@ -119,32 +216,42 @@ export function FlightScreen() {
     );
   }
 
-  const duration = playbackClock.durationS;
-  const progress = duration > 0 ? playbackClock.timeS / duration : 0;
+  const duration = flight.totalTimeS;
+  const progressFraction = duration > 0 ? Math.max(0, timeS) / duration : 0;
 
   return (
     <div className="screen flight">
-      <div className="viewport">
-        <SafeCanvas
-          camera={{ fov: 50, near: 0.0001, far: 100_000 }}
-          gl={{ logarithmicDepthBuffer: true }}
-          frameloop={hidden ? "never" : "always"}
-          dpr={settings.lowEffects ? 1 : [1, 1.5]}
-        >
-          <color attach="background" args={["#07111f"]} />
-          <FlightScene flight={flight} cameraMode={cameraMode} lowEffects={settings.lowEffects} />
-          <AdaptiveQuality />
-          {!settings.lowEffects && (
-            <EffectComposer>
-              <Bloom intensity={0.6} luminanceThreshold={0.35} luminanceSmoothing={0.2} mipmapBlur />
-            </EffectComposer>
-          )}
-        </SafeCanvas>
+      <div
+        className="viewport"
+        ref={viewportRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onWheel={onWheel}
+      >
+        {rendererId === null && (
+          <div className="renderer-loading">
+            <span className="renderer-loading-label">Loading launch view…</span>
+            <div className="renderer-loading-track">
+              <div className="renderer-loading-bar" style={{ width: `${progress * 100}%` }} />
+            </div>
+          </div>
+        )}
+
+        {notice && (
+          <div className="renderer-notice" role="status">
+            {notice}
+            <button className="renderer-notice-dismiss" onClick={() => setNotice(null)} aria-label="Dismiss">
+              ×
+            </button>
+          </div>
+        )}
 
         {/* HUD overlay */}
         {sample && (
           <div className="hud">
-            <HudReadout label="TIME" value={formatTime(sample.tS)} />
+            <HudReadout label="TIME" value={formatTime(timeS)} />
             <HudReadout label="ALTITUDE" value={sample.altitudeKm.toFixed(1)} unit="km" />
             <HudReadout label="SPEED" value={(sample.speedMs / 1000).toFixed(2)} unit="km/s" />
             <HudReadout label="FUEL" value={(sample.propellantKg / 1000).toFixed(1)} unit="t" />
@@ -160,12 +267,12 @@ export function FlightScreen() {
             {flight.events.map((e, i) => (
               <div
                 key={i}
-                className={`timeline-event${playbackClock.timeS >= e.t ? " past" : ""}`}
+                className={`timeline-event${timeS >= e.t ? " past" : ""}`}
                 style={{ left: `${(e.t / duration) * 100}%` }}
                 title={`${e.id} @ ${formatTime(e.t)}`}
               />
             ))}
-            <div className="timeline-progress" style={{ width: `${progress * 100}%` }} />
+            <div className="timeline-progress" style={{ width: `${progressFraction * 100}%` }} />
           </div>
         </div>
       </div>
@@ -187,12 +294,21 @@ export function FlightScreen() {
           min={0}
           max={duration}
           step={0.05}
-          value={playbackClock.timeS}
-          onChange={(e) => {
-            playbackClock.timeS = Number(e.target.value);
-          }}
+          value={Math.max(0, timeS)}
+          onChange={(e) => controllerRef.current?.seek(Number(e.target.value))}
           aria-label="Scrub flight"
         />
+        <div className="zoom-controls">
+          <button aria-label="Zoom out from rocket" title="Zoom out" onClick={() => applyZoom(1 / 1.6)}>
+            −
+          </button>
+          <span className="zoom-readout">
+            {cameraZoom >= 1 ? cameraZoom.toFixed(1) : cameraZoom.toFixed(2)}×
+          </span>
+          <button aria-label="Zoom in on rocket" title="Zoom in" onClick={() => applyZoom(1.6)}>
+            +
+          </button>
+        </div>
         <div className="camera-modes">
           {CAMERAS.map((c) => (
             <button
@@ -204,6 +320,11 @@ export function FlightScreen() {
             </button>
           ))}
         </div>
+        {rendererId && (
+          <span className="renderer-badge" title="Active launch renderer">
+            {rendererId === "unity" ? "UNITY" : "THREE"}
+          </span>
+        )}
         <button className="debrief-btn" onClick={() => setScreen("debrief")}>
           DEBRIEF →
         </button>

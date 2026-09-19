@@ -2,11 +2,13 @@
 
 ## 1. Purpose and starting point
 
-This plan begins after `IMPLEMENT.MD` Step 11 and Gate E. It turns the five player-facing performance values and the scenario research in `FAILURE_MODES.md` into a deterministic outcome-evaluation system.
+This plan turns `IMPLEMENT.MD`'s flyable Gate E prototype into the completed core learning loop. It turns the five player-facing performance values and the scenario research in `FAILURE_MODES.md` into a deterministic outcome-evaluation system.
 
 The player-facing loop becomes:
 
-**Build → inspect five performance values → launch → receive the physical flight result → understand the design pattern that caused it → change the relevant lever.**
+**Build → inspect five performance values → launch → receive the physical flight result → understand the supported diagnosis → change one relevant lever → relaunch → compare the two runs.**
+
+A debrief alone is a report, not a completed learning loop. Gate H therefore requires a player to preserve a baseline, make a controlled edit, and see whether the relevant measured result changed. Payload analysis and Monte Carlo are advanced tools; neither may change the launch-objective verdict.
 
 The new system must answer three different questions without conflating them:
 
@@ -39,12 +41,15 @@ The gaps are:
 6. The current stability rule treats a margin below one caliber as an immediate game-rule failure. `FAILURE_MODES.md` notes that a guided rocket can tolerate a negative static margin until aerodynamic torque exceeds control authority. The first evaluator must preserve the existing flight rule but label it as a simplified stability limit; the current model cannot honestly claim “Control saturation.”
 7. Raw outcome presentation, diagnosis, suggested fixes, and evidence formatting are coupled inside a React component.
 8. Saved summaries and worker messages have no evaluator version, metric assessment, primary diagnosis, or contributing diagnoses.
+9. The current plan does not preserve an experiment baseline, classify the number of build edits, or define an honest fallback when browser storage is unavailable.
 
 ## 3. Product behavior
 
 ### 3.1 Assembly screen
 
-Continue showing the five performance values as engineering measurements. Add a band and threshold explanation to each value, but do not predict a named failure outcome before launch.
+Start with a concise launch-objective card: target perigee 180–220 km, target apogee 180–250 km, sustained-orbit floor 150 km, and the current hard load limits. Provide a reference build and one-click reset so players always have a recoverable baseline.
+
+Continue showing the five performance values as engineering measurements. Add a band and threshold explanation to each value, but do not predict a named failure outcome before launch. Each hint describes the measurement's consequence, never a named predicted scenario.
 
 Preflight states are:
 
@@ -78,6 +83,8 @@ Present information in this order:
 4. Contributing diagnoses: other matched patterns, clearly labeled as contributing rather than separate outcomes.
 5. Suggested levers: changes tied to the evidence, each phrased as a tradeoff rather than a guaranteed fix.
 6. Five-value scorecard: predicted value, measured value where applicable, band, and threshold source.
+7. **Try one change:** retain the debriefed run as a pinned baseline and return to Assembly with the recommended editable control focused. The player can decline the suggestion and edit freely.
+8. **Comparison after relaunch:** classify the diff as `one_relevant_change`, `multiple_changes`, `no_change`, or `incompatible_baseline`. Only `one_relevant_change` may make causal wording about the recommended experiment. Other classifications show measured correlation only.
 
 Example:
 
@@ -309,6 +316,7 @@ Do not claim that one adjustment guarantees success. Do not recommend changing a
 | `web/src/sim/outcomes/scenarios.ts` | Implement declarative scenario matchers |
 | `web/src/sim/outcomes/evaluate.ts` | Evaluate metrics, collect diagnoses, and choose the primary diagnosis |
 | `web/src/sim/outcomes/explanations.ts` | Generate evidence-backed player copy |
+| `web/src/sim/outcomes/catalog.ts` | Own each enabled diagnosis's versioned `recommendedExperiment` mapping from diagnosis to editable control, direction, metric, and explanation key |
 
 Call the evaluator once at the end of `runFlight`, after raw orbit classification. Return its `FlightAssessment` beside the existing fields.
 
@@ -318,11 +326,13 @@ Call the evaluator once at the end of `runFlight`, after raw orbit classificatio
 |---|---|
 | `web/src/workers/protocol.ts` | Add `evidence` and `assessment` to `SerializableFlightResult` |
 | `web/src/workers/serialize.ts` | Preserve the new plain-data objects across the worker boundary |
-| `web/src/persistence/storage.ts` | Store evaluator version, mission result, primary diagnosis ID, contributing IDs, and five metric bands |
+| `web/src/persistence/storage.ts` | Store evaluator version, compact assessment summary, baseline lineage, diff classification, mission result, primary diagnosis ID, contributing IDs, and five metric bands |
 | `web/src/sim/ascent/robustness.ts` | Keep raw outcome counts and add diagnosis incidence counts plus primary-diagnosis counts |
 | `web/src/ui/store.ts` | Persist the new summary without recomputing outcomes in React |
 
-Bump the local run-summary key to `apogee.runs.v2`, or add a safe decoder that upgrades v1 records with `assessment: null`. Old data must not crash the run-comparison screen.
+Bump the local run-summary key to `apogee.runs.v2`, or add a safe decoder that upgrades v1 records with `assessment: null`. Store an `assessmentVersion` alongside the model, catalog, and guidance versions. Missing or incompatible assessments must show raw metrics and **Re-evaluate this build**, never a diagnosis calculated under unknown rules.
+
+Run-history writes must return success or failure. If storage is unavailable or full, retain the baseline in memory for the session, state that it will not survive reload, and disable reload-dependent comparison rather than silently losing it.
 
 Robustness output must distinguish:
 
@@ -342,8 +352,9 @@ Only primary-diagnosis counts may be displayed as mutually exclusive categories.
 | `web/src/ui/screens/FlightScreen.tsx` | Optionally mark relevant warning/limit events on the timeline |
 | `web/src/ui/components/PerformanceScorecard.tsx` | New reusable five-value scorecard |
 | `web/src/ui/components/DiagnosisCard.tsx` | New primary/contributing diagnosis presentation |
+| `web/src/ui/components/RunComparison.tsx` | New baseline, edit classification, and before/after measurement comparison |
 
-The UI must not contain its own physics thresholds or infer scenario IDs from strings.
+The UI must not contain its own physics thresholds, diagnosis-to-control mappings, or scenario IDs inferred from strings. A missing, invalid, or disabled assessment falls back to the existing raw-outcome debrief with an explicit diagnosis-unavailable state.
 
 ## 11. Implementation sequence
 
@@ -354,8 +365,9 @@ The UI must not contain its own physics thresholds or infer scenario IDs from st
 3. Define labels and units for all five metrics.
 4. Mark unsupported scenario rules disabled with explicit reasons.
 5. Add a small decoder for versioned stored assessments.
+6. Define the assessment catalog as the shipped source of truth, plus a rule-change log that says whether prior runs remain comparable or require rerun.
 
-**Completion gate:** every outcome, metric band, scenario, and threshold has one machine-readable definition and no React dependency.
+**Completion gate:** every outcome, metric band, scenario, threshold, recommended experiment, and compatibility policy has one machine-readable definition and no React dependency.
 
 ### Step 13 — Instrument the flight solver
 
@@ -384,6 +396,7 @@ The UI must not contain its own physics thresholds or infer scenario IDs from st
 4. Find at least one stable fixture for every supported named scenario.
 5. Verify nearby perturbations do not make category selection oscillate due only to floating-point noise.
 6. Record calibrated thresholds and fixture names beside the rule definitions.
+7. Re-measure every claim in `FAILURE_MODES.md` against the current derivation and solver before it becomes player copy; correct or mark prototype-era claims historical.
 
 **Completion gate:** no active scenario depends on an uncalibrated adjective such as “high,” “large,” “tiny,” or “barely.”
 
@@ -394,8 +407,9 @@ The UI must not contain its own physics thresholds or infer scenario IDs from st
 3. Add diagnosis counts to ascent robustness.
 4. Ensure canceled and stale worker results cannot overwrite a newer assessment.
 5. Handle legacy stored summaries safely.
+6. Preserve an in-memory baseline and visible degraded-persistence state when local storage fails.
 
-**Completion gate:** a normal flight, a telemetry-free batch flight, and a restored saved summary agree on the raw outcome and diagnosis IDs.
+**Completion gate:** a normal flight, a telemetry-free batch flight, and a restored saved summary agree on the raw outcome and diagnosis IDs; an unavailable or incompatible assessment degrades to raw-result presentation without losing the current-session baseline.
 
 ### Step 17 — Build the scorecard and debrief experience
 
@@ -405,8 +419,10 @@ The UI must not contain its own physics thresholds or infer scenario IDs from st
 4. Show measured value, threshold, stage/time, and tradeoff-aware suggestions.
 5. Extend robustness results with primary and overlapping diagnosis sections.
 6. Include assessment data in downloaded JSON reports and saved-run comparisons.
+7. Add **Try one change** from the debrief, return to Assembly with the baseline pinned and suggested control focused, and classify the next run's edit set before choosing causal wording.
+8. Include an assessment trace in downloaded JSON: assessment/rule versions, matched evidence and provenance, baseline lineage, edit classification, and persistence/worker degradation state.
 
-**Completion gate:** a player can connect each named diagnosis to the values that caused it and identify at least one relevant build lever.
+**Completion gate:** a player can launch a baseline, identify a relevant lever, make one controlled edit, relaunch, and see an honest before/after explanation. Advanced analysis remains visually and semantically separate from the launch verdict.
 
 ### Step 18 — Add physics needed by deferred categories
 
@@ -473,6 +489,12 @@ Add a paired test proving that `recordTelemetry: true` and `false` produce ident
 - Evidence and suggestion text use the same threshold values as the evaluator.
 - Robustness results distinguish raw outcomes, primary diagnoses, and overlapping incidence.
 - Keyboard and narrow-screen layouts preserve the reading order.
+- Experiment-loop fixtures: baseline → suggested one-control edit → causal comparison for low liftoff TWR, acceleration limit, and insufficient orbital energy.
+- Multi-control edit: comparison shows measured correlation and does not assert a causal recommendation result.
+- No-change and incompatible-baseline states do not produce a comparison claim.
+- Storage-unavailable state retains current-session comparison and explains that it will not survive reload.
+- Missing or mismatched assessment versions fall back to raw metrics and require re-evaluation.
+- A full-telemetry and telemetry-free batch run with identical input yield identical assessments; the batch evaluator uses fixed-size evidence and a documented time/memory budget.
 
 ## 13. Acceptance criteria
 
@@ -488,6 +510,8 @@ Add a paired test proving that `recordTelemetry: true` and `false` produce ident
 10. Existing payload handoff and mission analysis continue to depend on actual orbit achievement, not on a named diagnosis.
 11. Old local summaries do not crash the app after the storage schema changes.
 12. Production build, typecheck, unit tests, and the complete build-to-debrief Playwright flow pass.
+13. The browser experiment-loop test passes: reference baseline → evidence and suggested lever → exactly one relevant edit → relaunch → causal comparison; a multi-control control case produces correlation-only language.
+14. Saved run reports include enough versioned assessment trace to reproduce a reported diagnosis locally.
 
 ## 14. Scope boundaries
 
@@ -515,7 +539,7 @@ Deferred:
 |---|---|
 | F — Outcome foundation | Versioned types, thresholds, and flight evidence exist with deterministic tests |
 | G — Supported diagnosis | Eight supported scenarios classify calibrated flights without changing raw physics results |
-| H — Integrated debrief | Workers, storage, scorecard, debrief, robustness, and reports consume the structured assessment |
+| H — Core experiment loop | Workers, storage, scorecard, debrief, focused rebuild, versioned baseline comparison, robustness, and reports consume the structured assessment |
 | I — Extended physics | Deferred categories activate only after their causal mechanisms are simulated and verified |
 
-The first releasable increment is Gate H. Gate I is intentionally separate because labeling control saturation, tumbling, or wind drift without simulating those mechanisms would teach the wrong lesson.
+The first releasable increment is Gate H. It is the completion of the core gameplay loop; Gate E in `IMPLEMENT.MD` is a flyable prototype. Gate I is intentionally separate because labeling control saturation, tumbling, or wind drift without simulating those mechanisms would teach the wrong lesson.

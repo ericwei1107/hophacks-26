@@ -22,7 +22,12 @@ function flyReference() {
 function toHandoffSource(result: FlightResult): HandoffSource {
   return {
     orbitAchieved: result.orbitAchieved,
-    finalElements: result.finalElements,
+    // Every orbit-achieving flight now continues through TLI (see
+    // LUNAR_MISSION_PLAN.md §2.1), so `finalElements` describes the
+    // trans-lunar trajectory, not the parking orbit the payload mission
+    // model needs. `parkingElements` is set exactly when `orbitAchieved`
+    // is true, which is also the only case this source is used.
+    finalElements: result.finalState.parkingElements,
     stage2PropellantRemainingKg: result.stage2PropellantRemainingKg,
     payloadWetMassKg: result.finalState.rocket.config.payloadWetMassKg,
     weather: result.finalState.environment.weather,

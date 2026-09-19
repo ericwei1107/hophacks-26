@@ -7,9 +7,12 @@
 import type { RocketConfig } from "../domain/config";
 import { MODEL_VERSION } from "../domain/version";
 import type { FlightOutcome } from "../sim/ascent/flight";
+import type { FlightAssessment } from "../sim/outcomes/types";
+import type { TransferResult } from "../sim/lunar/transfer";
 
 const BUILD_KEY = "apogee.build.v1";
-const RUNS_KEY = "apogee.runs.v1";
+const RUNS_KEY = "apogee.runs.v2";
+const LEGACY_RUNS_KEY = "apogee.runs.v1";
 const SETTINGS_KEY = "apogee.settings.v1";
 const MAX_RUN_SUMMARIES = 10;
 
@@ -22,12 +25,18 @@ export interface RunSummary {
   targetOrbitAchieved: boolean;
   maxQPa: number;
   maxG: number;
+  /** Parking-orbit perigee/apogee — the meaningful "orbit reached" even when the flight went on to attempt trans-lunar injection. */
   perigeeKm: number | null;
   apogeeKm: number | null;
   modelVersion: string;
   catalogVersion: string;
   guidanceVersion: string;
   seed: number;
+  assessment: FlightAssessment | null;
+  /** Optional: absent on records saved before the lunar mission shipped. */
+  lunarTransfer?: TransferResult | null;
+  baselineRunId?: string;
+  comparisonKind?: "one_relevant_change" | "multiple_changes" | "no_change" | "incompatible_baseline";
 }
 
 export interface Settings {
@@ -51,11 +60,12 @@ function safeRead<T>(key: string): T | null {
   }
 }
 
-function safeWrite(key: string, value: unknown): void {
+function safeWrite(key: string, value: unknown): boolean {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch {
-    // Storage full or unavailable: the game remains playable without it.
+    return false;
   }
 }
 
@@ -72,13 +82,19 @@ export function saveBuild(config: RocketConfig): void {
 }
 
 export function loadRunSummaries(): RunSummary[] {
-  return safeRead<RunSummary[]>(RUNS_KEY) ?? [];
+  const current = safeRead<RunSummary[]>(RUNS_KEY);
+  const legacy = current ?? safeRead<RunSummary[]>(LEGACY_RUNS_KEY) ?? [];
+  return legacy.map((run) => ({ ...run, assessment: run.assessment ?? null }));
 }
 
-export function pushRunSummary(summary: RunSummary): RunSummary[] {
+export interface PushRunSummaryResult {
+  runs: RunSummary[];
+  persisted: boolean;
+}
+
+export function pushRunSummary(summary: RunSummary): PushRunSummaryResult {
   const runs = [summary, ...loadRunSummaries()].slice(0, MAX_RUN_SUMMARIES);
-  safeWrite(RUNS_KEY, runs);
-  return runs;
+  return { runs, persisted: safeWrite(RUNS_KEY, runs) };
 }
 
 export function loadSettings(): Settings {

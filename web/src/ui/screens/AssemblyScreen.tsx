@@ -3,6 +3,7 @@
  */
 
 import { OrbitControls } from "@react-three/drei";
+import { useEffect } from "react";
 
 import { SafeCanvas } from "../components/SafeCanvas";
 import { CONFIG_RANGES } from "../../domain/config";
@@ -21,6 +22,7 @@ function Slider({
   unit,
   onChange,
   format,
+  suggested = false,
 }: {
   label: string;
   value: number;
@@ -30,10 +32,11 @@ function Slider({
   unit: string;
   onChange: (value: number) => void;
   format?: (value: number) => string;
+  suggested?: boolean;
 }) {
   const display = format ? format(value) : `${value} ${unit}`;
   return (
-    <label className="control">
+    <label className={`control${suggested ? " suggested-control" : ""}`}>
       <span className="control-label">{label}</span>
       <input
         type="range"
@@ -69,14 +72,16 @@ function EngineSelect({
   value,
   options,
   onChange,
+  suggested = false,
 }: {
   label: string;
   value: EngineId;
   options: { id: EngineId; name: string }[];
   onChange: (id: EngineId) => void;
+  suggested?: boolean;
 }) {
   return (
-    <label className="control">
+    <label className={`control${suggested ? " suggested-control" : ""}`}>
       <span className="control-label">{label}</span>
       <select value={value} onChange={(e) => onChange(e.target.value as EngineId)} aria-label={label}>
         {options.map((o) => (
@@ -99,12 +104,20 @@ function Readout({ label, value, warn }: { label: string; value: string; warn?: 
 }
 
 export function AssemblyScreen() {
-  const { config, derived, updateConfig, resetToReference, launch, flightLoading, flightError, analysisStale } =
+  const { config, derived, updateConfig, resetToReference, launch, flightLoading, flightError, analysisStale, experimentBaseline, suggestedExperiment, persistenceNotice } =
     useAppStore();
 
   const errors = derived.checks.filter((c: BuildCheck) => c.severity === "error");
   const warnings = derived.checks.filter((c: BuildCheck) => c.severity === "warning");
   const canLaunch = errors.length === 0 && !flightLoading;
+
+  useEffect(() => {
+    if (!suggestedExperiment) {
+      return;
+    }
+    const input = document.querySelector<HTMLElement>(".suggested-control input, .suggested-control select");
+    input?.focus();
+  }, [suggestedExperiment]);
 
   return (
     <div className="screen assembly">
@@ -133,15 +146,26 @@ export function AssemblyScreen() {
       <div className="panel">
         <h1>APOGEE <span className="dim">/ Launch Lab</span></h1>
 
+        <section className="objective-card">
+          <strong>Launch objective</strong>
+          <p>Place the payload in a 180–220 × 180–250 km orbit. Perigee must stay above 150 km; structural max-Q is 45 kPa and payload load is 5 g.</p>
+        </section>
+        {experimentBaseline && suggestedExperiment && (
+          <section className="experiment-card">
+            <strong>Experiment baseline pinned</strong>
+            <p>Try one change: {suggestedExperiment.label}. Compare the next flight with {experimentBaseline.outcome.replaceAll("_", " ")}.</p>
+          </section>
+        )}
+
         <section className="controls">
-          <Slider label="Payload wet mass" value={config.payloadWetMassKg} min={CONFIG_RANGES.payloadWetMassKg.min} max={CONFIG_RANGES.payloadWetMassKg.max} step={CONFIG_RANGES.payloadWetMassKg.step} unit="kg" onChange={(v) => updateConfig({ payloadWetMassKg: v })} format={(v) => `${(v / 1000).toFixed(1)} t`} />
-          <Slider label="Body diameter" value={config.diameterM} min={CONFIG_RANGES.diameterM.min} max={CONFIG_RANGES.diameterM.max} step={CONFIG_RANGES.diameterM.step} unit="m" onChange={(v) => updateConfig({ diameterM: v })} format={(v) => `${v.toFixed(1)} m`} />
+          <Slider label="Payload wet mass" value={config.payloadWetMassKg} min={CONFIG_RANGES.payloadWetMassKg.min} max={CONFIG_RANGES.payloadWetMassKg.max} step={CONFIG_RANGES.payloadWetMassKg.step} unit="kg" onChange={(v) => updateConfig({ payloadWetMassKg: v })} format={(v) => `${(v / 1000).toFixed(1)} t`} suggested={suggestedExperiment?.control === "payloadWetMassKg"} />
+          <Slider label="Body diameter" value={config.diameterM} min={CONFIG_RANGES.diameterM.min} max={CONFIG_RANGES.diameterM.max} step={CONFIG_RANGES.diameterM.step} unit="m" onChange={(v) => updateConfig({ diameterM: v })} format={(v) => `${v.toFixed(1)} m`} suggested={suggestedExperiment?.control === "diameterM"} />
           <Slider label="Stage 1 propellant" value={config.stage1PropellantKg} min={CONFIG_RANGES.stage1PropellantKg.min} max={CONFIG_RANGES.stage1PropellantKg.max} step={CONFIG_RANGES.stage1PropellantKg.step} unit="kg" onChange={(v) => updateConfig({ stage1PropellantKg: v })} format={(v) => `${(v / 1000).toFixed(0)} t`} />
-          <Slider label="Stage 1 engines" value={config.stage1EngineCount} min={CONFIG_RANGES.stage1EngineCount.min} max={CONFIG_RANGES.stage1EngineCount.max} step={1} unit="" onChange={(v) => updateConfig({ stage1EngineCount: Math.round(v) })} format={(v) => `${v}×`} />
+          <Slider label="Stage 1 engines" value={config.stage1EngineCount} min={CONFIG_RANGES.stage1EngineCount.min} max={CONFIG_RANGES.stage1EngineCount.max} step={1} unit="" onChange={(v) => updateConfig({ stage1EngineCount: Math.round(v) })} format={(v) => `${v}×`} suggested={suggestedExperiment?.control === "stage1EngineCount"} />
           <EngineSelect label="Stage 1 engine" value={config.stage1Engine} options={[{ id: "booster", name: "B-1 Booster" }, { id: "sustainer", name: "S-2 Sustainer" }]} onChange={(id) => updateConfig({ stage1Engine: id })} />
-          <Slider label="Stage 2 propellant" value={config.stage2PropellantKg} min={CONFIG_RANGES.stage2PropellantKg.min} max={CONFIG_RANGES.stage2PropellantKg.max} step={CONFIG_RANGES.stage2PropellantKg.step} unit="kg" onChange={(v) => updateConfig({ stage2PropellantKg: v })} format={(v) => `${(v / 1000).toFixed(0)} t`} />
+          <Slider label="Stage 2 propellant" value={config.stage2PropellantKg} min={CONFIG_RANGES.stage2PropellantKg.min} max={CONFIG_RANGES.stage2PropellantKg.max} step={CONFIG_RANGES.stage2PropellantKg.step} unit="kg" onChange={(v) => updateConfig({ stage2PropellantKg: v })} format={(v) => `${(v / 1000).toFixed(0)} t`} suggested={suggestedExperiment?.control === "stage2PropellantKg"} />
           <EngineSelect label="Stage 2 engine" value={config.stage2Engine} options={[{ id: "vacuum", name: "V-9 Vacuum" }, { id: "sustainer", name: "S-2 Sustainer" }]} onChange={(id) => updateConfig({ stage2Engine: id })} />
-          <Slider label="Fin span" value={config.finSpanM} min={CONFIG_RANGES.finSpanM.min} max={CONFIG_RANGES.finSpanM.max} step={CONFIG_RANGES.finSpanM.step} unit="m" onChange={(v) => updateConfig({ finSpanM: v })} format={(v) => `${v.toFixed(1)} m`} />
+          <Slider label="Fin span" value={config.finSpanM} min={CONFIG_RANGES.finSpanM.min} max={CONFIG_RANGES.finSpanM.max} step={CONFIG_RANGES.finSpanM.step} unit="m" onChange={(v) => updateConfig({ finSpanM: v })} format={(v) => `${v.toFixed(1)} m`} suggested={suggestedExperiment?.control === "finSpanM"} />
         </section>
 
         <section className="readouts">
@@ -176,6 +200,7 @@ export function AssemblyScreen() {
           <button onClick={resetToReference}>Reset to reference build</button>
         </div>
         {analysisStale && <p className="dim small">Build edited — prior analysis invalidated until rerun.</p>}
+        {persistenceNotice && <p className="check warning">⚠ {persistenceNotice}</p>}
         <SettingsToggle />
       </div>
     </div>

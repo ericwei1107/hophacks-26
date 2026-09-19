@@ -528,7 +528,7 @@ Target 60 fps during normal desktop flight, with a 30 fps low-effects fallback. 
 |---|---|
 | A — Preserved core | Browser mission model passes Python parity fixtures |
 | B — Headless flight | Reference and failure scenarios produce valid deterministic outcomes |
-| C — Playable game | Assembly, flight, debrief, and rebuilding work end to end |
+| C — Flyable prototype | Assembly, flight, debrief, and rebuilding work end to end; follow `OUTCOME_SYSTEM_PLAN.md` Gate H before calling the teaching loop complete |
 | D — Integrated analysis | Actual launched payload feeds the preserved mission model |
 | E — Complete release | Robustness, sensitivity, replay, visual effects, accessibility, and browser checks pass |
 

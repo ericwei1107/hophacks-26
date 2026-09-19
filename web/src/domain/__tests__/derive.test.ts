@@ -37,30 +37,32 @@ describe("deriveRocket: reference build", () => {
   const rocket = derive();
 
   it("reproduces the documented stage dry masses", () => {
-    expect(rocket.stage1.dryMassKg).toBe(18_000);
-    expect(rocket.stage2.dryMassKg).toBe(4_000);
-    expect(rocket.dryMassKg).toBe(28_000);
-    expect(rocket.wetMassKg).toBe(288_000);
+    expect(rocket.stage1.dryMassKg).toBe(23_220);
+    expect(rocket.stage2.dryMassKg).toBe(5_300);
+    expect(rocket.dryMassKg).toBe(34_520);
+    expect(rocket.wetMassKg).toBe(364_520);
   });
 
   it("reproduces the documented performance figures", () => {
-    expect(rocket.liftoffTwr).toBeCloseTo(1.3455, 3);
-    expect(rocket.totalIdealDeltaVMs).toBeCloseTo(10_363, -2); // ≈ 10.4 km/s scale
+    // Calibrated to clear the trans-lunar delta-v requirement (~12.4-12.7
+    // km/s, LUNAR_MISSION_PLAN.md §2.2) — see referenceConfig()'s doc comment.
+    expect(rocket.liftoffTwr).toBeCloseTo(1.3288, 3);
+    expect(rocket.totalIdealDeltaVMs).toBeCloseTo(12_501, -2); // ≈ 12.5 km/s scale
   });
 
   it("derives geometry from the same calculation", () => {
-    expect(rocket.totalLengthM).toBeCloseTo(36.924, 3);
-    expect(rocket.slenderness).toBeCloseTo(9.979, 2);
+    expect(rocket.totalLengthM).toBeCloseTo(43.777, 3);
+    expect(rocket.slenderness).toBeCloseTo(11.832, 2);
     expect(rocket.dragAreaM2).toBeCloseTo(3.2256, 3);
-    expect(rocket.stage1.tankLengthM).toBeCloseTo(19.58, 2);
-    expect(rocket.stage2.tankLengthM).toBeCloseTo(5.874, 2);
+    expect(rocket.stage1.tankLengthM).toBeCloseTo(25.454, 2);
+    expect(rocket.stage2.tankLengthM).toBeCloseTo(6.853, 2);
   });
 
   it("is stable with a comfortable margin", () => {
-    expect(rocket.centerOfMassM).toBeCloseTo(21.515, 2);
-    expect(rocket.centerOfPressureM).toBeCloseTo(26.519, 2);
+    expect(rocket.centerOfMassM).toBeCloseTo(25.041, 2);
+    expect(rocket.centerOfPressureM).toBeCloseTo(31.836, 2);
     expect(rocket.staticMargin).toBeGreaterThan(1.0);
-    expect(rocket.staticMargin).toBeCloseTo(1.353, 2);
+    expect(rocket.staticMargin).toBeCloseTo(1.837, 2);
   });
 
   it("passes all blocking checks", () => {
@@ -84,8 +86,9 @@ describe("deriveRocket: slider consistency", () => {
   it("updates delta-v when tank capacity changes", () => {
     const bigger = derive({ stage1PropellantKg: 300_000 });
     expect(bigger.stage1.idealDeltaVMs).toBeGreaterThan(derive().stage1.idealDeltaVMs);
-    // +100 t propellant and +7.2% of it in tank structure.
-    expect(bigger.wetMassKg).toBe(395_200);
+    // +40 t propellant over the reference's 260 t and +7.2% of it in tank
+    // structure.
+    expect(bigger.wetMassKg).toBe(407_400);
   });
 });
 

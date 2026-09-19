@@ -1,0 +1,35 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`reference build baseline > keeps the recorded orbit, loads and staging time 1`] = `
+{
+  "apogeeKm": 404586.943,
+  "eventIds": [
+    "liftoff",
+    "max_q",
+    "stage1_burnout",
+    "separation",
+    "stage2_ignition",
+    "stage2_cutoff",
+    "fairing_jettison",
+    "circularization_ignition",
+    "orbit_cutoff",
+    "orbit_achieved",
+    "tli_ignition",
+    "tli_cutoff",
+    "lunar_arrival",
+  ],
+  "inclinationDeg": 0,
+  "liftoffT": 0,
+  "maxG": 4.5031,
+  "maxQPa": 34103.787,
+  "maxQT": 67.09999999999833,
+  "orbitAchievedT": 469.8002450348114,
+  "perigeeKm": 210.42,
+  "sampleCount": 10825,
+  "separationT": 154.69847744654436,
+  "stage1BurnoutT": 153.69847744654416,
+  "stage2IgnitionT": 155.69847744654456,
+  "stage2PropellantRemainingKg": 639.491,
+  "totalTimeS": 1141.1,
+}
+`;

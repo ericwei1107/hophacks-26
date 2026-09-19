@@ -1,0 +1,30 @@
+# Unity generates these; never commit them.
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+Logs/
+UserSettings/
+MemoryCaptures/
+Recordings/
+
+# Editor and IDE noise.
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+.vsconfig
+.vs/
+.idea/
+
+# Crash reports.
+sysinfo.txt
+crashlytics-build.properties
+
+# Assets/, Packages/ and ProjectSettings/ ARE committed.

@@ -48,6 +48,11 @@ import {
   type GuidanceCommand,
   type GuidanceContext,
 } from "./guidance";
+import { evaluateFlightOutcome } from "../outcomes/evaluate";
+import type { FlightAssessment, FlightEvidence } from "../outcomes/types";
+import { propagateKepler } from "../physics/kepler";
+import { findSoiEncounter, phasedMoonEpoch } from "../lunar/coast";
+import { evaluateTransfer, transferRequirement, type TransferResult } from "../lunar/transfer";
 
 export const FIXED_TIMESTEP_S = 0.05;
 
@@ -70,6 +75,13 @@ export const SUSTAINED_PERIGEE_KM = 150;
 /** Game rule: target corridor. */
 export const TARGET_PERIGEE_RANGE_KM: [number, number] = [180, 220];
 export const TARGET_APOGEE_RANGE_KM: [number, number] = [180, 250];
+/**
+ * Game rule: a fixed coast before trans-lunar injection, rather than a
+ * modelled phasing wait. Real missions vary this; a fixed duration keeps
+ * the encounter geometry (see `phasedMoonEpoch`) deterministic and keeps
+ * the mission clock well under `MAX_SIM_TIME_S`.
+ */
+export const PARKING_COAST_DURATION_S = 600;
 
 export type FlightPhase =
   | "PAD"
@@ -80,6 +92,9 @@ export type FlightPhase =
   | "ASCENT_2"
   | "COAST"
   | "CIRCULARIZE"
+  | "PARKING_COAST"
+  | "TLI_BURN"
+  | "TRANS_LUNAR"
   | "COMPLETE"
   | "FAILED";
 
@@ -166,6 +181,30 @@ export interface FlightState {
   stepCount: number;
   /** Set when the vehicle first lifts off. */
   liftoffT: number | null;
+  /** Parking-orbit elements at the moment a sustained orbit was confirmed — the baseline `orbitAchieved`/`targetOrbitAchieved` are measured against, since the trans-lunar burn moves the vehicle onto a different orbit entirely. */
+  parkingElements: OrbitalElements | null;
+  /** Mission clock at TLI ignition, s. */
+  tliIgnitionTimeS: number | null;
+  /** Orbital radius at TLI ignition, m from Earth's center. */
+  tliIgnitionRadiusM: number | null;
+  /** Speed at TLI ignition, m/s — the baseline `norm(velocity) - this` measures delta-v spent during the burn. */
+  tliIgnitionSpeedMs: number | null;
+  /** Ideal delta-v this build's parking orbit needs for a minimum-energy transfer, m/s. */
+  tliDeltaVRequiredMs: number | null;
+  /**
+   * Absolute cutoff speed, m/s — local circular velocity at ignition plus
+   * `tliDeltaVRequiredMs`. The parking orbit is never perfectly circular, so
+   * this is deliberately not `tliIgnitionSpeedMs + tliDeltaVRequiredMs`:
+   * that would fold the orbit's small eccentricity (the vehicle may already
+   * be a few m/s faster or slower than local circular at the ignition
+   * point) into the cutoff, biasing the achieved apogee and the resulting
+   * lunar aim.
+   */
+  tliTargetSpeedMs: number | null;
+  /** Set once the trans-lunar phase resolves; carried through to `FlightResult`. */
+  lunarTransfer: TransferResult | null;
+  /** When set, overrides the elements-derived outcome classification at the end of `runFlight` — used for every lunar-mission terminal state. */
+  terminalOutcomeOverride: FlightOutcome | null;
 }
 
 export interface FlightInput {
@@ -243,6 +282,14 @@ export function createFlight(
     maxAltitudeKm: 0,
     stepCount: 0,
     liftoffT: null,
+    parkingElements: null,
+    tliIgnitionTimeS: null,
+    tliIgnitionRadiusM: null,
+    tliIgnitionSpeedMs: null,
+    tliDeltaVRequiredMs: null,
+    tliTargetSpeedMs: null,
+    lunarTransfer: null,
+    terminalOutcomeOverride: null,
   };
 
   const blocking = rocket.checks.find((c) => c.severity === "error");
@@ -334,11 +381,40 @@ function currentCenterOfMassM(state: FlightState): number {
   return mass > 0 ? moment / mass : 0;
 }
 
+/**
+ * Length of the still-attached stack, m. Stage 1 (tank, engine bay, fins and
+ * interstage) leaves at separation, so the drawn vehicle shortens to the
+ * upper stage plus fairing.
+ */
+function attachedLengthM(state: FlightState): number {
+  if (state.stage1Attached) {
+    return state.rocket.totalLengthM;
+  }
+  let length = 0;
+  for (const c of state.rocket.components) {
+    if (
+      c.kind === "stage1-tank" ||
+      c.kind === "stage1-engine" ||
+      c.kind === "fins" ||
+      c.kind === "interstage" ||
+      c.kind === "payload" ||
+      (c.kind === "fairing" && state.fairingJettisoned)
+    ) {
+      continue;
+    }
+    length += c.lengthM;
+  }
+  return length;
+}
+
 function activeEngine(state: FlightState): { engine: EngineSpec; count: number } | null {
   if (state.phase === "ASCENT_1" && state.stage1PropellantKg > 0) {
     return { engine: state.rocket.stage1.engine, count: state.rocket.stage1.engineCount };
   }
-  if ((state.phase === "ASCENT_2" || state.phase === "CIRCULARIZE") && state.stage2PropellantKg > 0) {
+  if (
+    (state.phase === "ASCENT_2" || state.phase === "CIRCULARIZE" || state.phase === "TLI_BURN") &&
+    state.stage2PropellantKg > 0
+  ) {
     return { engine: state.rocket.stage2.engine, count: 1 };
   }
   return null;
@@ -405,7 +481,7 @@ function buildGuidanceContext(state: FlightState, position: Vec3, velocity: Vec3
   const elements = orbitalElements(position, velocity);
 
   const active = activeEngine(state);
-  const mass = baseMassKg(state) - (state.phase === "ASCENT_1" ? state.stage1PropellantKg : state.phase === "ASCENT_2" || state.phase === "CIRCULARIZE" ? state.stage2PropellantKg : 0) + propKg;
+  const mass = baseMassKg(state) - activePropellantKg(state) + propKg;
 
   let fullThrustN = 0;
   let massFlowKgS = 0;
@@ -499,7 +575,7 @@ function activePropellantKg(state: FlightState): number {
   if (state.phase === "ASCENT_1") {
     return state.stage1PropellantKg;
   }
-  if (state.phase === "ASCENT_2" || state.phase === "CIRCULARIZE") {
+  if (state.phase === "ASCENT_2" || state.phase === "CIRCULARIZE" || state.phase === "TLI_BURN") {
     return state.stage2PropellantKg;
   }
   return 0;
@@ -558,7 +634,7 @@ function rk4Step(state: FlightState, dt: number): void {
   const newProp = Math.max(0, prop0 + propDelta);
   if (state.phase === "ASCENT_1") {
     state.stage1PropellantKg = newProp;
-  } else if (state.phase === "ASCENT_2" || state.phase === "CIRCULARIZE") {
+  } else if (state.phase === "ASCENT_2" || state.phase === "CIRCULARIZE" || state.phase === "TLI_BURN") {
     state.stage2PropellantKg = newProp;
   }
 }
@@ -805,6 +881,10 @@ function applyBurnout(state: FlightState): void {
     state.stage2PropellantKg = 0;
     addEvent(state, "stage2_burnout");
     finalizeOrbit(state);
+  } else if (state.phase === "TLI_BURN") {
+    state.stage2PropellantKg = 0;
+    addEvent(state, "stage2_burnout");
+    resolveTliBurnout(state);
   }
 }
 
@@ -834,8 +914,71 @@ function finalizeOrbit(state: FlightState): void {
     enterPhase(state, "COAST");
     return;
   }
-  state.phase = "COMPLETE";
   addEvent(state, "orbit_achieved", `Orbit ${elements.perigeeAltitudeKm.toFixed(0)} x ${elements.apogeeAltitudeKm?.toFixed(0) ?? "?"} km`);
+  if (elements.perigeeAltitudeKm < SUSTAINED_PERIGEE_KM) {
+    // Bound but decaying: not a sustained orbit, so no trans-lunar attempt.
+    state.phase = "COMPLETE";
+    return;
+  }
+  state.parkingElements = elements;
+  enterPhase(state, "PARKING_COAST");
+}
+
+/**
+ * Resolve the trans-lunar phase once the TLI burn ends, whether by reaching
+ * its target delta-v or by exhausting stage-2 propellant early. Analytic,
+ * not integrated (LUNAR_MISSION_PLAN.md §3): the coast to the Moon is
+ * evaluated in one shot via `evaluateTransfer`/`findSoiEncounter`, not
+ * stepped through RK4.
+ */
+function resolveTliBurnout(state: FlightState): void {
+  enterPhase(state, "TRANS_LUNAR");
+
+  const deltaVSpentMs = norm(state.velocity) - (state.tliIgnitionSpeedMs ?? norm(state.velocity));
+  const elements = orbitalElements(state.position, state.velocity);
+  const apogeeAfterBurnM =
+    elements.bound && elements.apogeeAltitudeKm !== null
+      ? EARTH_RADIUS + elements.apogeeAltitudeKm * 1000
+      : Number.POSITIVE_INFINITY;
+
+  let soiEntryRelativePosition: Vec3 | null = null;
+  let soiEntryRelativeVelocity: Vec3 | null = null;
+  if (Number.isFinite(apogeeAfterBurnM)) {
+    // Phase the Moon from the vehicle's actual post-burn state, not the
+    // pre-burn ignition point: the burn takes on the order of a minute or
+    // more, during which the vehicle sweeps several degrees around its
+    // orbit. At the lunar distance that is tens of thousands of km — using
+    // the ignition point here previously missed the SOI outright. The
+    // post-burn position is close to the transfer orbit's actual periapsis
+    // for a short tangential burn, which is the standard patched-conic
+    // approximation (LUNAR_MISSION_PLAN.md §4.3.5).
+    const requirement = transferRequirement(norm(state.position));
+    const epoch = phasedMoonEpoch(state.position, state.t, requirement.timeOfFlightS);
+    const encounter = findSoiEncounter(state.position, state.velocity, state.t, epoch);
+    if (encounter) {
+      soiEntryRelativePosition = encounter.relativePosition;
+      soiEntryRelativeVelocity = encounter.relativeVelocity;
+    }
+  }
+
+  const transfer = evaluateTransfer({
+    parkingRadiusM: state.tliIgnitionRadiusM ?? norm(state.position),
+    deltaVAvailableMs: deltaVSpentMs,
+    deltaVRequiredMs: state.tliDeltaVRequiredMs ?? 0,
+    apogeeAfterBurnM,
+    soiEntryRelativePosition,
+    soiEntryRelativeVelocity,
+  });
+
+  state.lunarTransfer = transfer;
+  state.terminalOutcomeOverride = transfer.classification;
+  addEvent(
+    state,
+    transfer.classification,
+    `Trans-lunar burn spent ${deltaVSpentMs.toFixed(0)} m/s of ${(state.tliDeltaVRequiredMs ?? 0).toFixed(0)} m/s required` +
+      (transfer.periseleneRadiusM !== null ? `; periselene ${(transfer.periseleneRadiusM / 1000).toFixed(0)} km` : ""),
+  );
+  state.phase = "COMPLETE";
 }
 
 // ---------------------------------------------------------------------------
@@ -849,7 +992,8 @@ type StepEvent =
   | "fairing"
   | "impact"
   | "apogee_cutoff"
-  | "perigee_cutoff";
+  | "perigee_cutoff"
+  | "tli_delta_v_cutoff";
 
 interface StepHorizon {
   dtEvent: number;
@@ -926,6 +1070,11 @@ function findStepHorizon(state: FlightState, remaining: number): StepHorizon {
       }
     }
   }
+  if (state.phase === "TLI_BURN" && state.tliTargetSpeedMs !== null) {
+    if (norm(state.velocity) >= state.tliTargetSpeedMs) {
+      consider(0, "tli_delta_v_cutoff");
+    }
+  }
 
   return { dtEvent, event };
 }
@@ -974,6 +1123,10 @@ function applyStepEvent(state: FlightState, event: StepEvent): void {
       addEvent(state, "orbit_cutoff", "Target corridor reached");
       finalizeOrbit(state);
       break;
+    case "tli_delta_v_cutoff":
+      addEvent(state, "tli_cutoff", "Trans-lunar injection delta-v target reached");
+      resolveTliBurnout(state);
+      break;
   }
 }
 
@@ -997,13 +1150,53 @@ export function stepFlight(state: FlightState, dt: number = FIXED_TIMESTEP_S): v
     return;
   }
 
-  // Event-splitting integration loop.
+  if (state.phase === "PARKING_COAST") {
+    // Analytic, not integrated (LUNAR_MISSION_PLAN.md §4.1): the whole
+    // coast to the TLI ignition point happens in one Kepler jump rather
+    // than tens of thousands of RK4 substeps.
+    const { position, velocity } = propagateKepler(state.position, state.velocity, PARKING_COAST_DURATION_S);
+    state.position = position;
+    state.velocity = velocity;
+    state.t += PARKING_COAST_DURATION_S;
+    state.phaseTimeS += PARKING_COAST_DURATION_S;
+    state.stepCount += 1;
+
+    const ignitionRadiusM = norm(state.position);
+    const requirement = transferRequirement(ignitionRadiusM);
+    const localCircularMs = Math.sqrt(MU_EARTH / ignitionRadiusM);
+    state.tliIgnitionTimeS = state.t;
+    state.tliIgnitionRadiusM = ignitionRadiusM;
+    state.tliIgnitionSpeedMs = norm(state.velocity);
+    state.tliDeltaVRequiredMs = requirement.deltaVRequiredMs;
+    state.tliTargetSpeedMs = localCircularMs + requirement.deltaVRequiredMs;
+    normalize(state.attitude, state.velocity);
+
+    addEvent(
+      state,
+      "tli_ignition",
+      `Trans-lunar injection burn begins, targeting ${requirement.deltaVRequiredMs.toFixed(0)} m/s`,
+    );
+    enterPhase(state, "TLI_BURN");
+    return;
+  }
+
+  // Event-splitting integration loop. Detached stages are advanced by the
+  // same dtEvent sub-steps as the active stack, not by the full requested
+  // dt: a stage that separates mid-step exists for only the remainder of
+  // this call, and integrating it over the whole dt would double-count the
+  // pre-separation portion as extra gravity/drag drift on a body that did
+  // not yet exist.
   let remaining = dt;
   let guard = 0;
   while (remaining > 1e-9 && guard < 8) {
     guard += 1;
     const { dtEvent, event } = findStepHorizon(state, remaining);
     rk4Step(state, dtEvent);
+    for (const stage of state.detachedStages) {
+      if (!stage.landed) {
+        integrateDetachedStage(state, stage, dtEvent);
+      }
+    }
     state.t += dtEvent;
     state.phaseTimeS += dtEvent;
     remaining -= dtEvent;
@@ -1017,13 +1210,6 @@ export function stepFlight(state: FlightState, dt: number = FIXED_TIMESTEP_S): v
     }
   }
   state.stepCount += 1;
-
-  // Detached stages integrate under gravity and drag only.
-  for (const stage of state.detachedStages) {
-    if (!stage.landed) {
-      integrateDetachedStage(state, stage, dt);
-    }
-  }
 
   checkInFlightFailures(state);
 
@@ -1087,6 +1273,18 @@ export interface Telemetry {
   posX: Float64Array;
   posY: Float64Array;
   posZ: Float64Array;
+  /** ECI velocity samples, m/s — the tangents for Hermite interpolation. */
+  velX: Float64Array;
+  velY: Float64Array;
+  velZ: Float64Array;
+  /** Commanded body axis (nose direction) in ECI, unit vector. */
+  attX: Float64Array;
+  attY: Float64Array;
+  attZ: Float64Array;
+  /** Center of mass of the attached stack, m from the nose (moves as propellant burns). */
+  comFromNoseM: Float64Array;
+  /** Length of the attached stack, m (shortens at staging). */
+  attachedLengthM: Float64Array;
   /** Spent stage-1 ECI position (NaN before separation / when absent). */
   spentX: Float64Array;
   spentY: Float64Array;
@@ -1102,8 +1300,15 @@ const PHASE_INDEX: Record<FlightPhase, number> = {
   ASCENT_2: 5,
   COAST: 6,
   CIRCULARIZE: 7,
+  // COMPLETE and FAILED keep their original indices (8, 9) below: a
+  // hardcoded, positionally-matched PHASE_NAMES array in ui/telemetry.ts
+  // reads this same enumeration, and renumbering them would silently
+  // mislabel phases there. New phases are appended after it instead.
   COMPLETE: 8,
   FAILED: 9,
+  PARKING_COAST: 10,
+  TLI_BURN: 11,
+  TRANS_LUNAR: 12,
 };
 
 export type FlightOutcome =
@@ -1120,7 +1325,15 @@ export type FlightOutcome =
   | "aerodynamic_instability"
   | "slenderness_limit"
   | "vacuum_engine_low_ignition"
-  | "timeout";
+  | "timeout"
+  // Lunar-mission terminal states (LUNAR_MISSION_PLAN.md §2.3). Every one
+  // of these is reached only after a sustained parking orbit was already
+  // confirmed — see finalizeOrbit's SUSTAINED_PERIGEE_KM gate.
+  | "lunar_arrival"
+  | "lunar_impact"
+  | "lunar_miss"
+  | "tli_shortfall"
+  | "earth_escape";
 
 export interface FlightResult {
   outcome: FlightOutcome;
@@ -1142,6 +1355,10 @@ export interface FlightResult {
   catalogVersion: string;
   guidanceVersion: string;
   seed: number;
+  evidence: FlightEvidence;
+  assessment: FlightAssessment;
+  /** Set once a trans-lunar injection was attempted; null for any flight that never reached a sustained parking orbit. */
+  lunarTransfer: TransferResult | null;
 }
 
 export function runFlight(input: FlightInput): FlightResult {
@@ -1172,6 +1389,14 @@ export function runFlight(input: FlightInput): FlightResult {
     posX: new Float64Array(maxSamples),
     posY: new Float64Array(maxSamples),
     posZ: new Float64Array(maxSamples),
+    velX: new Float64Array(maxSamples),
+    velY: new Float64Array(maxSamples),
+    velZ: new Float64Array(maxSamples),
+    attX: new Float64Array(maxSamples),
+    attY: new Float64Array(maxSamples),
+    attZ: new Float64Array(maxSamples),
+    comFromNoseM: new Float64Array(maxSamples),
+    attachedLengthM: new Float64Array(maxSamples),
     spentX: new Float64Array(maxSamples).fill(Number.NaN),
     spentY: new Float64Array(maxSamples).fill(Number.NaN),
     spentZ: new Float64Array(maxSamples).fill(Number.NaN),
@@ -1210,6 +1435,14 @@ export function runFlight(input: FlightInput): FlightResult {
     telemetry.posX[i] = state.position[0];
     telemetry.posY[i] = state.position[1];
     telemetry.posZ[i] = state.position[2];
+    telemetry.velX[i] = state.velocity[0];
+    telemetry.velY[i] = state.velocity[1];
+    telemetry.velZ[i] = state.velocity[2];
+    telemetry.attX[i] = state.attitude[0];
+    telemetry.attY[i] = state.attitude[1];
+    telemetry.attZ[i] = state.attitude[2];
+    telemetry.comFromNoseM[i] = currentCenterOfMassM(state);
+    telemetry.attachedLengthM[i] = attachedLengthM(state);
     const spent = state.detachedStages[0];
     if (spent) {
       telemetry.spentX[i] = spent.position[0];
@@ -1236,18 +1469,34 @@ export function runFlight(input: FlightInput): FlightResult {
   }
 
   const elements = state.phase === "COMPLETE" ? orbitalElements(state.position, state.velocity) : null;
-  const orbitAchieved =
-    elements !== null && elements.bound && !elements.intersectsGround && elements.perigeeAltitudeKm >= SUSTAINED_PERIGEE_KM;
-  const targetOrbitAchieved =
-    orbitAchieved &&
-    elements.perigeeAltitudeKm >= TARGET_PERIGEE_RANGE_KM[0] &&
-    elements.perigeeAltitudeKm <= TARGET_PERIGEE_RANGE_KM[1] &&
-    elements.apogeeAltitudeKm !== null &&
-    elements.apogeeAltitudeKm >= TARGET_APOGEE_RANGE_KM[0] &&
-    elements.apogeeAltitudeKm <= TARGET_APOGEE_RANGE_KM[1];
 
   let outcome: FlightOutcome;
-  if (state.phase === "COMPLETE" && elements) {
+  let orbitAchieved: boolean;
+  let targetOrbitAchieved: boolean;
+
+  if (state.terminalOutcomeOverride !== null) {
+    // A lunar-mission terminal state. `elements` at this point describes
+    // the post-TLI-burn trans-lunar trajectory, not a parking orbit, so
+    // orbit/target achievement are measured against the parking orbit
+    // finalizeOrbit already confirmed sustained before allowing TLI.
+    outcome = state.terminalOutcomeOverride;
+    const parking = state.parkingElements!;
+    orbitAchieved = true;
+    targetOrbitAchieved =
+      parking.perigeeAltitudeKm >= TARGET_PERIGEE_RANGE_KM[0] &&
+      parking.perigeeAltitudeKm <= TARGET_PERIGEE_RANGE_KM[1] &&
+      parking.apogeeAltitudeKm !== null &&
+      parking.apogeeAltitudeKm >= TARGET_APOGEE_RANGE_KM[0] &&
+      parking.apogeeAltitudeKm <= TARGET_APOGEE_RANGE_KM[1];
+  } else if (state.phase === "COMPLETE" && elements) {
+    orbitAchieved = elements.bound && !elements.intersectsGround && elements.perigeeAltitudeKm >= SUSTAINED_PERIGEE_KM;
+    targetOrbitAchieved =
+      orbitAchieved &&
+      elements.perigeeAltitudeKm >= TARGET_PERIGEE_RANGE_KM[0] &&
+      elements.perigeeAltitudeKm <= TARGET_PERIGEE_RANGE_KM[1] &&
+      elements.apogeeAltitudeKm !== null &&
+      elements.apogeeAltitudeKm >= TARGET_APOGEE_RANGE_KM[0] &&
+      elements.apogeeAltitudeKm <= TARGET_APOGEE_RANGE_KM[1];
     if (targetOrbitAchieved) {
       outcome = "target_orbit";
     } else if (orbitAchieved) {
@@ -1257,7 +1506,18 @@ export function runFlight(input: FlightInput): FlightResult {
     }
   } else {
     outcome = (state.failureCode ?? "timeout") as FlightOutcome;
+    orbitAchieved = false;
+    targetOrbitAchieved = false;
   }
+
+  const evidence: FlightEvidence = {
+    maxQPa: state.maxQPa,
+    maxG: state.maxG,
+    terminalTimeS: state.t,
+    perigeeKm: elements?.perigeeAltitudeKm ?? null,
+    source: "observed",
+  };
+  const assessment = evaluateFlightOutcome(state.rocket, outcome, evidence);
 
   return {
     outcome,
@@ -1276,5 +1536,8 @@ export function runFlight(input: FlightInput): FlightResult {
     catalogVersion: CATALOG_VERSION,
     guidanceVersion: guidance.version,
     seed,
+    evidence,
+    assessment,
+    lunarTransfer: state.lunarTransfer,
   };
 }

@@ -12,7 +12,7 @@ export function buildRunReport(flight: SerializableFlightResult): string {
   const t = flight.telemetry;
   return JSON.stringify(
     {
-      reportVersion: 1,
+      reportVersion: 2,
       modelVersion: flight.modelVersion,
       catalogVersion: flight.catalogVersion,
       guidanceVersion: flight.guidanceVersion,
@@ -27,11 +27,18 @@ export function buildRunReport(flight: SerializableFlightResult): string {
       failureDetail: flight.failureDetail,
       maxQPa: flight.maxQPa,
       maxG: flight.maxG,
+      // `finalOrbit` is the trans-lunar trajectory for any flight that
+      // attempted TLI (see `lunarTransfer`), not the parking orbit —
+      // `parkingOrbit` is the one to read for "what orbit did it reach".
       finalOrbit: flight.finalElements,
+      parkingOrbit: flight.parkingElements,
+      lunarTransfer: flight.lunarTransfer,
       stage2PropellantRemainingKg: flight.stage2PropellantRemainingKg,
       totalTimeS: flight.totalTimeS,
       events: flight.events,
       sampleCount: t.sampleCount,
+      evidence: flight.evidence,
+      assessment: flight.assessment,
     },
     null,
     2,
@@ -83,9 +90,21 @@ export function configDifferences(a: RocketConfig, b: RocketConfig): string[] {
 export function compareRunToCurrent(
   current: SerializableFlightResult,
   previous: RunSummary,
-): { configDiffs: string[]; outcomeChange: string } {
+): { configDiffs: string[]; outcomeChange: string; kind: "one_relevant_change" | "multiple_changes" | "no_change" | "incompatible_baseline" } {
+  const configDiffs = configDifferences(previous.config, current.config);
+  const recommended = previous.assessment?.primaryDiagnosis?.recommendedExperiment;
+  const changed = Object.keys(previous.config).filter((key) => key !== "modelVersion" && previous.config[key as keyof typeof previous.config] !== current.config[key as keyof typeof current.config]);
+  const compatible = previous.modelVersion === current.modelVersion && previous.catalogVersion === current.catalogVersion && previous.guidanceVersion === current.guidanceVersion;
+  const kind = !compatible
+    ? "incompatible_baseline"
+    : changed.length === 0
+      ? "no_change"
+      : changed.length === 1 && recommended !== undefined && changed[0] === recommended.control
+        ? "one_relevant_change"
+        : "multiple_changes";
   return {
-    configDiffs: configDifferences(previous.config, current.config),
+    configDiffs,
     outcomeChange: `${previous.outcome} → ${current.outcome}`,
+    kind,
   };
 }

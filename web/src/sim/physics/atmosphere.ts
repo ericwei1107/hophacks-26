@@ -171,3 +171,25 @@ export class Atmosphere {
     };
   }
 }
+
+/**
+ * US Standard Atmosphere temperature profile, K, from geometric altitude in
+ * km. Presentation only — the ascent solver never reads it, so changing it
+ * cannot move a trajectory.
+ */
+export function standardTemperatureK(altitudeKm: number): number {
+  const h = Number.isFinite(altitudeKm) ? Math.max(0, altitudeKm) : 0;
+  if (h <= 11) return 288.15 - 6.5 * h;
+  if (h <= 20) return 216.65;
+  if (h <= 32) return 216.65 + 1.0 * (h - 20);
+  if (h <= 47) return 228.65 + 2.8 * (h - 32);
+  if (h <= 51) return 270.65;
+  if (h <= 71) return 270.65 - 2.8 * (h - 51);
+  if (h <= 84.852) return 214.65 - 2.0 * (h - 71);
+  return 186.95;
+}
+
+/** Speed of sound, m/s, at a geometric altitude in km. Presentation only. */
+export function speedOfSoundMs(altitudeKm: number): number {
+  return Math.sqrt(1.4 * SPECIFIC_GAS_CONSTANT * standardTemperatureK(altitudeKm));
+}

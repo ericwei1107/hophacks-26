@@ -13,7 +13,7 @@ import { CATALOG_VERSION } from "./version";
 
 export const SEA_LEVEL_PRESSURE_PA = 101_325.0;
 
-export type EngineId = "booster" | "sustainer" | "vacuum";
+export type EngineId = "booster" | "sustainer" | "vacuum" | "cryogenic";
 
 export interface EngineSpec {
   id: EngineId;
@@ -111,6 +111,18 @@ const ENGINE_SEEDS: EngineSeed[] = [
     nozzleDiameterM: 2.0,
     minThrottle: 0.1,
     referenceThrustN: 930_000,
+    referenceAtSeaLevel: false,
+  },
+  {
+    id: "cryogenic",
+    name: "H-1 Cryogenic upper stage (fictional)",
+    seaLevelRated: false,
+    seaLevelIspS: 120,
+    vacuumIspS: 440,
+    dryMassKg: 1_800,
+    nozzleDiameterM: 2.2,
+    minThrottle: 0.15,
+    referenceThrustN: 930000,
     referenceAtSeaLevel: false,
   },
 ];

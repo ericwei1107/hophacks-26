@@ -14,6 +14,7 @@ import type { RocketConfig } from "../../domain/config";
 import { Rng } from "../prng";
 import { runFlight, type FlightEnvironment, type FlightOutcome, type FlightPerturbations } from "./flight";
 import type { GuidanceCoefficients } from "./guidance";
+import type { DiagnosisId } from "../outcomes/types";
 
 export interface AscentUncertaintyRange {
   /** [min, max] multiplicative scale, or [min, max] absolute m/s for wind. */
@@ -75,6 +76,10 @@ export interface AscentRobustnessResult {
   totalRuns: number;
   completedRuns: number;
   outcomeCounts: Partial<Record<FlightOutcome, number>>;
+  /** Primary diagnoses are mutually exclusive because every flight has at most one. */
+  primaryDiagnosisCounts: Partial<Record<DiagnosisId, number>>;
+  /** Incidence can overlap once contributing diagnoses are introduced. */
+  diagnosisIncidenceCounts: Partial<Record<DiagnosisId, number>>;
   orbitAchievedCount: number;
   targetOrbitCount: number;
   /** Wilson score interval for the orbit-achieved probability. */
@@ -121,6 +126,8 @@ export interface AscentAnalysisRequest {
 export function runAscentAnalysis(request: AscentAnalysisRequest): AscentRobustnessResult {
   const rng = new Rng(request.seed);
   const outcomeCounts: Partial<Record<FlightOutcome, number>> = {};
+  const primaryDiagnosisCounts: Partial<Record<DiagnosisId, number>> = {};
+  const diagnosisIncidenceCounts: Partial<Record<DiagnosisId, number>> = {};
   let orbitAchievedCount = 0;
   let targetOrbitCount = 0;
   const maxQs: number[] = [];
@@ -147,6 +154,14 @@ export function runAscentAnalysis(request: AscentAnalysisRequest): AscentRobustn
         recordTelemetry: false,
       });
       outcomeCounts[result.outcome] = (outcomeCounts[result.outcome] ?? 0) + 1;
+      const primary = result.assessment.primaryDiagnosis;
+      if (primary) {
+        primaryDiagnosisCounts[primary.id] = (primaryDiagnosisCounts[primary.id] ?? 0) + 1;
+        diagnosisIncidenceCounts[primary.id] = (diagnosisIncidenceCounts[primary.id] ?? 0) + 1;
+      }
+      for (const diagnosis of result.assessment.contributingDiagnoses) {
+        diagnosisIncidenceCounts[diagnosis.id] = (diagnosisIncidenceCounts[diagnosis.id] ?? 0) + 1;
+      }
       if (result.orbitAchieved) {
         orbitAchievedCount++;
       }
@@ -173,6 +188,8 @@ export function runAscentAnalysis(request: AscentAnalysisRequest): AscentRobustn
     totalRuns: request.runs,
     completedRuns,
     outcomeCounts,
+    primaryDiagnosisCounts,
+    diagnosisIncidenceCounts,
     orbitAchievedCount,
     targetOrbitCount,
     orbitProbability: completedRuns > 0 ? orbitAchievedCount / completedRuns : 0,

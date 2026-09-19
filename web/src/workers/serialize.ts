@@ -59,6 +59,8 @@ export function serializeFlightResult(result: FlightResult): SerializableFlightR
     events: result.events,
     telemetry: result.telemetry,
     finalElements: result.finalElements,
+    parkingElements: result.finalState.parkingElements,
+    lunarTransfer: result.lunarTransfer,
     maxQPa: result.maxQPa,
     maxG: result.maxG,
     stage2PropellantRemainingKg: result.stage2PropellantRemainingKg,
@@ -69,6 +71,8 @@ export function serializeFlightResult(result: FlightResult): SerializableFlightR
     catalogVersion: result.catalogVersion,
     guidanceVersion: result.guidanceVersion,
     totalTimeS: result.finalState.t,
+    evidence: result.evidence,
+    assessment: result.assessment,
   };
 }
 
@@ -77,7 +81,9 @@ export function telemetryTransferBuffers(result: SerializableFlightResult): Tran
   return [
     t.tS, t.altitudeKm, t.speedMs, t.airspeedMs, t.dynamicPressurePa, t.properAccelG,
     t.propellantKg, t.massKg, t.throttle, t.aoaDeg, t.apogeeKm, t.perigeeKm,
-    t.posX, t.posY, t.posZ, t.spentX, t.spentY, t.spentZ,
+    t.posX, t.posY, t.posZ, t.velX, t.velY, t.velZ,
+    t.attX, t.attY, t.attZ, t.comFromNoseM, t.attachedLengthM,
+    t.spentX, t.spentY, t.spentZ,
   ].map((a) => a.buffer);
 }
 

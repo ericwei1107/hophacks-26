@@ -35,17 +35,30 @@ export const CONFIG_RANGES = {
   finSpanM: { min: 0, max: 3, step: 0.1, unit: "m" },
 } as const;
 
-/** The reference build, matching the documented prototype calibration. */
+/**
+ * The reference build. Calibrated to clear the trans-lunar delta-v
+ * requirement (LUNAR_MISSION_PLAN.md §2.2) under the existing fixed
+ * autopilot: 12,501 m/s ideal delta-v, liftoff TWR 1.33, static margin 1.84
+ * calibers, slenderness 11.8 — reaches `target_orbit` exactly as the old LEO
+ * reference did. The cryogenic upper stage is what makes lunar delta-v
+ * reachable at all (the old `vacuum` engine tops out around 11.9 km/s on
+ * this airframe), but headroom above ~12.6 km/s is bounded by the fixed
+ * guidance, not by propellant: builds swept past that under this same
+ * autopilot overshoot the parking-orbit apogee cap and land in
+ * `sustained_orbit` (or worse) instead of `target_orbit`. That is a real,
+ * measured steering-loss effect — see LUNAR_MISSION_PLAN.md §1 — not a
+ * placeholder value.
+ */
 export function referenceConfig(): RocketConfig {
   return {
     modelVersion: MODEL_VERSION,
     payloadWetMassKg: 5_000,
     diameterM: 3.7,
-    stage1PropellantKg: 200_000,
-    stage1EngineCount: 4,
+    stage1PropellantKg: 260_000,
+    stage1EngineCount: 5,
     stage1Engine: "booster",
-    stage2PropellantKg: 60_000,
-    stage2Engine: "vacuum",
+    stage2PropellantKg: 70_000,
+    stage2Engine: "cryogenic",
     finSpanM: 2.0,
   };
 }

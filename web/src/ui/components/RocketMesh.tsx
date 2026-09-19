@@ -20,11 +20,14 @@ export function RocketMesh({
   showMarkers = false,
   thrusting = false,
   throttle = 0,
+  stage1Attached = true,
 }: {
   rocket: DerivedRocket;
   showMarkers?: boolean;
   thrusting?: boolean;
   throttle?: number;
+  /** False after separation: the booster, its fins and the interstage are gone. */
+  stage1Attached?: boolean;
 }) {
   const d = rocket.diameterM;
   const r = d / 2;
@@ -34,8 +37,16 @@ export function RocketMesh({
   const yOf = (xStart: number, length: number) => total - (xStart + length / 2);
 
   const parts = useMemo(() => {
-    return rocket.components.filter((c) => c.kind !== "payload");
-  }, [rocket]);
+    return rocket.components.filter(
+      (c) =>
+        c.kind !== "payload" &&
+        (stage1Attached ||
+          (c.kind !== "stage1-tank" &&
+            c.kind !== "stage1-engine" &&
+            c.kind !== "interstage" &&
+            c.kind !== "fins")),
+    );
+  }, [rocket, stage1Attached]);
 
   const finGeoms = useMemo(() => {
     if (rocket.fins.spanM <= 0) {
@@ -94,7 +105,7 @@ export function RocketMesh({
       })}
 
       {/* Engine nozzles at the base */}
-      {Array.from({ length: rocket.stage1.engineCount }).map((_, i) => {
+      {stage1Attached && Array.from({ length: rocket.stage1.engineCount }).map((_, i) => {
         const angle = (i / rocket.stage1.engineCount) * Math.PI * 2;
         const nozzleR = rocket.stage1.engine.nozzleDiameterM / 2;
         const ringR = rocket.stage1.engineCount === 1 ? 0 : Math.max(0, r - nozzleR);
@@ -110,7 +121,8 @@ export function RocketMesh({
       })}
 
       {/* Fins: four, in a cross at the base */}
-      {finGeoms &&
+      {stage1Attached &&
+        finGeoms &&
         [0, 1, 2, 3].map((i) => (
           <group key={`fin-${i}`} rotation={[0, (i * Math.PI) / 2, 0]}>
             <mesh

@@ -4,5 +4,5 @@
  * stored runs.
  */
 export const MODEL_VERSION = "1.0.0";
-export const CATALOG_VERSION = "1.0.0";
+export const CATALOG_VERSION = "1.1.0";
 export const GUIDANCE_VERSION = "1.0.0";

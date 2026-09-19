@@ -18,18 +18,24 @@ function fly(overrides: Partial<RocketConfig> = {}): FlightResult {
 }
 
 describe("reference build", () => {
-  it("reaches the target corridor", () => {
+  it("reaches the target corridor, then the Moon", () => {
     const result = fly();
-    expect(result.outcome).toBe("target_orbit");
+    // The reference build clears the lunar delta-v requirement, so the
+    // mission continues past the parking orbit through TLI to a lunar
+    // arrival. The parking orbit itself — confirmed sustained and
+    // on-target before TLI ever begins — is what orbitAchieved and
+    // targetOrbitAchieved describe.
+    expect(result.outcome).toBe("lunar_arrival");
     expect(result.orbitAchieved).toBe(true);
     expect(result.targetOrbitAchieved).toBe(true);
-    const el = result.finalElements!;
-    expect(el.perigeeAltitudeKm).toBeGreaterThanOrEqual(180);
-    expect(el.perigeeAltitudeKm).toBeLessThanOrEqual(220);
-    expect(el.apogeeAltitudeKm).toBeGreaterThanOrEqual(180);
-    expect(el.apogeeAltitudeKm!).toBeLessThanOrEqual(250);
-    // Equatorial launch due east -> near-equatorial inclination.
-    expect(el.inclinationDeg).toBeLessThan(1);
+    const parking = result.finalState.parkingElements!;
+    expect(parking.perigeeAltitudeKm).toBeGreaterThanOrEqual(180);
+    expect(parking.perigeeAltitudeKm).toBeLessThanOrEqual(220);
+    expect(parking.apogeeAltitudeKm).toBeGreaterThanOrEqual(180);
+    expect(parking.apogeeAltitudeKm!).toBeLessThanOrEqual(250);
+    // Equatorial launch due east -> near-equatorial inclination, preserved
+    // by the in-plane TLI burn.
+    expect(result.finalElements!.inclinationDeg).toBeLessThan(1);
   });
 
   it("approximately reproduces the documented calibration figures", () => {
@@ -80,7 +86,12 @@ describe("failure scenarios", () => {
   it("adequate liftoff thrust but insufficient orbital energy", () => {
     // Heavy payload, big first stage, undersized upper stage: stages fine,
     // but the upper stage cannot circularize and the vehicle reenters.
-    const result = fly({ payloadWetMassKg: 20_000, stage1PropellantKg: 240_000, stage2PropellantKg: 15_000 });
+    const result = fly({
+      payloadWetMassKg: 20_000,
+      stage1PropellantKg: 240_000,
+      stage1EngineCount: 4,
+      stage2PropellantKg: 15_000,
+    });
     expect(result.outcome).toBe("insufficient_orbital_energy");
     expect(result.orbitAchieved).toBe(false);
   });
@@ -105,14 +116,15 @@ describe("failure scenarios", () => {
 
   it("structural max-Q failure", () => {
     // Overpowered first stage accelerates too hard low in the atmosphere.
-    const result = fly({ stage1EngineCount: 5 });
+    const result = fly({ stage1EngineCount: 7, diameterM: 4.0, payloadWetMassKg: 500, finSpanM: 2.6 });
     expect(result.outcome).toBe("dynamic_pressure_limit");
     expect(result.maxQPa).toBeGreaterThan(45_000);
   });
 
   it("vacuum engine igniting too low fails", () => {
-    // Big slow first stage stages below 60 km.
-    const result = fly({ stage1PropellantKg: 280_000 });
+    // Under-engined relative to its propellant load: a slow first stage
+    // stages below 60 km.
+    const result = fly({ stage1PropellantKg: 240_000, stage1EngineCount: 4 });
     expect(result.outcome).toBe("vacuum_engine_low_ignition");
   });
 

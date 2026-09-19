@@ -7,6 +7,7 @@
 import { useMemo, useState } from "react";
 
 import { analyzePayload, createPayloadHandoff, type PayloadAnalysis } from "../../sim/orbital/payload";
+import { MOON_RADIUS_M } from "../../sim/lunar/moon";
 import type { MonteCarloSummary } from "../../sim/orbital/types";
 import type { AscentRobustnessResult, AscentSensitivityResult } from "../../sim/ascent/robustness";
 import { useAppStore, simClient } from "../store";
@@ -17,31 +18,12 @@ import {
   copyConfigToClipboard,
   downloadText,
 } from "../../persistence/report";
-import type { FlightOutcome } from "../../sim/ascent/flight";
-
-const OUTCOME_PRESENTATION: Record<FlightOutcome, { title: string; suggestion: string }> = {
-  target_orbit: { title: "TARGET ORBIT ACHIEVED", suggestion: "The payload is in the target corridor. Run the payload mission analysis to check three-year survival." },
-  sustained_orbit: { title: "ORBIT ACHIEVED (OFF-TARGET)", suggestion: "A safe bound orbit outside the target corridor. The autopilot did its best with this build's energy margin." },
-  low_perigee: { title: "ORBIT NOT SUSTAINED", suggestion: "Perigee below 150 km: the orbit decays. More upper-stage capability would help." },
-  unbound_trajectory: { title: "TRAJECTORY UNBOUND", suggestion: "The vehicle escaped instead of closing its orbit. Less upper-stage burn or an earlier cutoff." },
-  insufficient_orbital_energy: { title: "INSUFFICIENT ORBITAL ENERGY", suggestion: "The upper stage exhausted before reaching a sustainable orbit and the vehicle reentered. Add upper-stage propellant or a more capable first stage." },
-  impact: { title: "GROUND IMPACT", suggestion: "The vehicle came back down. Check the trajectory and staging." },
-  invalid_build: { title: "INVALID BUILD", suggestion: "Resolve the build errors before launch." },
-  insufficient_liftoff_thrust: { title: "INSUFFICIENT LIFTOFF THRUST", suggestion: "Thrust-to-weight below 1: the vehicle cannot leave the pad. Add engines or reduce mass." },
-  acceleration_limit: { title: "ACCELERATION LIMIT EXCEEDED", suggestion: "Even at minimum throttle the vehicle exceeded 5 g. A lower-thrust upper-stage engine or heavier upper stack." },
-  dynamic_pressure_limit: { title: "MAX-Q STRUCTURAL FAILURE", suggestion: "Dynamic pressure exceeded 45 kPa. A gentler build (less liftoff thrust) or a narrower body reduces peak dynamic pressure." },
-  aerodynamic_instability: { title: "AERODYNAMIC INSTABILITY", suggestion: "Center of pressure ahead of center of mass in the atmosphere. Increase fin span." },
-  slenderness_limit: { title: "STRUCTURAL FAILURE (SLENDERNESS)", suggestion: "The stack is too long for its diameter. Increase diameter or shorten the tanks." },
-  vacuum_engine_low_ignition: { title: "VACUUM ENGINE IGNITED TOO LOW", suggestion: "This engine needs ~60 km. Use a sea-level upper-stage engine or a more capable first stage." },
-  timeout: { title: "SIMULATION TIMEOUT", suggestion: "The flight did not reach a terminal state in time." },
-};
-
-function outcomeTitle(outcome: FlightOutcome): string {
-  return OUTCOME_PRESENTATION[outcome]?.title ?? outcome;
+function outcomeTitle(outcome: string): string {
+  return outcome.replaceAll("_", " ").toUpperCase();
 }
 
 export function DebriefScreen() {
-  const { flight, setScreen, returnToBuild, runSummaries } = useAppStore();
+  const { flight, setScreen, returnToBuild, startExperiment, runSummaries, persistenceNotice } = useAppStore();
   const [hoverTimeS, setHoverTimeS] = useState<number | null>(null);
   const [payloadAnalysis, setPayloadAnalysis] = useState<PayloadAnalysis | null>(null);
   const [monteCarlo, setMonteCarlo] = useState<MonteCarloSummary | null>(null);
@@ -56,7 +38,11 @@ export function DebriefScreen() {
       flight
         ? createPayloadHandoff({
             orbitAchieved: flight.orbitAchieved,
-            finalElements: flight.finalElements,
+            // The parking orbit, not `finalElements`: every orbit-achieving
+            // flight now continues through TLI (LUNAR_MISSION_PLAN.md
+            // §2.1), so `finalElements` describes the trans-lunar
+            // trajectory, not something a LEO payload mission model can use.
+            finalElements: flight.parkingElements ?? flight.finalElements,
             stage2PropellantRemainingKg: flight.stage2PropellantRemainingKg,
             payloadWetMassKg: flight.config.payloadWetMassKg,
             weather: flight.weather,
@@ -75,9 +61,17 @@ export function DebriefScreen() {
     );
   }
 
-  const presentation = OUTCOME_PRESENTATION[flight.outcome];
+  const assessment = flight.assessment;
+  const diagnosis = assessment.primaryDiagnosis;
+  const currentSummary = runSummaries.find((run) => run.seed === flight.seed);
+  const baseline = currentSummary?.baselineRunId ? runSummaries.find((run) => run.id === currentSummary.baselineRunId) : null;
   const failureEvent = flight.events.find((e) => e.id === "failed");
-  const el = flight.finalElements;
+  // The parking orbit, not `finalElements`: any flight that attempted TLI
+  // has `finalElements` describing the trans-lunar trajectory instead
+  // (LUNAR_MISSION_PLAN.md §2.1). Fall back to `finalElements` only for
+  // flights that never got that far (e.g. `low_perigee`).
+  const el = flight.parkingElements ?? flight.finalElements;
+  const lunar = flight.lunarTransfer;
 
   const channels: ChartChannel[] = [
     { label: "Altitude", unit: "km", color: "#63ddeb", value: (t, i) => t.altitudeKm[i] },
@@ -160,7 +154,7 @@ export function DebriefScreen() {
   return (
     <div className="screen debrief">
       <header className={`outcome ${flight.orbitAchieved ? "success" : "failure"}`}>
-        <h1>{outcomeTitle(flight.outcome)}</h1>
+        <h1>{diagnosis?.title ?? outcomeTitle(flight.outcome)}</h1>
         {el && (
           <p className="orbit-line">
             Orbit: {el.perigeeAltitudeKm.toFixed(0)} × {el.apogeeAltitudeKm?.toFixed(0) ?? "?"} km, inclination {el.inclinationDeg.toFixed(1)}°
@@ -169,16 +163,47 @@ export function DebriefScreen() {
       </header>
 
       <section className="cause-card">
-        <h2>Primary cause</h2>
-        <p className="cause-detail">{flight.failureDetail ?? "The flight met its objective."}</p>
+        <h2>{diagnosis ? "Primary diagnosis" : "Flight result"}</h2>
+        <p className="cause-detail">{diagnosis?.explanation ?? flight.failureDetail ?? "The flight met its objective."}</p>
         {failureEvent && <p className="cause-time">at {failureEvent.t.toFixed(1)} s</p>}
-        <p className="cause-suggestion">{presentation.suggestion}</p>
+        {diagnosis && <p className="cause-suggestion">{diagnosis.evidence} Try one change: {diagnosis.recommendedExperiment.label}.</p>}
         <div className="evidence">
           <span>Max-Q {(flight.maxQPa / 1000).toFixed(1)} kPa (limit 45)</span>
           <span>Peak g {flight.maxG.toFixed(2)} (limit 5.0)</span>
           {el && <span>Perigee {el.perigeeAltitudeKm.toFixed(0)} km (sustained ≥ 150)</span>}
         </div>
       </section>
+
+      {lunar && (
+        <section className="analysis">
+          <h2>Trans-lunar injection — {outcomeTitle(lunar.classification)}</h2>
+          <div className="evidence">
+            <span>
+              Δv spent {lunar.deltaVAvailableMs.toFixed(0)} m/s of {lunar.deltaVRequiredMs.toFixed(0)} m/s required
+            </span>
+            <span>Achieved apogee {(lunar.achievedApogeeM / 1000).toFixed(0)} km</span>
+            {lunar.timeOfFlightS !== null && (
+              <span>Time of flight {(lunar.timeOfFlightS / 86_400).toFixed(1)} days</span>
+            )}
+            {lunar.periseleneRadiusM !== null && (
+              <span>Periselene altitude {((lunar.periseleneRadiusM - 1_737_400) / 1000).toFixed(0)} km</span>
+            )}
+          </div>
+          <p className="dim small">
+            {lunar.classification === "lunar_arrival" &&
+              "The transfer reached the Moon's sphere of influence within the aim corridor."}
+            {lunar.classification === "lunar_impact" &&
+              "The transfer reached the Moon's sphere of influence, but periselene fell below the surface."}
+            {lunar.classification === "lunar_miss" &&
+              "The transfer either missed the Moon's sphere of influence or landed outside the aim corridor."}
+            {lunar.classification === "tli_shortfall" &&
+              "The upper stage ran out of usable delta-v before the transfer could reach the Moon's distance."}
+            {lunar.classification === "earth_escape" &&
+              "The burn carried far more energy than the transfer needed."}
+            {" "}The Earth-Moon coast is evaluated analytically (patched conic), not simulated step by step, and the Moon's own gravity during the Earth leg is not modelled — see LUNAR_MISSION_PLAN.md §3.
+          </p>
+        </section>
+      )}
 
       <section className="plots">
         {channels.map((channel) => (
@@ -196,6 +221,11 @@ export function DebriefScreen() {
       <div className="actions">
         <button onClick={() => setScreen("flight")}>↺ Replay</button>
         <button onClick={returnToBuild}>← Return to build</button>
+        {currentSummary && diagnosis && (
+          <button onClick={() => startExperiment(currentSummary, diagnosis.recommendedExperiment)}>
+            Try one change: {diagnosis.recommendedExperiment.label}
+          </button>
+        )}
         {handoff && (
           <button onClick={runPayloadMission} disabled={analysisProgress !== null}>
             Analyze payload mission
@@ -220,6 +250,26 @@ export function DebriefScreen() {
         </button>
       </div>
       {analysisProgress && <p className="dim">{analysisProgress}</p>}
+      {persistenceNotice && <p className="check warning">⚠ {persistenceNotice}</p>}
+
+      {baseline && (() => {
+        const comparison = compareRunToCurrent(flight, baseline);
+        const label = comparison.kind === "one_relevant_change"
+          ? "Controlled experiment"
+          : comparison.kind === "no_change"
+            ? "No build change"
+            : comparison.kind === "incompatible_baseline"
+              ? "Baseline needs re-evaluation"
+              : "Multiple changes — correlation only";
+        return (
+          <section className="analysis">
+            <h2>{label}</h2>
+            <p className="analysis-line">Outcome: {comparison.outcomeChange}</p>
+            <p className="dim small">{comparison.kind === "one_relevant_change" ? "This run changed the suggested control only, so the comparison can support a causal explanation." : "This comparison reports measurements without claiming that one change caused the difference."}</p>
+            <ul>{comparison.configDiffs.map((diff) => <li key={diff}>{diff}</li>)}</ul>
+          </section>
+        );
+      })()}
 
       {runSummaries.length > 1 && (
         <section className="analysis">
@@ -315,9 +365,15 @@ export function DebriefScreen() {
           <p>Max-Q p95 {(robustness.maxQPaP95 / 1000).toFixed(1)} kPa; peak-g p95 {robustness.maxGP95.toFixed(2)} g</p>
           <ul>
             {Object.entries(robustness.outcomeCounts).map(([outcome, count]) => (
-              <li key={outcome}>{outcomeTitle(outcome as FlightOutcome)}: {count}</li>
+              <li key={outcome}>{outcomeTitle(outcome)}: {count}</li>
             ))}
           </ul>
+          {Object.keys(robustness.primaryDiagnosisCounts).length > 0 && (
+            <>
+              <h3>Primary diagnoses</h3>
+              <ul>{Object.entries(robustness.primaryDiagnosisCounts).map(([id, count]) => <li key={id}>{id.replaceAll("_", " ")}: {count}</li>)}</ul>
+            </>
+          )}
         </section>
       )}
 

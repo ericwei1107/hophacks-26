@@ -12,6 +12,8 @@ import type { MonteCarloSummary } from "../sim/orbital/types";
 import type { SpacecraftMission } from "../sim/orbital/types";
 import type { WeatherSnapshot } from "../sim/orbital/weather";
 import type { OrbitalElements } from "../sim/physics/orbital";
+import type { FlightAssessment, FlightEvidence } from "../sim/outcomes/types";
+import type { TransferResult } from "../sim/lunar/transfer";
 
 /** Plain-data flight input (class instances cannot cross the worker boundary). */
 export interface SerializedFlightInput {
@@ -37,6 +39,10 @@ export interface SerializableFlightResult {
   events: FlightEvent[];
   telemetry: Telemetry;
   finalElements: OrbitalElements | null;
+  /** Parking-orbit elements, captured before any trans-lunar injection attempt — the meaningful "orbit reached" for a lunar-outcome flight, since `finalElements` then describes the trans-lunar trajectory instead. */
+  parkingElements: OrbitalElements | null;
+  /** Set once a trans-lunar injection was attempted; null otherwise. */
+  lunarTransfer: TransferResult | null;
   maxQPa: number;
   maxG: number;
   stage2PropellantRemainingKg: number;
@@ -47,6 +53,8 @@ export interface SerializableFlightResult {
   catalogVersion: string;
   guidanceVersion: string;
   totalTimeS: number;
+  evidence: FlightEvidence;
+  assessment: FlightAssessment;
 }
 
 export interface OrbitalMonteCarloRequest {

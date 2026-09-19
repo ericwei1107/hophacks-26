@@ -3,6 +3,9 @@
  * surface-projected ground track. The trail reveals up to the current
  * playback time via the instanced segment count; geometries are rebuilt only
  * when the flight changes.
+ *
+ * Both are baked once into the scene's inertial frame; the enclosing group is
+ * what moves each frame, so no Earth-scale coordinate is recomputed here.
  */
 
 import { useEffect, useMemo } from "react";
@@ -14,18 +17,20 @@ import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 
 import { EARTH_RADIUS } from "../../sim/physics/constants";
 import type { Telemetry } from "../../sim/ascent/flight";
-import { playbackClock } from "../playbackClock";
+import type { RenderFrame } from "../../protocol";
+import { eciToInertialSceneKm } from "../../renderers/threeAxes";
 
 const EARTH_RADIUS_KM = EARTH_RADIUS / 1000;
 
-/** ECI (x,y,z) meters -> scene (x, z, -y) kilometers. */
-function toScene(out: [number, number, number], x: number, y: number, z: number): void {
-  out[0] = x / 1000;
-  out[1] = z / 1000;
-  out[2] = -y / 1000;
-}
-
-export function Trajectory({ telemetry, lowEffects }: { telemetry: Telemetry; lowEffects: boolean }) {
+export function Trajectory({
+  telemetry,
+  frameRef,
+  lowEffects,
+}: {
+  telemetry: Telemetry;
+  frameRef: { current: RenderFrame | null };
+  lowEffects: boolean;
+}) {
   const size = useThree((s) => s.size);
 
   const { trail, groundTrack, maxSegments, stride } = useMemo(() => {
@@ -36,15 +41,15 @@ export function Trajectory({ telemetry, lowEffects }: { telemetry: Telemetry; lo
     const positions: number[] = [];
     const colors: number[] = [];
     const ground: number[] = [];
-    const v: [number, number, number] = [0, 0, 0];
+    const v = new THREE.Vector3();
 
     const newest = new THREE.Color("#63ddeb");
     const oldest = new THREE.Color("#1a3a4a");
     const c = new THREE.Color();
 
     for (let i = 0; i < n; i += stride) {
-      toScene(v, telemetry.posX[i], telemetry.posY[i], telemetry.posZ[i]);
-      positions.push(v[0], v[1], v[2]);
+      eciToInertialSceneKm(telemetry.posX[i], telemetry.posY[i], telemetry.posZ[i], v);
+      positions.push(v.x, v.y, v.z);
       const age = i / (n - 1);
       c.copy(oldest).lerp(newest, age * age);
       colors.push(c.r, c.g, c.b);
@@ -52,7 +57,7 @@ export function Trajectory({ telemetry, lowEffects }: { telemetry: Telemetry; lo
       const r = Math.hypot(telemetry.posX[i], telemetry.posY[i], telemetry.posZ[i]);
       if (r > 0) {
         const scale = (EARTH_RADIUS_KM * 1.002) / r;
-        ground.push(v[0] * scale, v[1] * scale, v[2] * scale);
+        ground.push(v.x * scale, v.y * scale, v.z * scale);
       }
     }
 
@@ -96,11 +101,9 @@ export function Trajectory({ telemetry, lowEffects }: { telemetry: Telemetry; lo
     const mat = trail.material as LineMaterial;
     mat.resolution.set(size.width, size.height);
 
-    // Reveal the trail up to the playback position (in decimated points).
-    const index = Math.min(
-      maxSegments,
-      Math.max(0, Math.floor(playbackClock.timeS / (0.05 * stride))),
-    );
+    // Reveal the trail up to the position of the frame being drawn.
+    const t = frameRef.current?.t ?? 0;
+    const index = Math.min(maxSegments, Math.max(0, Math.floor(t / (0.05 * stride))));
     trail.geometry.instanceCount = lowEffects ? maxSegments : index;
     const groundGeom = groundTrack.geometry as THREE.BufferGeometry;
     groundGeom.setDrawRange(0, lowEffects ? maxSegments + 1 : index + 1);

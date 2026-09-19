@@ -1,7 +1,7 @@
 /**
- * Central application store (zustand). High-frequency telemetry playback
- * position is kept out of React state (see playbackClock) per R3F performance
- * guidance.
+ * Central application store (zustand). High-frequency playback position is
+ * deliberately absent: PlaybackController owns it and the renderer reads it
+ * every animation frame, so it never causes a React render.
  */
 
 import { create } from "zustand";
@@ -25,6 +25,7 @@ import { defaultEnvironment } from "../sim/ascent/flight";
 import { referenceSnapshot, type WeatherSnapshot } from "../sim/orbital/weather";
 import { SimClient } from "../workers/client";
 import { serializeFlightInput, type SerializableFlightResult } from "../workers/serialize";
+import type { RecommendedExperiment } from "../sim/outcomes/types";
 
 export type Screen = "assembly" | "flight" | "debrief";
 export type CameraMode = "overhead" | "chase" | "ground" | "orbit";
@@ -45,6 +46,9 @@ interface AppStore {
   runSummaries: RunSummary[];
   /** True when the config changed since the last recorded run. */
   analysisStale: boolean;
+  experimentBaseline: RunSummary | null;
+  suggestedExperiment: RecommendedExperiment | null;
+  persistenceNotice: string | null;
 
   flight: SerializableFlightResult | null;
   flightLoading: boolean;
@@ -53,6 +57,8 @@ interface AppStore {
   playing: boolean;
   playbackSpeed: number;
   cameraMode: CameraMode;
+  /** 1 = close rocket framing. Larger values pull back; still centered on the vehicle. */
+  cameraZoom: number;
 
   setScreen: (screen: Screen) => void;
   updateConfig: (patch: Partial<RocketConfig>) => void;
@@ -64,8 +70,13 @@ interface AppStore {
   setPlaying: (playing: boolean) => void;
   setPlaybackSpeed: (speed: number) => void;
   setCameraMode: (mode: CameraMode) => void;
+  setCameraZoom: (zoom: number) => void;
   returnToBuild: () => void;
+  startExperiment: (baseline: RunSummary, suggestion: RecommendedExperiment) => void;
 }
+
+const MIN_CAMERA_ZOOM = 0.0005;
+const MAX_CAMERA_ZOOM = 6;
 
 let activeFlightRunId: number | null = null;
 
@@ -81,6 +92,9 @@ export const useAppStore = create<AppStore>((set, get) => {
     weather: referenceSnapshot(),
     runSummaries: initialSummaries,
     analysisStale: isAnalysisStale(initialConfig, initialSummaries[0] ?? null),
+    experimentBaseline: null,
+    suggestedExperiment: null,
+    persistenceNotice: null,
 
     flight: null,
     flightLoading: false,
@@ -89,6 +103,7 @@ export const useAppStore = create<AppStore>((set, get) => {
     playing: true,
     playbackSpeed: 1,
     cameraMode: "overhead",
+    cameraZoom: 1,
 
     setScreen: (screen) => set({ screen }),
 
@@ -148,21 +163,32 @@ export const useAppStore = create<AppStore>((set, get) => {
           targetOrbitAchieved: result.targetOrbitAchieved,
           maxQPa: result.maxQPa,
           maxG: result.maxG,
-          perigeeKm: result.finalElements?.perigeeAltitudeKm ?? null,
-          apogeeKm: result.finalElements?.apogeeAltitudeKm ?? null,
+          // The parking orbit, not `finalElements`: a lunar-outcome flight's
+          // `finalElements` describes the trans-lunar trajectory instead
+          // (LUNAR_MISSION_PLAN.md §2.1). `parkingElements` is set exactly
+          // when `orbitAchieved` is true.
+          perigeeKm: result.parkingElements?.perigeeAltitudeKm ?? result.finalElements?.perigeeAltitudeKm ?? null,
+          apogeeKm: result.parkingElements?.apogeeAltitudeKm ?? result.finalElements?.apogeeAltitudeKm ?? null,
           modelVersion: result.modelVersion,
           catalogVersion: result.catalogVersion,
           guidanceVersion: result.guidanceVersion,
           seed: result.seed,
+          assessment: result.assessment,
+          lunarTransfer: result.lunarTransfer,
+          ...(get().experimentBaseline ? { baselineRunId: get().experimentBaseline!.id } : {}),
         };
-        const runSummaries = pushRunSummary(summary);
+        const saved = pushRunSummary(summary);
         set({
           flight: result,
           flightLoading: false,
           screen: "flight",
           playing: true,
-          runSummaries,
+          cameraZoom: 1,
+          runSummaries: saved.runs,
           analysisStale: false,
+          persistenceNotice: saved.persisted ? null : "This run is available for comparison until you reload, but browser storage could not save it.",
+          experimentBaseline: null,
+          suggestedExperiment: null,
         });
       } catch (error) {
         if (activeFlightRunId === runId) {
@@ -183,9 +209,21 @@ export const useAppStore = create<AppStore>((set, get) => {
     setPlaying: (playing) => set({ playing }),
     setPlaybackSpeed: (playbackSpeed) => set({ playbackSpeed }),
     setCameraMode: (cameraMode) => set({ cameraMode }),
+    setCameraZoom: (zoom) =>
+      set({ cameraZoom: Math.min(MAX_CAMERA_ZOOM, Math.max(MIN_CAMERA_ZOOM, zoom)) }),
 
     returnToBuild: () => {
       set({ screen: "assembly", flight: null, playing: false });
+    },
+
+    startExperiment: (baseline, suggestion) => {
+      set({
+        screen: "assembly",
+        flight: null,
+        playing: false,
+        experimentBaseline: baseline,
+        suggestedExperiment: suggestion,
+      });
     },
   };
 });
