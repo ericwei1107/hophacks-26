@@ -127,6 +127,13 @@ export interface DerivedRocket {
  */
 const PACKING_RATIOS = [1.0, 0.5, 0.4641, 0.4142, 0.3702, 0.3611, 0.3333, 0.3026, 0.2767];
 
+/**
+ * Educational license: real engine packs tolerate nozzle overhang and gimbal
+ * clearance, so the packing check allows 5% tighter than the mathematical
+ * optimum.
+ */
+const PACKING_TOLERANCE = 0.95;
+
 export function enginesFitDiameter(
   nozzleDiameterM: number,
   count: number,
@@ -135,7 +142,7 @@ export function enginesFitDiameter(
   if (count < 1 || count > 9) {
     return false;
   }
-  const ratio = PACKING_RATIOS[count - 1];
+  const ratio = PACKING_RATIOS[count - 1] / PACKING_TOLERANCE;
   const requiredRadius = nozzleDiameterM / 2 / ratio;
   return requiredRadius <= bodyDiameterM / 2 + 1e-9;
 }
@@ -338,10 +345,12 @@ export function deriveRocket(config: RocketConfig, catalog: EngineCatalog): Deri
 
   // --- Warnings ---------------------------------------------------------------
   if (slenderness > SLENDERNESS_LIMIT) {
+    // Not a blocking error: a physically assembled but poor design may still
+    // be launched to demonstrate the structural failure at liftoff.
     checks.push({
       id: "slenderness_limit",
-      severity: "error",
-      message: `Slenderness ${slenderness.toFixed(1)} exceeds the structural limit of ${SLENDERNESS_LIMIT}: the stack cannot survive launch loads.`,
+      severity: "warning",
+      message: `Slenderness ${slenderness.toFixed(1)} exceeds the structural limit of ${SLENDERNESS_LIMIT}: the stack will not survive liftoff loads.`,
     });
   } else if (slenderness > SLENDERNESS_WARNING) {
     checks.push({

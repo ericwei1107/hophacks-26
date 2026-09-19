@@ -106,10 +106,13 @@ describe("deriveRocket: blocking checks", () => {
     expect(rocket.checks.some((c) => c.id === "engine_packing")).toBe(true);
   });
 
-  it("flags excessive slenderness as a structural error", () => {
+  it("flags excessive slenderness as a warning (launch demonstrates the failure)", () => {
     const rocket = derive({ diameterM: 1.0, stage1PropellantKg: 400_000 });
     expect(rocket.slenderness).toBeGreaterThan(20);
-    expect(rocket.checks.some((c) => c.id === "slenderness_limit" && c.severity === "error")).toBe(true);
+    const check = rocket.checks.find((c) => c.id === "slenderness_limit");
+    // Physically assembled but poor designs may still launch; the structural
+    // failure happens at liftoff in the solver, not at build time.
+    expect(check?.severity).toBe("warning");
   });
 });
 
