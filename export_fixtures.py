@@ -187,6 +187,40 @@ def export_perturbed_cases(n: int = 64, seed: int = 42) -> dict:
     })
 
 
+def export_corrections() -> dict:
+    """Before/after pairs for intentional corrections.
+
+    "before" values are frozen snapshots of the pre-correction Python code;
+    "after" values are computed live, so any regression in a corrected path
+    breaks the parity tests on both sides.
+    """
+    failing = MISSIONS["failing"]
+    after = s.simulate(failing, REFERENCE_WEATHER)
+    return envelope("corrections", {
+        "decay_stops_at_reentry_boundary": {
+            "description": (
+                "Unpowered decay used to overshoot the reentry boundary in "
+                "one 7-day step and report negative altitudes. It now stops "
+                "at the boundary with a shortened final timestep."
+            ),
+            "mission": failing.to_dict(),
+            "before": {
+                "final_altitude": -252.80226690325162,
+                "orbital_decay": 652.8022669032516,
+                "failure_reasons": [
+                    "insufficient_delta_v", "insufficient_propellant",
+                    "below_operating_altitude", "orbital_decay",
+                ],
+            },
+            "after": {
+                "final_altitude": after.final_altitude,
+                "orbital_decay": after.orbital_decay,
+                "failure_reasons": after.failure_reasons,
+            },
+        },
+    })
+
+
 def main() -> None:
     FIXTURE_DIR.mkdir(exist_ok=True)
     exports = {
@@ -194,6 +228,7 @@ def main() -> None:
         "missions.json": export_missions(),
         "scalar_helpers.json": export_scalar_helpers(),
         "perturbed_cases.json": export_perturbed_cases(),
+        "corrections.json": export_corrections(),
     }
     for filename, data in exports.items():
         path = FIXTURE_DIR / filename

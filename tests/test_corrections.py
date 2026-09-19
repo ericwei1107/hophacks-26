@@ -81,3 +81,22 @@ def test_monte_carlo_rejects_non_positive_counts(passing_mission, reference_weat
         s.run_overall_monte_carlo(passing_mission, reference_weather, n=-5)
     with pytest.raises(ValueError):
         s.run_parameter_sensitivity(passing_mission, reference_weather, n=0)
+
+
+# ---------------------------------------------------------------------------
+# Correction: orbital decay stops at the reentry boundary
+# ---------------------------------------------------------------------------
+
+def test_decay_stops_at_reentry_boundary(failing_mission, reference_weather):
+    # Before: final_altitude -252.80226690325162 km, decay 652.8022669032516 km.
+    # After: decay clamps at the 120 km boundary with a shortened final step.
+    result = s.simulate(failing_mission, reference_weather)
+    assert result.final_altitude == pytest.approx(120.0)
+    assert result.orbital_decay == pytest.approx(280.0)
+    assert "orbital_decay" in result.failure_reasons
+
+
+def test_decay_never_produces_negative_altitude(reference_weather):
+    mission = make_mission(target_altitude=130.0, fuel=1.0, isp=100.0, lifespan=10.0)
+    result = s.simulate(mission, reference_weather)
+    assert result.final_altitude >= s.REENTRY_ALTITUDE_KM

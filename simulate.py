@@ -236,16 +236,24 @@ def estimate_propellant_required(mission: SpacecraftMission, required_delta_v: f
     return mission.mass * (mass_ratio - 1)
 
 def estimate_unpowered_decay(mission: SpacecraftMission, weather: SpaceWeather, duration_s: float, spacecraft_mass: float) -> float:
+    """Altitude lost to drag over duration_s with no stationkeeping.
+
+    This fallback approximates a mission that performs no stationkeeping at
+    all; it does not predict the exact moment propulsion runs out. Decay stops
+    at the reentry boundary: the final step is shortened so the trajectory
+    never produces an altitude below REENTRY_ALTITUDE_KM.
+    """
     altitude = mission.target_altitude * 1000
+    reentry_m = REENTRY_ALTITUDE_KM * 1000
     timestep = 7 * SECONDS_PER_DAY
     steps = max(1, math.ceil(duration_s / timestep))
     total_altitude_loss = 0.0
 
     for _ in range(steps):
-        current_altitude_km = altitude / 1000
-        if current_altitude_km <= REENTRY_ALTITUDE_KM:
+        if altitude <= reentry_m:
             break
 
+        current_altitude_km = altitude / 1000
         radius = EARTH_RADIUS + altitude
         density = estimate_atmospheric_density(current_altitude_km, weather, mission.target_inclination)
         velocity = atmospheric_relative_velocity(current_altitude_km, mission.target_inclination)
@@ -253,6 +261,13 @@ def estimate_unpowered_decay(mission: SpacecraftMission, weather: SpaceWeather, 
         drag_acceleration = drag_force / spacecraft_mass
         decay_rate = -2 * radius ** 2 * drag_acceleration * velocity / MU_EARTH
         altitude_change = decay_rate * timestep
+
+        if altitude + altitude_change <= reentry_m:
+            # Shortened final timestep: integrate only to the reentry boundary.
+            fraction = (altitude - reentry_m) / (-altitude_change)
+            total_altitude_loss += abs(altitude_change) * fraction / 1000
+            break
+
         total_altitude_loss += abs(altitude_change) / 1000
         altitude += altitude_change
 
@@ -359,7 +374,8 @@ def simulate(mission: SpacecraftMission, weather: SpaceWeather, ops: Operational
 
         if final_altitude < MIN_OPERATING_ALTITUDE_KM:
             failures.append("below_operating_altitude")
-        if final_altitude < REENTRY_ALTITUDE_KM:
+        # Decay stops at the reentry boundary; reaching it means reentry.
+        if final_altitude <= REENTRY_ALTITUDE_KM + 1e-6:
             failures.append("orbital_decay")
 
     return SimulationResult(

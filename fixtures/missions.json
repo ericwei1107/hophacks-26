@@ -100,8 +100,8 @@
           "propellant_required": 298.0531551504839,
           "propellant_remaining": -238.05315515048392,
           "initial_altitude": 400.0,
-          "final_altitude": -252.80226690325162,
-          "orbital_decay": 652.8022669032516,
+          "final_altitude": 120.00000000000006,
+          "orbital_decay": 279.99999999999994,
           "average_density": 1.4366903350001435e-12,
           "average_drag": 0.002158258072383038
         }

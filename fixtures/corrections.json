@@ -1,0 +1,40 @@
+{
+  "fixture": "corrections",
+  "model_version": "1.0.0",
+  "generator": "export_fixtures.py (Python reference)",
+  "payload": {
+    "decay_stops_at_reentry_boundary": {
+      "description": "Unpowered decay used to overshoot the reentry boundary in one 7-day step and report negative altitudes. It now stops at the boundary with a shortened final timestep.",
+      "mission": {
+        "mass": 1000.0,
+        "fuel": 60.0,
+        "lifespan": 7.0,
+        "target_altitude": 400.0,
+        "target_inclination": 97.4,
+        "cross_section_area": 20.0,
+        "drag_coefficient": 2.5,
+        "isp": 220.0
+      },
+      "before": {
+        "final_altitude": -252.80226690325162,
+        "orbital_decay": 652.8022669032516,
+        "failure_reasons": [
+          "insufficient_delta_v",
+          "insufficient_propellant",
+          "below_operating_altitude",
+          "orbital_decay"
+        ]
+      },
+      "after": {
+        "final_altitude": 120.00000000000006,
+        "orbital_decay": 279.99999999999994,
+        "failure_reasons": [
+          "insufficient_delta_v",
+          "insufficient_propellant",
+          "below_operating_altitude",
+          "orbital_decay"
+        ]
+      }
+    }
+  }
+}

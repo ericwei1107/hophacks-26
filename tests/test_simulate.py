@@ -93,13 +93,12 @@ def test_failing_mission(failing_mission, reference_weather):
     assert result.required_delta_v == pytest.approx(562.8078131413511)
 
 
-def test_known_defect_decay_below_surface(failing_mission, reference_weather):
-    """Documents the pre-correction behavior: decay can cross the reentry
-    boundary in one step and produce a negative altitude. The correction
-    commit updates this test and adds before/after fixtures."""
+def test_failing_mission_stays_above_surface(failing_mission, reference_weather):
+    # Corrected behavior: decay stops at the reentry boundary. The
+    # pre-correction values (-252.8 km final altitude) are preserved in
+    # fixtures/corrections.json.
     result = s.simulate(failing_mission, reference_weather)
-    assert result.final_altitude == pytest.approx(-252.80226690325162)
-    assert result.orbital_decay == pytest.approx(652.8022669032516)
+    assert result.final_altitude >= s.REENTRY_ALTITUDE_KM
 
 
 def test_invalid_inputs_fail_before_calculation(reference_weather):
