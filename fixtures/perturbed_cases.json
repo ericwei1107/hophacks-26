@@ -1,0 +1,2715 @@
+{
+  "fixture": "perturbed_cases",
+  "model_version": "1.0.0",
+  "generator": "export_fixtures.py (Python reference)",
+  "payload": {
+    "base_mission": {
+      "mass": 750.0,
+      "fuel": 200.0,
+      "lifespan": 5.0,
+      "target_altitude": 500.0,
+      "target_inclination": 51.6,
+      "cross_section_area": 10.0,
+      "drag_coefficient": 2.2,
+      "isp": 325.0
+    },
+    "base_weather": {
+      "kp": 3.0,
+      "f107": 150.0,
+      "solar_wind_speed": 400.0,
+      "solar_wind_density": 5.0,
+      "solar_wind_temperature": 100000.0
+    },
+    "seed": 42,
+    "cases": [
+      {
+        "index": 0,
+        "mission": {
+          "mass": 751.5562739049104,
+          "fuel": 195.87612659784511,
+          "lifespan": 5.090213793260105,
+          "target_altitude": 503.90723553285653,
+          "target_inclination": 51.40861757432567,
+          "cross_section_area": 8.939815762451662,
+          "drag_coefficient": 2.3446267830177803,
+          "isp": 317.30124788337366
+        },
+        "weather": {
+          "kp": 3.5149852869674336,
+          "f107": 154.55440543688076,
+          "solar_wind_speed": 398.72828556647914,
+          "solar_wind_density": 5.119635868531213,
+          "solar_wind_temperature": 107649.69648515388
+        },
+        "ops": {
+          "insertion_altitude_error_km": 2.9561063425344236,
+          "insertion_inclination_error_deg": 0.9622004065104102,
+          "cam_scale": 1.3671026316171335
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 720.6905479117548,
+          "required_delta_v": 280.0213186077918,
+          "drag_delta_v": 22.741512811404718,
+          "collision_avoidance_delta_v": 24.878545931965775,
+          "insertion_delta_v": 131.14543028583287,
+          "disposal_delta_v": 101.25582957858842,
+          "propellant_required": 70.76979830230181,
+          "propellant_remaining": 125.1063282955433,
+          "initial_altitude": 503.90723553285653,
+          "final_altitude": 503.90723553285653,
+          "orbital_decay": 0.0,
+          "average_density": 2.1463637203878641e-13,
+          "average_drag": 0.00012026516434664494
+        }
+      },
+      {
+        "index": 1,
+        "mission": {
+          "mass": 759.2183456360146,
+          "fuel": 196.3088985904899,
+          "lifespan": 5.291180068875272,
+          "target_altitude": 468.879888907359,
+          "target_inclination": 51.131584024283164,
+          "cross_section_area": 10.679067216019334,
+          "drag_coefficient": 2.4547377924247176,
+          "isp": 317.5833490825801
+        },
+        "weather": {
+          "kp": 5.509492405867085,
+          "f107": 244.7058697284535,
+          "solar_wind_speed": 588.6706856460403,
+          "solar_wind_density": 11.439205503009092,
+          "solar_wind_temperature": 162432.56613509817
+        },
+        "ops": {
+          "insertion_altitude_error_km": -1.9677120192766204,
+          "insertion_inclination_error_deg": 0.6730423507712012,
+          "cam_scale": 0.5013127752004425
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 716.2372166472685,
+          "required_delta_v": 361.23060137702566,
+          "drag_delta_v": 168.77329527928092,
+          "collision_avoidance_delta_v": 8.940443839635648,
+          "insertion_delta_v": 91.8691725738731,
+          "disposal_delta_v": 91.64768968423596,
+          "propellant_required": 93.36891446950472,
+          "propellant_remaining": 102.93998412098517,
+          "initial_altitude": 468.879888907359,
+          "final_altitude": 468.879888907359,
+          "orbital_decay": 0.0,
+          "average_density": 1.2302512271804372e-12,
+          "average_drag": 0.0008665964790965349
+        }
+      },
+      {
+        "index": 2,
+        "mission": {
+          "mass": 732.5831882506695,
+          "fuel": 187.49285786000468,
+          "lifespan": 4.70370964830103,
+          "target_altitude": 470.062244826707,
+          "target_inclination": 50.50583033751124,
+          "cross_section_area": 10.853412398767983,
+          "drag_coefficient": 2.3185609765349096,
+          "isp": 319.06981562311904
+        },
+        "weather": {
+          "kp": 3.3270594805117106,
+          "f107": 163.70533522383602,
+          "solar_wind_speed": 427.1396815060047,
+          "solar_wind_density": 4.693947492661525,
+          "solar_wind_temperature": 94429.5751945635
+        },
+        "ops": {
+          "insertion_altitude_error_km": 9.153176109661176,
+          "insertion_inclination_error_deg": 0.13885553246348964,
+          "cam_scale": 1.3730118213650857
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 713.0360848469775,
+          "required_delta_v": 195.91719938600576,
+          "drag_delta_v": 52.979085493040664,
+          "collision_avoidance_delta_v": 22.2526559972715,
+          "insertion_delta_v": 28.712019254542604,
+          "disposal_delta_v": 91.973438641151,
+          "propellant_required": 47.33586819688211,
+          "propellant_remaining": 140.15698966312257,
+          "initial_altitude": 470.062244826707,
+          "final_altitude": 470.062244826707,
+          "orbital_decay": 0.0,
+          "average_density": 4.3676691627042706e-13,
+          "average_drag": 0.0002949261649791992
+        }
+      },
+      {
+        "index": 3,
+        "mission": {
+          "mass": 734.3951318386299,
+          "fuel": 193.91756326342482,
+          "lifespan": 5.0037599958382675,
+          "target_altitude": 491.230584302076,
+          "target_inclination": 50.7116732058018,
+          "cross_section_area": 8.5,
+          "drag_coefficient": 2.684,
+          "isp": 311.53402720680475
+        },
+        "weather": {
+          "kp": 2.4482329173247845,
+          "f107": 169.04478772270465,
+          "solar_wind_speed": 350.25286375686846,
+          "solar_wind_density": 5.148052783041242,
+          "solar_wind_temperature": 105348.9202925982
+        },
+        "ops": {
+          "insertion_altitude_error_km": 8.209876626551726,
+          "insertion_inclination_error_deg": -0.053605869533488865,
+          "cam_scale": 1.5360814792834792
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 715.8765855743616,
+          "required_delta_v": 169.946751325049,
+          "drag_delta_v": 31.90022342991346,
+          "collision_avoidance_delta_v": 24.00913199508024,
+          "insertion_delta_v": 16.24876497512192,
+          "disposal_delta_v": 97.78863092493339,
+          "propellant_required": 42.00991124046613,
+          "propellant_remaining": 151.9076520229587,
+          "initial_altitude": 491.230584302076,
+          "final_altitude": 491.230584302076,
+          "orbital_decay": 0.0,
+          "average_density": 2.751897170298898e-13,
+          "average_drag": 0.00016794970007062517
+        }
+      },
+      {
+        "index": 4,
+        "mission": {
+          "mass": 727.8894608093259,
+          "fuel": 193.2492592910314,
+          "lifespan": 5.544029127203334,
+          "target_altitude": 463.93315933787585,
+          "target_inclination": 53.62870216307242,
+          "cross_section_area": 9.58637523573623,
+          "drag_coefficient": 2.317816854548165,
+          "isp": 320.4123218401237
+        },
+        "weather": {
+          "kp": 3.8932504670923853,
+          "f107": 119.79732956873099,
+          "solar_wind_speed": 364.7008552384515,
+          "solar_wind_density": 4.734681216618103,
+          "solar_wind_temperature": 107177.31112081255
+        },
+        "ops": {
+          "insertion_altitude_error_km": -0.31340879079332384,
+          "insertion_inclination_error_deg": -0.3050738999746358,
+          "cam_scale": 1.1290766888362476
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 739.8602465186987,
+          "required_delta_v": 191.01238302364837,
+          "drag_delta_v": 41.258854006764054,
+          "collision_avoidance_delta_v": 18.458094338360247,
+          "insertion_delta_v": 41.01169456468822,
+          "disposal_delta_v": 90.28374011383585,
+          "propellant_required": 45.620947775617424,
+          "propellant_remaining": 147.62831151541397,
+          "initial_altitude": 463.93315933787585,
+          "final_altitude": 463.93315933787585,
+          "orbital_decay": 0.0,
+          "average_density": 3.2381527468569613e-13,
+          "average_drag": 0.00019444007166134427
+        }
+      },
+      {
+        "index": 5,
+        "mission": {
+          "mass": 763.2998761279847,
+          "fuel": 188.9801231565204,
+          "lifespan": 4.7273914152959895,
+          "target_altitude": 487.30265198584726,
+          "target_inclination": 51.85533113258309,
+          "cross_section_area": 8.5,
+          "drag_coefficient": 2.684,
+          "isp": 299.0
+        },
+        "weather": {
+          "kp": 2.7662884150503895,
+          "f107": 180.32768980138613,
+          "solar_wind_speed": 412.6047589042893,
+          "solar_wind_density": 4.770065056143717,
+          "solar_wind_temperature": 89804.96143108555
+        },
+        "ops": {
+          "insertion_altitude_error_km": -4.519482343830022,
+          "insertion_inclination_error_deg": -0.21542882507091798,
+          "cam_scale": 0.7175986043524828
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 648.6239073510069,
+          "required_delta_v": 177.49170074607082,
+          "drag_delta_v": 36.71922094357315,
+          "collision_avoidance_delta_v": 10.3723770251574,
+          "insertion_delta_v": 33.688112956870185,
+          "disposal_delta_v": 96.71198982047008,
+          "propellant_required": 47.63126039403069,
+          "propellant_remaining": 141.34886276248972,
+          "initial_altitude": 487.30265198584726,
+          "final_altitude": 487.30265198584726,
+          "orbital_decay": 0.0,
+          "average_density": 3.44952921240522e-13,
+          "average_drag": 0.00021112947925899702
+        }
+      },
+      {
+        "index": 6,
+        "mission": {
+          "mass": 775.5764643213505,
+          "fuel": 209.722364908527,
+          "lifespan": 4.94235321115917,
+          "target_altitude": 490.8909649548233,
+          "target_inclination": 53.36135753293641,
+          "cross_section_area": 11.087374200342875,
+          "drag_coefficient": 2.681924599617817,
+          "isp": 326.233970043537
+        },
+        "weather": {
+          "kp": 2.6849216654355046,
+          "f107": 144.38659216008588,
+          "solar_wind_speed": 393.42994096556237,
+          "solar_wind_density": 5.192221238760966,
+          "solar_wind_temperature": 88535.49451284843
+        },
+        "ops": {
+          "insertion_altitude_error_km": -0.07694352059461167,
+          "insertion_inclination_error_deg": -0.023248076155458437,
+          "cam_scale": 0.9750505814586122
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 765.7063263642248,
+          "required_delta_v": 152.44336927422756,
+          "drag_delta_v": 31.766751611127223,
+          "collision_avoidance_delta_v": 19.803058499394897,
+          "insertion_delta_v": 3.177974228680279,
+          "disposal_delta_v": 97.69558493502518,
+          "propellant_required": 37.850476736199376,
+          "propellant_remaining": 171.87188817232763,
+          "initial_altitude": 490.8909649548233,
+          "final_altitude": 490.8909649548233,
+          "orbital_decay": 0.0,
+          "average_density": 2.2425155920581823e-13,
+          "average_drag": 0.00017932203756586252
+        }
+      },
+      {
+        "index": 7,
+        "mission": {
+          "mass": 764.8092991145938,
+          "fuel": 209.0485595263365,
+          "lifespan": 4.8484041798763,
+          "target_altitude": 499.338622636443,
+          "target_inclination": 50.47967974397933,
+          "cross_section_area": 11.927274917194389,
+          "drag_coefficient": 2.425593375682109,
+          "isp": 324.3489323907932
+        },
+        "weather": {
+          "kp": 2.9867296165904222,
+          "f107": 179.27875169988454,
+          "solar_wind_speed": 436.4954207231488,
+          "solar_wind_density": 5.160798939758965,
+          "solar_wind_temperature": 96631.4414327957
+        },
+        "ops": {
+          "insertion_altitude_error_km": -2.8991728752196275,
+          "insertion_inclination_error_deg": -0.5226868595284061,
+          "cam_scale": 1.2043057621297173
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 768.5991232590296,
+          "required_delta_v": 238.23804830799332,
+          "drag_delta_v": 38.578951300751214,
+          "collision_avoidance_delta_v": 26.951308461248786,
+          "insertion_delta_v": 72.70021306647354,
+          "disposal_delta_v": 100.0075754795198,
+          "propellant_required": 59.483543005558005,
+          "propellant_remaining": 149.5650165207785,
+          "initial_altitude": 499.338622636443,
+          "final_altitude": 499.338622636443,
+          "orbital_decay": 0.0,
+          "average_density": 2.837257475184709e-13,
+          "average_drag": 0.00021919673903374726
+        }
+      },
+      {
+        "index": 8,
+        "mission": {
+          "mass": 726.4144783810573,
+          "fuel": 198.92382023470208,
+          "lifespan": 5.5029053864299,
+          "target_altitude": 491.1303494025395,
+          "target_inclination": 50.60268309418104,
+          "cross_section_area": 9.169880240752054,
+          "drag_coefficient": 2.684,
+          "isp": 313.4518345538821
+        },
+        "weather": {
+          "kp": 2.521541905671298,
+          "f107": 161.36189760954312,
+          "solar_wind_speed": 427.66633371353083,
+          "solar_wind_density": 4.643552206817371,
+          "solar_wind_temperature": 115250.5744728525
+        },
+        "ops": {
+          "insertion_altitude_error_km": 4.524824274375474,
+          "insertion_inclination_error_deg": 0.04997724974883191,
+          "cam_scale": 0.862808093183989
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 744.0055851582973,
+          "required_delta_v": 162.2641389592722,
+          "drag_delta_v": 36.84749800741301,
+          "collision_avoidance_delta_v": 15.98196635847497,
+          "insertion_delta_v": 11.67350431401044,
+          "disposal_delta_v": 97.7611702793738,
+          "propellant_required": 39.37573116441209,
+          "propellant_remaining": 159.54808907029,
+          "initial_altitude": 491.1303494025395,
+          "final_altitude": 491.1303494025395,
+          "orbital_decay": 0.0,
+          "average_density": 2.662069145086044e-13,
+          "average_drag": 0.00017523749688991072
+        }
+      },
+      {
+        "index": 9,
+        "mission": {
+          "mass": 735.6760160101479,
+          "fuel": 207.6725854054556,
+          "lifespan": 4.7782701067393845,
+          "target_altitude": 503.3133908533821,
+          "target_inclination": 52.076282398512056,
+          "cross_section_area": 9.953870204745854,
+          "drag_coefficient": 2.153607490178304,
+          "isp": 336.79162149526655
+        },
+        "weather": {
+          "kp": 4.177863495196602,
+          "f107": 121.8192078169045,
+          "solar_wind_speed": 419.9769260886576,
+          "solar_wind_density": 5.282942671235229,
+          "solar_wind_temperature": 95659.88549119083
+        },
+        "ops": {
+          "insertion_altitude_error_km": 5.287801683727591,
+          "insertion_inclination_error_deg": -0.6668983837892206,
+          "cam_scale": 0.5571653386082829
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 821.2276020130955,
+          "required_delta_v": 222.84001007811057,
+          "drag_delta_v": 16.670419323603095,
+          "collision_avoidance_delta_v": 10.586951417115541,
+          "insertion_delta_v": 94.48897894612413,
+          "disposal_delta_v": 101.0936603912678,
+          "propellant_required": 51.34889780651015,
+          "propellant_remaining": 156.32368759894547,
+          "initial_altitude": 503.3133908533821,
+          "final_altitude": 503.3133908533821,
+          "orbital_decay": 0.0,
+          "average_density": 1.6173225209859285e-13,
+          "average_drag": 9.281088824120605e-05
+        }
+      },
+      {
+        "index": 10,
+        "mission": {
+          "mass": 771.2136799129017,
+          "fuel": 188.33208107524484,
+          "lifespan": 4.5,
+          "target_altitude": 505.9406306982721,
+          "target_inclination": 52.482693040487824,
+          "cross_section_area": 9.323891669486615,
+          "drag_coefficient": 2.61970464892084,
+          "isp": 320.1829251774693
+        },
+        "weather": {
+          "kp": 3.4890943450178336,
+          "f107": 139.68925054603952,
+          "solar_wind_speed": 423.2356010960637,
+          "solar_wind_density": 5.126894578455898,
+          "solar_wind_temperature": 125000.0
+        },
+        "ops": {
+          "insertion_altitude_error_km": -11.607550331322223,
+          "insertion_inclination_error_deg": 0.5698879084924111,
+          "cam_scale": 2.012079286035859
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 686.0557411305907,
+          "required_delta_v": 243.85538543328389,
+          "drag_delta_v": 19.127017404338897,
+          "collision_avoidance_delta_v": 34.342568247141195,
+          "insertion_delta_v": 88.57487202585864,
+          "disposal_delta_v": 101.81092775594516,
+          "propellant_required": 62.281871120858796,
+          "propellant_remaining": 126.05020995438605,
+          "initial_altitude": 505.9406306982721,
+          "final_altitude": 505.9406306982721,
+          "orbital_decay": 0.0,
+          "average_density": 1.7818936110040445e-13,
+          "average_drag": 0.00011655676515619483
+        }
+      },
+      {
+        "index": 11,
+        "mission": {
+          "mass": 806.555928320938,
+          "fuel": 205.81619123852056,
+          "lifespan": 4.5,
+          "target_altitude": 520.760765216026,
+          "target_inclination": 50.29890878684431,
+          "cross_section_area": 10.756437480011797,
+          "drag_coefficient": 2.4799574823762267,
+          "isp": 322.53997503805067
+        },
+        "weather": {
+          "kp": 6.4127139807261315,
+          "f107": 254.0083469551315,
+          "solar_wind_speed": 527.7365504709874,
+          "solar_wind_density": 11.312388310717132,
+          "solar_wind_temperature": 144575.5438770443
+        },
+        "ops": {
+          "insertion_altitude_error_km": 37.979305217722626,
+          "insertion_inclination_error_deg": 0.690431104349827,
+          "cam_scale": 0.756475828730239
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 718.8894248307519,
+          "required_delta_v": 329.23488395343605,
+          "drag_delta_v": 73.69039017904701,
+          "collision_avoidance_delta_v": 16.14340383056844,
+          "insertion_delta_v": 133.5531966996566,
+          "disposal_delta_v": 105.84789324416397,
+          "propellant_required": 88.47786144758234,
+          "propellant_remaining": 117.33832979093822,
+          "initial_altitude": 520.760765216026,
+          "final_altitude": 520.760765216026,
+          "orbital_decay": 0.0,
+          "average_density": 6.650599376743141e-13,
+          "average_drag": 0.0004719325140762667
+        }
+      },
+      {
+        "index": 12,
+        "mission": {
+          "mass": 695.8188843592841,
+          "fuel": 193.44768802031186,
+          "lifespan": 5.272652633538314,
+          "target_altitude": 503.766775650996,
+          "target_inclination": 53.53555003203214,
+          "cross_section_area": 10.02511415140585,
+          "drag_coefficient": 1.9509419704416888,
+          "isp": 315.5299976902319
+        },
+        "weather": {
+          "kp": 7.069368302268709,
+          "f107": 221.44240084706715,
+          "solar_wind_speed": 633.4895805686913,
+          "solar_wind_density": 7.865880003667157,
+          "solar_wind_temperature": 177450.62871283927
+        },
+        "ops": {
+          "insertion_altitude_error_km": 14.841009224619285,
+          "insertion_inclination_error_deg": 0.36931706288436705,
+          "cam_scale": 0.9071535602964408
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 759.0535426506401,
+          "required_delta_v": 275.6539317021114,
+          "drag_delta_v": 89.59402011642523,
+          "collision_avoidance_delta_v": 19.32329225626452,
+          "insertion_delta_v": 65.51914478020868,
+          "disposal_delta_v": 101.21747454921297,
+          "propellant_required": 64.83166219038725,
+          "propellant_remaining": 128.6160258299246,
+          "initial_altitude": 503.766775650996,
+          "final_altitude": 503.766775650996,
+          "orbital_decay": 0.0,
+          "average_density": 8.127693743825797e-13,
+          "average_drag": 0.00042674513812060157
+        }
+      },
+      {
+        "index": 13,
+        "mission": {
+          "mass": 730.5660192931422,
+          "fuel": 206.96811154124345,
+          "lifespan": 5.5743906148268385,
+          "target_altitude": 493.01915923248094,
+          "target_inclination": 53.61488729921446,
+          "cross_section_area": 9.582629355207805,
+          "drag_coefficient": 2.1323777828571706,
+          "isp": 309.0120512330953
+        },
+        "weather": {
+          "kp": 2.68585131823897,
+          "f107": 160.17910560328386,
+          "solar_wind_speed": 468.88050898659765,
+          "solar_wind_density": 5.174018526597544,
+          "solar_wind_temperature": 113764.44431953374
+        },
+        "ops": {
+          "insertion_altitude_error_km": 9.950140526189632,
+          "insertion_inclination_error_deg": -0.18857969652256829,
+          "cam_scale": 1.0012729957068809
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 755.8767360142343,
+          "required_delta_v": 185.07266676013265,
+          "drag_delta_v": 30.54318212300556,
+          "collision_avoidance_delta_v": 20.122927415537603,
+          "insertion_delta_v": 36.12804283838607,
+          "disposal_delta_v": 98.2785143832034,
+          "propellant_required": 46.008162690182004,
+          "propellant_remaining": 160.95994885106143,
+          "initial_altitude": 493.01915923248094,
+          "final_altitude": 493.01915923248094,
+          "orbital_decay": 0.0,
+          "average_density": 2.634898508116084e-13,
+          "average_drag": 0.00014481216373830814
+        }
+      },
+      {
+        "index": 14,
+        "mission": {
+          "mass": 741.4921685365057,
+          "fuel": 184.0,
+          "lifespan": 5.416326175080519,
+          "target_altitude": 498.83696856580735,
+          "target_inclination": 51.58565018185737,
+          "cross_section_area": 10.407612109603237,
+          "drag_coefficient": 2.432497017056539,
+          "isp": 340.02512691469695
+        },
+        "weather": {
+          "kp": 2.5395790790260833,
+          "f107": 145.20270856972306,
+          "solar_wind_speed": 425.1334615347315,
+          "solar_wind_density": 5.663438460341408,
+          "solar_wind_temperature": 87329.97046459946
+        },
+        "ops": {
+          "insertion_altitude_error_km": -1.4008943914717726,
+          "insertion_inclination_error_deg": 1.0165358480680706,
+          "cam_scale": 1.515494682953759
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 739.1304813890855,
+          "required_delta_v": 296.5525500169736,
+          "drag_delta_v": 26.87992179780289,
+          "collision_avoidance_delta_v": 33.10700210578291,
+          "insertion_delta_v": 136.69520437060024,
+          "disposal_delta_v": 99.87042174278758,
+          "propellant_required": 68.96544254934396,
+          "propellant_remaining": 115.03455745065604,
+          "initial_altitude": 498.83696856580735,
+          "final_altitude": 498.83696856580735,
+          "orbital_decay": 0.0,
+          "average_density": 1.9345256593471723e-13,
+          "average_drag": 0.00013107526589226033
+        }
+      },
+      {
+        "index": 15,
+        "mission": {
+          "mass": 761.2359342570747,
+          "fuel": 194.07155049903704,
+          "lifespan": 5.5641347847133,
+          "target_altitude": 500.5923020437071,
+          "target_inclination": 51.298424238873366,
+          "cross_section_area": 10.561569554818002,
+          "drag_coefficient": 2.341231695975181,
+          "isp": 312.16893133835777
+        },
+        "weather": {
+          "kp": 2.9081515821290838,
+          "f107": 149.84653318434457,
+          "solar_wind_speed": 381.56654454727715,
+          "solar_wind_density": 4.767102320228797,
+          "solar_wind_temperature": 95920.86899706432
+        },
+        "ops": {
+          "insertion_altitude_error_km": -13.00873268328683,
+          "insertion_inclination_error_deg": 1.1216971673479228,
+          "cam_scale": 1.2458560125515667
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 695.1975158365664,
+          "required_delta_v": 319.6639833302635,
+          "drag_delta_v": 27.133635542733995,
+          "collision_avoidance_delta_v": 28.658711028956102,
+          "insertion_delta_v": 163.52137933133451,
+          "disposal_delta_v": 100.35025742723883,
+          "propellant_required": 83.7865715474775,
+          "propellant_remaining": 110.28497895155955,
+          "initial_altitude": 500.5923020437071,
+          "final_altitude": 500.5923020437071,
+          "orbital_decay": 0.0,
+          "average_density": 2.0057774822792276e-13,
+          "average_drag": 0.00013262676481705157
+        }
+      },
+      {
+        "index": 16,
+        "mission": {
+          "mass": 781.2264012496993,
+          "fuel": 196.9085891912571,
+          "lifespan": 5.150969871085991,
+          "target_altitude": 495.561244950865,
+          "target_inclination": 49.48301103676691,
+          "cross_section_area": 10.142027581294213,
+          "drag_coefficient": 2.6106662525093616,
+          "isp": 309.54914953512764
+        },
+        "weather": {
+          "kp": 5.440780352236055,
+          "f107": 247.10968154775966,
+          "solar_wind_speed": 642.7071428807807,
+          "solar_wind_density": 10.00074659063037,
+          "solar_wind_temperature": 169248.6762925911
+        },
+        "ops": {
+          "insertion_altitude_error_km": 3.743528360290439,
+          "insertion_inclination_error_deg": -0.23594121701115023,
+          "cam_scale": 1.1172464329172804
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 682.359372849754,
+          "required_delta_v": 262.08895684340814,
+          "drag_delta_v": 105.63555542095297,
+          "collision_avoidance_delta_v": 21.950514703266645,
+          "insertion_delta_v": 35.52849533340658,
+          "disposal_delta_v": 98.97439138578193,
+          "propellant_required": 70.44629010665102,
+          "propellant_remaining": 126.46229908460609,
+          "initial_altitude": 495.561244950865,
+          "final_altitude": 495.561244950865,
+          "orbital_decay": 0.0,
+          "average_density": 8.095607323922349e-13,
+          "average_drag": 0.0005716657919276994
+        }
+      },
+      {
+        "index": 17,
+        "mission": {
+          "mass": 725.8856115874328,
+          "fuel": 209.99596873354966,
+          "lifespan": 5.302304269609582,
+          "target_altitude": 461.5806650779642,
+          "target_inclination": 52.42928982989371,
+          "cross_section_area": 9.893514658471243,
+          "drag_coefficient": 2.2772800599186174,
+          "isp": 325.04464060403103
+        },
+        "weather": {
+          "kp": 3.5610261045309763,
+          "f107": 140.27305638398673,
+          "solar_wind_speed": 391.1696045664263,
+          "solar_wind_density": 4.8510836467787835,
+          "solar_wind_temperature": 122849.22246999537
+        },
+        "ops": {
+          "insertion_altitude_error_km": 9.23378545123741,
+          "insertion_inclination_error_deg": -0.5969727879507013,
+          "cam_scale": 0.46343874368777094
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 809.9577846343361,
+          "required_delta_v": 238.05918662803307,
+          "drag_delta_v": 51.20653233283885,
+          "collision_avoidance_delta_v": 7.3155347503440735,
+          "insertion_delta_v": 89.90264153116868,
+          "disposal_delta_v": 89.63447801368147,
+          "propellant_required": 56.28692989581284,
+          "propellant_remaining": 153.7090388377368,
+          "initial_altitude": 461.5806650779642,
+          "final_altitude": 461.5806650779642,
+          "orbital_decay": 0.0,
+          "average_density": 4.184401636417443e-13,
+          "average_drag": 0.0002542710629917055
+        }
+      },
+      {
+        "index": 18,
+        "mission": {
+          "mass": 824.0610300523573,
+          "fuel": 198.64677111834334,
+          "lifespan": 4.768384753757175,
+          "target_altitude": 525.0,
+          "target_inclination": 52.56595630543631,
+          "cross_section_area": 8.595244722167461,
+          "drag_coefficient": 2.3367207619032366,
+          "isp": 312.4023347252844
+        },
+        "weather": {
+          "kp": 4.0811029749011265,
+          "f107": 174.70607690051227,
+          "solar_wind_speed": 425.8922416783728,
+          "solar_wind_density": 4.746506379389305,
+          "solar_wind_temperature": 107576.25725043789
+        },
+        "ops": {
+          "insertion_altitude_error_km": 2.424019691400925,
+          "insertion_inclination_error_deg": -0.7103857184866158,
+          "cam_scale": 0.8068833871139953
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 661.633247630536,
+          "required_delta_v": 235.709431037211,
+          "drag_delta_v": 16.691712207781464,
+          "collision_avoidance_delta_v": 15.082934693666134,
+          "insertion_delta_v": 96.93497235288068,
+          "disposal_delta_v": 106.99981178288272,
+          "propellant_required": 65.9045530037228,
+          "propellant_remaining": 132.74221811462053,
+          "initial_altitude": 525.0,
+          "final_altitude": 525.0,
+          "orbital_decay": 0.0,
+          "average_density": 1.9098846122709583e-13,
+          "average_drag": 0.00010242551843630053
+        }
+      },
+      {
+        "index": 19,
+        "mission": {
+          "mass": 784.2256119390667,
+          "fuel": 197.63082683176432,
+          "lifespan": 4.830072654755274,
+          "target_altitude": 521.1327617046063,
+          "target_inclination": 52.78742249488471,
+          "cross_section_area": 10.103781423105286,
+          "drag_coefficient": 2.1474366848252555,
+          "isp": 311.84016980290136
+        },
+        "weather": {
+          "kp": 1.7999999999999998,
+          "f107": 142.83964276075275,
+          "solar_wind_speed": 487.45990674738675,
+          "solar_wind_density": 6.334263473753783,
+          "solar_wind_temperature": 115010.79035685082
+        },
+        "ops": {
+          "insertion_altitude_error_km": 9.955047565422262,
+          "insertion_inclination_error_deg": 1.6163725228223529,
+          "cam_scale": 1.1882675506178986
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 687.3046099322895,
+          "required_delta_v": 368.8931454779787,
+          "drag_delta_v": 11.539806004586783,
+          "collision_avoidance_delta_v": 25.885596000650114,
+          "insertion_delta_v": 225.51871795334858,
+          "disposal_delta_v": 105.94902551939322,
+          "propellant_required": 100.5416881911851,
+          "propellant_remaining": 97.08913864057922,
+          "initial_altitude": 521.1327617046063,
+          "final_altitude": 521.1327617046063,
+          "orbital_decay": 0.0,
+          "average_density": 1.152705601919731e-13,
+          "average_drag": 6.685313200584017e-05
+        }
+      },
+      {
+        "index": 20,
+        "mission": {
+          "mass": 752.6898457227263,
+          "fuel": 191.41144793722717,
+          "lifespan": 4.8312125029550606,
+          "target_altitude": 480.46302667271243,
+          "target_inclination": 50.12326853507279,
+          "cross_section_area": 11.007571868597294,
+          "drag_coefficient": 2.2675164294041332,
+          "isp": 336.70919157560985
+        },
+        "weather": {
+          "kp": 8.161840529597065,
+          "f107": 223.84550980376343,
+          "solar_wind_speed": 609.4973998460722,
+          "solar_wind_density": 11.08072542811712,
+          "solar_wind_temperature": 158590.85278814496
+        },
+        "ops": {
+          "insertion_altitude_error_km": 7.545903683075319,
+          "insertion_inclination_error_deg": 0.9358249349986297,
+          "cam_scale": 0.8826403462847107
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 748.1654099016663,
+          "required_delta_v": 420.4919033827921,
+          "drag_delta_v": 176.67549172355967,
+          "collision_avoidance_delta_v": 16.00240087902888,
+          "insertion_delta_v": 132.97936897026722,
+          "disposal_delta_v": 94.83464180993633,
+          "propellant_required": 102.22193108468795,
+          "propellant_remaining": 89.18951685253921,
+          "initial_altitude": 480.46302667271243,
+          "final_altitude": 480.46302667271243,
+          "orbital_decay": 0.0,
+          "average_density": 1.4714713386579904e-12,
+          "average_drag": 0.0009831382499226528
+        }
+      },
+      {
+        "index": 21,
+        "mission": {
+          "mass": 788.8562326596999,
+          "fuel": 202.98897623300456,
+          "lifespan": 4.7181214014943915,
+          "target_altitude": 488.15324736504215,
+          "target_inclination": 52.82643028265046,
+          "cross_section_area": 9.505175908944656,
+          "drag_coefficient": 2.389401336965056,
+          "isp": 318.56549375317786
+        },
+        "weather": {
+          "kp": 3.3940683847779343,
+          "f107": 176.91961857984097,
+          "solar_wind_speed": 385.9807208145437,
+          "solar_wind_density": 5.903753842750124,
+          "solar_wind_temperature": 93580.39700212209
+        },
+        "ops": {
+          "insertion_altitude_error_km": -0.10144653056523106,
+          "insertion_inclination_error_deg": -0.01904947055731448,
+          "cam_scale": 0.9317695543784178
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 715.356593520138,
+          "required_delta_v": 150.61105394419764,
+          "drag_delta_v": 35.842356653191224,
+          "collision_avoidance_delta_v": 15.176212297842449,
+          "insertion_delta_v": 2.6472552117389285,
+          "disposal_delta_v": 96.94522978142504,
+          "propellant_required": 38.962429908048776,
+          "propellant_remaining": 164.0265463249558,
+          "initial_altitude": 488.15324736504215,
+          "final_altitude": 488.15324736504215,
+          "orbital_decay": 0.0,
+          "average_density": 3.5113948186416117e-13,
+          "average_drag": 0.00021433080398461043
+        }
+      },
+      {
+        "index": 22,
+        "mission": {
+          "mass": 800.0588345914579,
+          "fuel": 188.69294572363242,
+          "lifespan": 4.905490030149908,
+          "target_altitude": 475.3658580708846,
+          "target_inclination": 51.953655639870426,
+          "cross_section_area": 10.473985055605686,
+          "drag_coefficient": 2.501430970994771,
+          "isp": 335.44389875902726
+        },
+        "weather": {
+          "kp": 2.4136834194841916,
+          "f107": 170.5258435470625,
+          "solar_wind_speed": 432.4576169477103,
+          "solar_wind_density": 4.708179649992708,
+          "solar_wind_temperature": 94962.3130050771
+        },
+        "ops": {
+          "insertion_altitude_error_km": -17.936795536709308,
+          "insertion_inclination_error_deg": 0.007482447383956589,
+          "cam_scale": 1.0296062438312952
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 696.5952435346719,
+          "required_delta_v": 179.01986599096352,
+          "drag_delta_v": 47.05806284666826,
+          "collision_avoidance_delta_v": 17.54144603495926,
+          "insertion_delta_v": 20.986956956709257,
+          "disposal_delta_v": 93.43340015262675,
+          "propellant_required": 44.745913703431526,
+          "propellant_remaining": 143.94703202020088,
+          "initial_altitude": 475.3658580708846,
+          "final_altitude": 475.3658580708846,
+          "orbital_decay": 0.0,
+          "average_density": 3.8598039153658606e-13,
+          "average_drag": 0.00027188299702458603
+        }
+      },
+      {
+        "index": 23,
+        "mission": {
+          "mass": 784.6415248712259,
+          "fuel": 201.81409549739396,
+          "lifespan": 5.160801496626095,
+          "target_altitude": 461.24680823072947,
+          "target_inclination": 52.05439176971202,
+          "cross_section_area": 11.062131070808771,
+          "drag_coefficient": 2.3700141179236436,
+          "isp": 315.3628245769314
+        },
+        "weather": {
+          "kp": 2.76983023350631,
+          "f107": 139.07610856041188,
+          "solar_wind_speed": 409.05672160342743,
+          "solar_wind_density": 5.084648770404168,
+          "solar_wind_temperature": 101514.3778334424
+        },
+        "ops": {
+          "insertion_altitude_error_km": -5.652192712272571,
+          "insertion_inclination_error_deg": 0.041749432792316556,
+          "cam_scale": 0.8447476399277389
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 707.8815779438664,
+          "required_delta_v": 166.19926902841888,
+          "drag_delta_v": 50.31814609959028,
+          "collision_avoidance_delta_v": 14.454292437847773,
+          "insertion_delta_v": 11.884525365036811,
+          "disposal_delta_v": 89.54230512594404,
+          "propellant_required": 43.32025296645937,
+          "propellant_remaining": 158.4938425309346,
+          "initial_altitude": 461.24680823072947,
+          "final_altitude": 461.24680823072947,
+          "orbital_decay": 0.0,
+          "average_density": 3.871892899581605e-13,
+          "average_drag": 0.0002735998766332204
+        }
+      },
+      {
+        "index": 24,
+        "mission": {
+          "mass": 769.1274144221587,
+          "fuel": 204.5802147911689,
+          "lifespan": 5.026448397696203,
+          "target_altitude": 504.1957767702714,
+          "target_inclination": 51.95242512431249,
+          "cross_section_area": 10.809714073370323,
+          "drag_coefficient": 2.0938354349359525,
+          "isp": 325.1017592746501
+        },
+        "weather": {
+          "kp": 2.177800574534386,
+          "f107": 117.0,
+          "solar_wind_speed": 352.7292577716651,
+          "solar_wind_density": 5.859954989601732,
+          "solar_wind_temperature": 92730.9453541351
+        },
+        "ops": {
+          "insertion_altitude_error_km": -0.6787489328303421,
+          "insertion_inclination_error_deg": -1.3184220287768524,
+          "cam_scale": 0.45
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 751.941491911851,
+          "required_delta_v": 299.82874819793415,
+          "drag_delta_v": 12.719075876163194,
+          "collision_avoidance_delta_v": 9.817500922664722,
+          "insertion_delta_v": 175.95755495347922,
+          "disposal_delta_v": 101.33461644562703,
+          "propellant_required": 75.84257991038987,
+          "propellant_remaining": 128.73763488077904,
+          "initial_altitude": 504.1957767702714,
+          "final_altitude": 504.1957767702714,
+          "orbital_decay": 0.0,
+          "average_density": 1.1536765400747582e-13,
+          "average_drag": 6.987416817649321e-05
+        }
+      },
+      {
+        "index": 25,
+        "mission": {
+          "mass": 731.4308582261993,
+          "fuel": 196.70606668173264,
+          "lifespan": 4.770697582123409,
+          "target_altitude": 491.7930948911027,
+          "target_inclination": 52.72861872548408,
+          "cross_section_area": 9.282880019347283,
+          "drag_coefficient": 2.013105715590814,
+          "isp": 305.42864257957876
+        },
+        "weather": {
+          "kp": 2.955578492024259,
+          "f107": 165.02886914743812,
+          "solar_wind_speed": 423.3517203524884,
+          "solar_wind_density": 5.042918671679155,
+          "solar_wind_temperature": 112283.0812250381
+        },
+        "ops": {
+          "insertion_altitude_error_km": 6.648888268191278,
+          "insertion_inclination_error_deg": 0.3275901008804768,
+          "cam_scale": 0.8487866978910226
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 713.3940504397447,
+          "required_delta_v": 188.86505275171015,
+          "drag_delta_v": 25.98495328782236,
+          "collision_avoidance_delta_v": 13.979947163222576,
+          "insertion_delta_v": 50.957427549890525,
+          "disposal_delta_v": 97.94272475077469,
+          "propellant_required": 47.60566776633437,
+          "propellant_remaining": 149.10039891539827,
+          "initial_altitude": 491.7930948911027,
+          "final_altitude": 491.7930948911027,
+          "orbital_decay": 0.0,
+          "average_density": 2.853887518354676e-13,
+          "average_drag": 0.0001432191480160682
+        }
+      },
+      {
+        "index": 26,
+        "mission": {
+          "mass": 696.8814014600279,
+          "fuel": 203.1171306367517,
+          "lifespan": 5.250577051679521,
+          "target_altitude": 476.25238619544,
+          "target_inclination": 51.18858077530018,
+          "cross_section_area": 10.494732398611035,
+          "drag_coefficient": 2.4816890840548114,
+          "isp": 331.68862697818827
+        },
+        "weather": {
+          "kp": 2.599655836833024,
+          "f107": 170.90749250177777,
+          "solar_wind_speed": 354.6211705610246,
+          "solar_wind_density": 5.0703746631809015,
+          "solar_wind_temperature": 103335.38091215551
+        },
+        "ops": {
+          "insertion_altitude_error_km": -23.511789669424733,
+          "insertion_inclination_error_deg": 0.029951723258313395,
+          "cam_scale": 1.2793998287668613
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 831.9826305594291,
+          "required_delta_v": 202.1884897574385,
+          "drag_delta_v": 54.87565677704003,
+          "collision_avoidance_delta_v": 23.448365351405236,
+          "insertion_delta_v": 30.187222665753332,
+          "disposal_delta_v": 93.6772449632399,
+          "propellant_required": 44.69219163718914,
+          "propellant_remaining": 158.42493899956258,
+          "initial_altitude": 476.25238619544,
+          "final_altitude": 476.25238619544,
+          "orbital_decay": 0.0,
+          "average_density": 3.782540796962184e-13,
+          "average_drag": 0.0002644301649102224
+        }
+      },
+      {
+        "index": 27,
+        "mission": {
+          "mass": 745.0999556143036,
+          "fuel": 196.87247370924425,
+          "lifespan": 4.732253984956427,
+          "target_altitude": 483.35949902626976,
+          "target_inclination": 50.96024199946772,
+          "cross_section_area": 10.428770429056513,
+          "drag_coefficient": 2.4907310328300554,
+          "isp": 329.52733136086346
+        },
+        "weather": {
+          "kp": 3.179652776870618,
+          "f107": 143.52009327210607,
+          "solar_wind_speed": 421.58931550304015,
+          "solar_wind_density": 4.773248815474027,
+          "solar_wind_temperature": 103696.13927076237
+        },
+        "ops": {
+          "insertion_altitude_error_km": 2.0253461034585607,
+          "insertion_inclination_error_deg": 0.6906028233422199,
+          "cam_scale": 0.9396619583606498
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 757.6637054883815,
+          "required_delta_v": 239.8497871365606,
+          "drag_delta_v": 33.867821266224944,
+          "collision_avoidance_delta_v": 16.18314327177518,
+          "insertion_delta_v": 94.16874778524969,
+          "disposal_delta_v": 95.63007481331078,
+          "propellant_required": 57.40613908103678,
+          "propellant_remaining": 139.46633462820748,
+          "initial_altitude": 483.35949902626976,
+          "final_altitude": 483.35949902626976,
+          "orbital_decay": 0.0,
+          "average_density": 2.748188388981803e-13,
+          "average_drag": 0.00019130176082225004
+        }
+      },
+      {
+        "index": 28,
+        "mission": {
+          "mass": 753.6936004851724,
+          "fuel": 194.8094367751509,
+          "lifespan": 4.993121314525714,
+          "target_altitude": 487.43051161712793,
+          "target_inclination": 51.7148411605082,
+          "cross_section_area": 9.812425113567716,
+          "drag_coefficient": 2.3736500213071112,
+          "isp": 311.82488757997686
+        },
+        "weather": {
+          "kp": 4.030614437801347,
+          "f107": 152.6703272472858,
+          "solar_wind_speed": 332.4633843384223,
+          "solar_wind_density": 5.120943585855872,
+          "solar_wind_temperature": 107150.43878334686
+        },
+        "ops": {
+          "insertion_altitude_error_km": -12.681897060567376,
+          "insertion_inclination_error_deg": -2.4,
+          "cam_scale": 0.7615563554361731
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 703.0215977872124,
+          "required_delta_v": 477.698502603013,
+          "drag_delta_v": 34.11869766824564,
+          "collision_avoidance_delta_v": 13.425470446909165,
+          "insertion_delta_v": 333.4072812676458,
+          "disposal_delta_v": 96.74705322021236,
+          "propellant_required": 127.43255453731173,
+          "propellant_remaining": 67.37688223783918,
+          "initial_altitude": 487.43051161712793,
+          "final_altitude": 487.43051161712793,
+          "orbital_decay": 0.0,
+          "average_density": 2.9501460969840996e-13,
+          "average_drag": 0.0001842875910742057
+        }
+      },
+      {
+        "index": 29,
+        "mission": {
+          "mass": 805.8746919694543,
+          "fuel": 198.84088404013684,
+          "lifespan": 4.679812352524775,
+          "target_altitude": 493.5564678856305,
+          "target_inclination": 48.6,
+          "cross_section_area": 10.30554848161799,
+          "drag_coefficient": 2.316223744742924,
+          "isp": 323.2833528381833
+        },
+        "weather": {
+          "kp": 3.345802596153926,
+          "f107": 140.8759176129277,
+          "solar_wind_speed": 397.027361562196,
+          "solar_wind_density": 4.758680346592451,
+          "solar_wind_temperature": 84260.23914791441
+        },
+        "ops": {
+          "insertion_altitude_error_km": -12.431196264596732,
+          "insertion_inclination_error_deg": -0.9080878471682035,
+          "cam_scale": 1.3895241342827176
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 699.1569329004542,
+          "required_delta_v": 280.48924291002794,
+          "drag_delta_v": 22.713314961538703,
+          "collision_avoidance_delta_v": 24.77961313307064,
+          "insertion_delta_v": 134.5706780449948,
+          "disposal_delta_v": 98.42563677042381,
+          "propellant_required": 74.54749872884575,
+          "propellant_remaining": 124.29338531129109,
+          "initial_altitude": 493.5564678856305,
+          "final_altitude": 493.5564678856305,
+          "orbital_decay": 0.0,
+          "average_density": 2.190036103518443e-13,
+          "average_drag": 0.00013923175671214688
+        }
+      },
+      {
+        "index": 30,
+        "mission": {
+          "mass": 807.7933362375919,
+          "fuel": 200.03307297365964,
+          "lifespan": 5.092136464621005,
+          "target_altitude": 506.36983397487256,
+          "target_inclination": 51.80837657533681,
+          "cross_section_area": 9.278186210115159,
+          "drag_coefficient": 1.87,
+          "isp": 306.79484144983553
+        },
+        "weather": {
+          "kp": 7.409966130985538,
+          "f107": 229.83886170307048,
+          "solar_wind_speed": 498.34223498027575,
+          "solar_wind_density": 11.248644867231732,
+          "solar_wind_temperature": 170269.06054077178
+        },
+        "ops": {
+          "insertion_altitude_error_km": 24.9701419756,
+          "insertion_inclination_error_deg": 0.6706583195765667,
+          "cam_scale": 1.5544462743560343
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 665.644163307448,
+          "required_delta_v": 319.26543617817487,
+          "drag_delta_v": 70.71083077342549,
+          "collision_avoidance_delta_v": 29.873851688430882,
+          "insertion_delta_v": 116.75269469538024,
+          "disposal_delta_v": 101.92805902093824,
+          "propellant_required": 90.43366070888872,
+          "propellant_remaining": 109.59941226477092,
+          "initial_altitude": 506.36983397487256,
+          "final_altitude": 506.36983397487256,
+          "orbital_decay": 0.0,
+          "average_density": 8.60939322165718e-13,
+          "average_drag": 0.00039946325854192167
+        }
+      },
+      {
+        "index": 31,
+        "mission": {
+          "mass": 765.2573582213031,
+          "fuel": 191.12256576109016,
+          "lifespan": 4.8542405988924475,
+          "target_altitude": 499.301415255188,
+          "target_inclination": 50.23047878958364,
+          "cross_section_area": 10.22006547627537,
+          "drag_coefficient": 2.4985391984416063,
+          "isp": 304.2091742073469
+        },
+        "weather": {
+          "kp": 8.274520215086651,
+          "f107": 230.4019946618476,
+          "solar_wind_speed": 629.1673159804424,
+          "solar_wind_density": 10.890197540383424,
+          "solar_wind_temperature": 143306.664425499
+        },
+        "ops": {
+          "insertion_altitude_error_km": -2.0494988720371996,
+          "insertion_inclination_error_deg": 0.542433376074637,
+          "cam_scale": 1.1244557741194503
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 665.0999616053371,
+          "required_delta_v": 338.18839104810644,
+          "drag_delta_v": 142.24700976981566,
+          "collision_avoidance_delta_v": 21.56047505391636,
+          "insertion_delta_v": 74.38350274424823,
+          "disposal_delta_v": 99.9974034801262,
+          "propellant_required": 91.85903737952785,
+          "propellant_remaining": 99.26352838156231,
+          "initial_altitude": 499.301415255188,
+          "final_altitude": 499.301415255188,
+          "orbital_decay": 0.0,
+          "average_density": 1.1727866905551225e-12,
+          "average_drag": 0.0007993363140291926
+        }
+      },
+      {
+        "index": 32,
+        "mission": {
+          "mass": 709.6151174263535,
+          "fuel": 190.08539466054717,
+          "lifespan": 5.159593451023023,
+          "target_altitude": 490.9720518287726,
+          "target_inclination": 50.422534069196765,
+          "cross_section_area": 11.233689301266622,
+          "drag_coefficient": 1.969138055693985,
+          "isp": 338.7901362410506
+        },
+        "weather": {
+          "kp": 3.757217297717122,
+          "f107": 128.6446933659357,
+          "solar_wind_speed": 420.07791079154424,
+          "solar_wind_density": 5.004777701231654,
+          "solar_wind_temperature": 104371.0443163122
+        },
+        "ops": {
+          "insertion_altitude_error_km": 7.537903438261145,
+          "insertion_inclination_error_deg": 0.2007369313299195,
+          "cam_scale": 1.0756099233669536
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 788.5349062792321,
+          "required_delta_v": 181.19684180797242,
+          "drag_delta_v": 25.560595646955456,
+          "collision_avoidance_delta_v": 22.84381023437953,
+          "insertion_delta_v": 35.0746347634934,
+          "disposal_delta_v": 97.71780116314403,
+          "propellant_required": 39.77577475434312,
+          "propellant_remaining": 150.30961990620403,
+          "initial_altitude": 490.9720518287726,
+          "final_altitude": 490.9720518287726,
+          "orbital_decay": 0.0,
+          "average_density": 2.1357077912425328e-13,
+          "average_drag": 0.00012631727658118973
+        }
+      },
+      {
+        "index": 33,
+        "mission": {
+          "mass": 721.5594639551838,
+          "fuel": 204.37862987053882,
+          "lifespan": 4.793214867327511,
+          "target_altitude": 492.11860513076465,
+          "target_inclination": 51.811362266406675,
+          "cross_section_area": 10.600663619828401,
+          "drag_coefficient": 2.249399389743578,
+          "isp": 317.8385727633525
+        },
+        "weather": {
+          "kp": 2.349744052363168,
+          "f107": 142.99123923580456,
+          "solar_wind_speed": 354.32829620016383,
+          "solar_wind_density": 3.9069484356551554,
+          "solar_wind_temperature": 103650.76524189372
+        },
+        "ops": {
+          "insertion_altitude_error_km": 18.11860840129604,
+          "insertion_inclination_error_deg": 0.19065148191215647,
+          "cam_scale": 0.8721701160117543
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 777.3396455648543,
+          "required_delta_v": 183.86200578167518,
+          "drag_delta_v": 23.896156042387158,
+          "collision_avoidance_delta_v": 16.45611727735174,
+          "insertion_delta_v": 45.47784787063013,
+          "disposal_delta_v": 98.03188459130615,
+          "propellant_required": 43.843873830619415,
+          "propellant_remaining": 160.5347560399194,
+          "initial_altitude": 492.11860513076465,
+          "final_altitude": 492.11860513076465,
+          "orbital_decay": 0.0,
+          "average_density": 2.0360236706636882e-13,
+          "average_drag": 0.00013013435520770473
+        }
+      },
+      {
+        "index": 34,
+        "mission": {
+          "mass": 808.5900518468565,
+          "fuel": 189.11478027470415,
+          "lifespan": 5.189297964121956,
+          "target_altitude": 468.4932304205811,
+          "target_inclination": 52.72029137234276,
+          "cross_section_area": 9.587358102654797,
+          "drag_coefficient": 2.5540560237276244,
+          "isp": 319.07167102723685
+        },
+        "weather": {
+          "kp": 3.5559497150680364,
+          "f107": 155.38945724834693,
+          "solar_wind_speed": 426.88603497964107,
+          "solar_wind_density": 3.989239977894588,
+          "solar_wind_temperature": 98239.66439099182
+        },
+        "ops": {
+          "insertion_altitude_error_km": 13.501322492125915,
+          "insertion_inclination_error_deg": 0.16886390280732197,
+          "cam_scale": 0.8779833455919046
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 657.6126825317557,
+          "required_delta_v": 193.69325840025607,
+          "drag_delta_v": 50.745230110694244,
+          "collision_avoidance_delta_v": 13.837623499454143,
+          "insertion_delta_v": 37.569264438444904,
+          "disposal_delta_v": 91.54114035166276,
+          "propellant_required": 51.63512002661997,
+          "propellant_remaining": 137.47966024808417,
+          "initial_altitude": 468.4932304205811,
+          "final_altitude": 468.4932304205811,
+          "orbital_decay": 0.0,
+          "average_density": 4.2399187636336583e-13,
+          "average_drag": 0.0002798603076222681
+        }
+      },
+      {
+        "index": 35,
+        "mission": {
+          "mass": 675.0,
+          "fuel": 191.76139244851248,
+          "lifespan": 5.085698750530691,
+          "target_altitude": 501.11633532671243,
+          "target_inclination": 52.18188519666602,
+          "cross_section_area": 10.32759627515257,
+          "drag_coefficient": 2.4037064689983088,
+          "isp": 333.12879702150127
+        },
+        "weather": {
+          "kp": 3.1449545522054763,
+          "f107": 174.33627590685998,
+          "solar_wind_speed": 399.83320977362786,
+          "solar_wind_density": 5.009112057856608,
+          "solar_wind_temperature": 96970.5870659055
+        },
+        "ops": {
+          "insertion_altitude_error_km": 1.3956376224018943,
+          "insertion_inclination_error_deg": -1.418981533080987,
+          "cam_scale": 0.718290504533359
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 816.8861125082863,
+          "required_delta_v": 341.8918006692853,
+          "drag_delta_v": 36.37019777839127,
+          "collision_avoidance_delta_v": 14.87059994687026,
+          "insertion_delta_v": 190.15753866936444,
+          "disposal_delta_v": 100.49346427465935,
+          "propellant_required": 74.47030062233094,
+          "propellant_remaining": 117.29109182618154,
+          "initial_altitude": 501.11633532671243,
+          "final_altitude": 501.11633532671243,
+          "orbital_decay": 0.0,
+          "average_density": 2.6272931169901037e-13,
+          "average_drag": 0.00017469409887233293
+        }
+      },
+      {
+        "index": 36,
+        "mission": {
+          "mass": 736.6602076116586,
+          "fuel": 193.13722745332285,
+          "lifespan": 5.197895844439636,
+          "target_altitude": 525.0,
+          "target_inclination": 52.73233801449565,
+          "cross_section_area": 8.639889211406338,
+          "drag_coefficient": 2.3297443200854437,
+          "isp": 316.76146846902947
+        },
+        "weather": {
+          "kp": 3.221118270858196,
+          "f107": 161.7061432393508,
+          "solar_wind_speed": 415.51513965239144,
+          "solar_wind_density": 4.584900382154393,
+          "solar_wind_temperature": 98817.06993124187
+        },
+        "ops": {
+          "insertion_altitude_error_km": 13.823266167401176,
+          "insertion_inclination_error_deg": 0.8756005021227362,
+          "cam_scale": 0.611209178819073
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 723.2869639276074,
+          "required_delta_v": 266.8216080741252,
+          "drag_delta_v": 15.869654510181023,
+          "collision_avoidance_delta_v": 12.527362857840998,
+          "insertion_delta_v": 131.42477892322046,
+          "disposal_delta_v": 106.99981178288272,
+          "propellant_required": 66.072471387982,
+          "propellant_remaining": 127.06475606534084,
+          "initial_altitude": 525.0,
+          "final_altitude": 525.0,
+          "orbital_decay": 0.0,
+          "average_density": 1.499353900277807e-13,
+          "average_drag": 8.061209645838919e-05
+        }
+      },
+      {
+        "index": 37,
+        "mission": {
+          "mass": 712.306790684805,
+          "fuel": 198.2027541515656,
+          "lifespan": 5.500578538703941,
+          "target_altitude": 475.77019483995,
+          "target_inclination": 52.09625702376949,
+          "cross_section_area": 11.945395558931136,
+          "drag_coefficient": 1.87,
+          "isp": 315.10772570371984
+        },
+        "weather": {
+          "kp": 3.9098450177951873,
+          "f107": 149.5864561826223,
+          "solar_wind_speed": 328.0,
+          "solar_wind_density": 5.249077788363621,
+          "solar_wind_temperature": 109974.86026977585
+        },
+        "ops": {
+          "insertion_altitude_error_km": 6.1865522227588166,
+          "insertion_inclination_error_deg": 0.23849556559750756,
+          "cam_scale": 1.0182589187913291
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 758.6187579629877,
+          "required_delta_v": 199.71721409369366,
+          "drag_delta_v": 45.2569416751121,
+          "collision_avoidance_delta_v": 22.261158987526702,
+          "insertion_delta_v": 38.65449110457046,
+          "disposal_delta_v": 93.54462232648439,
+          "propellant_required": 47.55681045203298,
+          "propellant_remaining": 150.64594369953264,
+          "initial_altitude": 475.77019483995,
+          "final_altitude": 475.77019483995,
+          "orbital_decay": 0.0,
+          "average_density": 3.5217748532496476e-13,
+          "average_drag": 0.0002115496154779367
+        }
+      },
+      {
+        "index": 38,
+        "mission": {
+          "mass": 758.8719690857268,
+          "fuel": 188.69334579228567,
+          "lifespan": 5.253363480414644,
+          "target_altitude": 489.4772195038844,
+          "target_inclination": 52.65210342445031,
+          "cross_section_area": 9.885736361757845,
+          "drag_coefficient": 1.9714343498466436,
+          "isp": 304.68460576475235
+        },
+        "weather": {
+          "kp": 3.351905183071575,
+          "f107": 158.06261920912837,
+          "solar_wind_speed": 353.54702842871205,
+          "solar_wind_density": 4.276962199766352,
+          "solar_wind_temperature": 80269.83559075958
+        },
+        "ops": {
+          "insertion_altitude_error_km": -4.789777060858396,
+          "insertion_inclination_error_deg": -0.9716783310765063,
+          "cam_scale": 1.4397554312732153
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 663.5092436646811,
+          "required_delta_v": 287.4520971337598,
+          "drag_delta_v": 28.178289262198653,
+          "collision_avoidance_delta_v": 27.37728470090462,
+          "insertion_delta_v": 134.5883519695012,
+          "disposal_delta_v": 97.30817120115535,
+          "propellant_required": 76.63387053391534,
+          "propellant_remaining": 112.05947525837033,
+          "initial_altitude": 489.4772195038844,
+          "final_altitude": 489.4772195038844,
+          "orbital_decay": 0.0,
+          "average_density": 2.7703164283862334e-13,
+          "average_drag": 0.00014502188340898855
+        }
+      },
+      {
+        "index": 39,
+        "mission": {
+          "mass": 715.473061479348,
+          "fuel": 200.5279016491532,
+          "lifespan": 5.2066555929147675,
+          "target_altitude": 482.9322784569342,
+          "target_inclination": 53.93229624719431,
+          "cross_section_area": 9.595090461116765,
+          "drag_coefficient": 2.2062515653429497,
+          "isp": 331.58132231921905
+        },
+        "weather": {
+          "kp": 3.7608533088430214,
+          "f107": 171.68353757293045,
+          "solar_wind_speed": 391.39009427262,
+          "solar_wind_density": 4.84365436646484,
+          "solar_wind_temperature": 102679.575219476
+        },
+        "ops": {
+          "insertion_altitude_error_km": 4.384694784120276,
+          "insertion_inclination_error_deg": -0.9233390592749986,
+          "cam_scale": 0.9997167306579496
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 803.409282967844,
+          "required_delta_v": 284.74202804807044,
+          "drag_delta_v": 43.86891577222507,
+          "collision_avoidance_delta_v": 17.587069793111283,
+          "insertion_delta_v": 127.7732540150974,
+          "disposal_delta_v": 95.51278846763671,
+          "propellant_required": 65.47685671643451,
+          "propellant_remaining": 135.0510449327187,
+          "initial_altitude": 482.9322784569342,
+          "final_altitude": 482.9322784569342,
+          "orbital_decay": 0.0,
+          "average_density": 3.8164779699477356e-13,
+          "average_drag": 0.00021779316720477526
+        }
+      },
+      {
+        "index": 40,
+        "mission": {
+          "mass": 775.5531178965125,
+          "fuel": 209.0067780443678,
+          "lifespan": 4.98415375167896,
+          "target_altitude": 460.0,
+          "target_inclination": 49.924613144195085,
+          "cross_section_area": 11.557000757001049,
+          "drag_coefficient": 2.2761833543230328,
+          "isp": 319.7548476361376
+        },
+        "weather": {
+          "kp": 3.2563220989222006,
+          "f107": 127.09692252970555,
+          "solar_wind_speed": 418.703487090449,
+          "solar_wind_density": 5.500997646646145,
+          "solar_wind_temperature": 98917.06598496447
+        },
+        "ops": {
+          "insertion_altitude_error_km": -10.459532538326606,
+          "insertion_inclination_error_deg": -0.5393787612872121,
+          "cam_scale": 1.2175498563730989
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 748.2409748639511,
+          "required_delta_v": 239.80158440147852,
+          "drag_delta_v": 46.352485343864856,
+          "collision_avoidance_delta_v": 20.643452433459732,
+          "insertion_delta_v": 83.60763726629895,
+          "disposal_delta_v": 89.19800935785497,
+          "propellant_required": 61.63646757080815,
+          "propellant_remaining": 147.37031047355964,
+          "initial_altitude": 460.0,
+          "final_altitude": 460.0,
+          "orbital_decay": 0.0,
+          "average_density": 3.672147746121785e-13,
+          "average_drag": 0.00025935115444756336
+        }
+      },
+      {
+        "index": 41,
+        "mission": {
+          "mass": 778.1920984197125,
+          "fuel": 192.16095778644012,
+          "lifespan": 5.528101005758485,
+          "target_altitude": 501.6062563362098,
+          "target_inclination": 50.55393115975942,
+          "cross_section_area": 9.999943016924387,
+          "drag_coefficient": 2.1195934744572864,
+          "isp": 338.3479684941139
+        },
+        "weather": {
+          "kp": 2.6805405866894327,
+          "f107": 137.54570578169685,
+          "solar_wind_speed": 417.7348988557525,
+          "solar_wind_density": 4.315369803429213,
+          "solar_wind_temperature": 125000.0
+        },
+        "ops": {
+          "insertion_altitude_error_km": -3.2722703826903605,
+          "insertion_inclination_error_deg": -2.075509602116226,
+          "cam_scale": 0.8080223771645679
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 732.2513166461339,
+          "required_delta_v": 416.96456653449525,
+          "drag_delta_v": 19.30952627489023,
+          "collision_avoidance_delta_v": 17.543043007101428,
+          "insertion_delta_v": 279.4846658187659,
+          "disposal_delta_v": 100.62733143373771,
+          "propellant_required": 104.20181539770324,
+          "propellant_remaining": 87.95914238873688,
+          "initial_altitude": 501.6062563362098,
+          "final_altitude": 501.6062563362098,
+          "orbital_decay": 0.0,
+          "average_density": 1.7100587664114084e-13,
+          "average_drag": 9.67695093370079e-05
+        }
+      },
+      {
+        "index": 42,
+        "mission": {
+          "mass": 714.3494339548336,
+          "fuel": 193.4173968420951,
+          "lifespan": 5.229439474003794,
+          "target_altitude": 474.85671790576083,
+          "target_inclination": 53.52443483405058,
+          "cross_section_area": 9.207410086340298,
+          "drag_coefficient": 2.033274706568645,
+          "isp": 323.9608118481372
+        },
+        "weather": {
+          "kp": 3.8457344559986284,
+          "f107": 127.00305685686284,
+          "solar_wind_speed": 431.47417629074056,
+          "solar_wind_density": 6.461613268403241,
+          "solar_wind_temperature": 123410.97863855446
+        },
+        "ops": {
+          "insertion_altitude_error_km": 7.030934201533658,
+          "insertion_inclination_error_deg": 0.027621787727694882,
+          "cam_scale": 0.6630014356661628
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 761.2507076961926,
+          "required_delta_v": 145.8868729453643,
+          "drag_delta_v": 30.464236467134963,
+          "collision_avoidance_delta_v": 10.613864250331421,
+          "insertion_delta_v": 11.51543942987159,
+          "disposal_delta_v": 93.29333279802631,
+          "propellant_required": 33.56783650862266,
+          "propellant_remaining": 159.84956033347243,
+          "initial_altitude": 474.85671790576083,
+          "final_altitude": 474.85671790576083,
+          "orbital_decay": 0.0,
+          "average_density": 2.965211153265673e-13,
+          "average_drag": 0.0001497211565157565
+        }
+      },
+      {
+        "index": 43,
+        "mission": {
+          "mass": 741.0788247742771,
+          "fuel": 210.0,
+          "lifespan": 5.663578963967938,
+          "target_altitude": 507.94012753786933,
+          "target_inclination": 50.73189671483977,
+          "cross_section_area": 11.472919948670663,
+          "drag_coefficient": 2.5356883074171073,
+          "isp": 303.35238637405115
+        },
+        "weather": {
+          "kp": 3.0853330282763434,
+          "f107": 147.34560486955237,
+          "solar_wind_speed": 483.07698115120405,
+          "solar_wind_density": 5.634933997834175,
+          "solar_wind_temperature": 101458.88842941508
+        },
+        "ops": {
+          "insertion_altitude_error_km": 18.09903904471974,
+          "insertion_inclination_error_deg": -1.176309773869411,
+          "cam_scale": 0.45
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 742.2003355512611,
+          "required_delta_v": 320.37390229292293,
+          "drag_delta_v": 29.753677012061544,
+          "collision_avoidance_delta_v": 11.956908362028013,
+          "insertion_delta_v": 176.3068292942615,
+          "disposal_delta_v": 102.35648762457186,
+          "propellant_required": 84.26526989365387,
+          "propellant_remaining": 125.73473010634613,
+          "initial_altitude": 507.94012753786933,
+          "final_altitude": 507.94012753786933,
+          "orbital_decay": 0.0,
+          "average_density": 1.8147168246320561e-13,
+          "average_drag": 0.00014084990002531235
+        }
+      },
+      {
+        "index": 44,
+        "mission": {
+          "mass": 753.1094422060959,
+          "fuel": 200.43250265379612,
+          "lifespan": 4.935493636910463,
+          "target_altitude": 496.6849744905163,
+          "target_inclination": 50.095682628211854,
+          "cross_section_area": 11.20411539482857,
+          "drag_coefficient": 2.1797285920044143,
+          "isp": 323.8190668404513
+        },
+        "weather": {
+          "kp": 2.6054104641365217,
+          "f107": 117.0,
+          "solar_wind_speed": 331.2876074859481,
+          "solar_wind_density": 4.7358637981267755,
+          "solar_wind_temperature": 102915.06920310485
+        },
+        "ops": {
+          "insertion_altitude_error_km": 12.569317145792066,
+          "insertion_inclination_error_deg": -0.49912425644521496,
+          "cam_scale": 0.7027591858649829
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 749.3507404435891,
+          "required_delta_v": 210.9799766216301,
+          "drag_delta_v": 16.627910353191258,
+          "collision_avoidance_delta_v": 14.760508099266989,
+          "insertion_delta_v": 80.30970004907553,
+          "disposal_delta_v": 99.28185812009633,
+          "propellant_required": 51.73482605850685,
+          "propellant_remaining": 148.69767659528927,
+          "initial_altitude": 496.6849744905163,
+          "final_altitude": 496.6849744905163,
+          "orbital_decay": 0.0,
+          "average_density": 1.397312960085548e-13,
+          "average_drag": 9.109990694900719e-05
+        }
+      },
+      {
+        "index": 45,
+        "mission": {
+          "mass": 745.2449348703434,
+          "fuel": 195.16807961485534,
+          "lifespan": 5.306865067656725,
+          "target_altitude": 485.6442663613636,
+          "target_inclination": 49.75169410668197,
+          "cross_section_area": 10.405938854101473,
+          "drag_coefficient": 2.6269013414173292,
+          "isp": 336.9270004204705
+        },
+        "weather": {
+          "kp": 3.3602953157896405,
+          "f107": 158.8021787654244,
+          "solar_wind_speed": 371.39233758795046,
+          "solar_wind_density": 4.467088922002337,
+          "solar_wind_temperature": 84633.58020610081
+        },
+        "ops": {
+          "insertion_altitude_error_km": 0.09672859739329365,
+          "insertion_inclination_error_deg": -0.19218727785195935,
+          "cam_scale": 0.6260446297187459
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 768.5600655419203,
+          "required_delta_v": 178.15101417202848,
+          "drag_delta_v": 44.021207378066364,
+          "collision_avoidance_delta_v": 12.190190756100035,
+          "insertion_delta_v": 25.682516376605392,
+          "disposal_delta_v": 96.25709966125669,
+          "propellant_required": 41.28492858620363,
+          "propellant_remaining": 153.88315102865172,
+          "initial_altitude": 485.6442663613636,
+          "final_altitude": 485.6442663613636,
+          "orbital_decay": 0.0,
+          "average_density": 3.032423773940668e-13,
+          "average_drag": 0.00022154369495330965
+        }
+      },
+      {
+        "index": 46,
+        "mission": {
+          "mass": 756.7068613484015,
+          "fuel": 206.04185075683787,
+          "lifespan": 4.660336593518743,
+          "target_altitude": 474.0253738803315,
+          "target_inclination": 52.2714033742759,
+          "cross_section_area": 8.900043480199905,
+          "drag_coefficient": 2.3641039561521047,
+          "isp": 307.119101574069
+        },
+        "weather": {
+          "kp": 3.573305920195307,
+          "f107": 117.0,
+          "solar_wind_speed": 428.1065410781227,
+          "solar_wind_density": 4.56717971063202,
+          "solar_wind_temperature": 117174.94352853399
+        },
+        "ops": {
+          "insertion_altitude_error_km": -18.834484853786936,
+          "insertion_inclination_error_deg": 0.8170073361103742,
+          "cam_scale": 1.1736439142776722
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 725.2934129465876,
+          "required_delta_v": 263.65403338747774,
+          "drag_delta_v": 24.768350249729462,
+          "collision_avoidance_delta_v": 16.010908192983365,
+          "insertion_delta_v": 129.81018936176505,
+          "disposal_delta_v": 93.06458558299983,
+          "propellant_required": 69.2280877637707,
+          "propellant_remaining": 136.81376299306717,
+          "initial_altitude": 474.0253738803315,
+          "final_altitude": 474.0253738803315,
+          "orbital_decay": 0.0,
+          "average_density": 2.557392321995189e-13,
+          "average_drag": 0.00014478940787636272
+        }
+      },
+      {
+        "index": 47,
+        "mission": {
+          "mass": 726.3157798695981,
+          "fuel": 192.78948504634823,
+          "lifespan": 5.579704473982874,
+          "target_altitude": 494.4467307379157,
+          "target_inclination": 48.6,
+          "cross_section_area": 10.571087685183752,
+          "drag_coefficient": 2.2941355258064324,
+          "isp": 303.96349094489597
+        },
+        "weather": {
+          "kp": 2.020970414908444,
+          "f107": 151.8679824731793,
+          "solar_wind_speed": 365.33382035864867,
+          "solar_wind_density": 5.918890969322007,
+          "solar_wind_temperature": 111745.67724972671
+        },
+        "ops": {
+          "insertion_altitude_error_km": 6.399633646690958,
+          "insertion_inclination_error_deg": -1.0105091172087433,
+          "cam_scale": 1.0705821972943044
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 701.7423218384591,
+          "required_delta_v": 292.81921465950745,
+          "drag_delta_v": 29.17777590580958,
+          "collision_avoidance_delta_v": 23.485765634248743,
+          "insertion_delta_v": 141.48631534025708,
+          "disposal_delta_v": 98.66935777919207,
+          "propellant_required": 74.97018519902056,
+          "propellant_remaining": 117.81929984732767,
+          "initial_altitude": 494.4467307379157,
+          "final_altitude": 494.4467307379157,
+          "orbital_decay": 0.0,
+          "average_density": 2.110928148346669e-13,
+          "average_drag": 0.00013632768875511089
+        }
+      },
+      {
+        "index": 48,
+        "mission": {
+          "mass": 750.2818015745713,
+          "fuel": 198.5485845264656,
+          "lifespan": 4.875443795085214,
+          "target_altitude": 486.0610966082287,
+          "target_inclination": 52.19554839257022,
+          "cross_section_area": 9.141164225221377,
+          "drag_coefficient": 2.2258447208313386,
+          "isp": 321.8271149891278
+        },
+        "weather": {
+          "kp": 7.986686715663536,
+          "f107": 229.3304498762755,
+          "solar_wind_speed": 523.3493625341363,
+          "solar_wind_density": 12.02055958812955,
+          "solar_wind_temperature": 124302.65180835311
+        },
+        "ops": {
+          "insertion_altitude_error_km": -0.23024724320358791,
+          "insertion_inclination_error_deg": -0.41213976951485515,
+          "cam_scale": 1.2149355636454513
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 740.9801820071439,
+          "required_delta_v": 300.581339101756,
+          "drag_delta_v": 129.76885179852013,
+          "collision_avoidance_delta_v": 19.342071064914382,
+          "insertion_delta_v": 55.098962920989,
+          "disposal_delta_v": 96.37145331733245,
+          "propellant_required": 74.97013913615237,
+          "propellant_remaining": 123.57844539031322,
+          "initial_altitude": 486.0610966082287,
+          "final_altitude": 486.0610966082287,
+          "orbital_decay": 0.0,
+          "average_density": 1.3115460665297123e-12,
+          "average_drag": 0.0007165465348462815
+        }
+      },
+      {
+        "index": 49,
+        "mission": {
+          "mass": 831.9145787012817,
+          "fuel": 197.69317291721816,
+          "lifespan": 5.507493251508544,
+          "target_altitude": 478.2789851021141,
+          "target_inclination": 52.48514814994625,
+          "cross_section_area": 11.041189590797345,
+          "drag_coefficient": 2.1239673123209575,
+          "isp": 331.72393684717275
+        },
+        "weather": {
+          "kp": 2.6450031099432905,
+          "f107": 158.3724795182724,
+          "solar_wind_speed": 423.0290543351299,
+          "solar_wind_density": 4.746462561589313,
+          "solar_wind_temperature": 92820.26475915611
+        },
+        "ops": {
+          "insertion_altitude_error_km": -14.118676439845038,
+          "insertion_inclination_error_deg": 0.5330607809222104,
+          "cam_scale": 0.8400902154650467
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 693.5721595823894,
+          "required_delta_v": 237.40006869014277,
+          "drag_delta_v": 39.14262083357473,
+          "collision_avoidance_delta_v": 17.32385398886307,
+          "insertion_delta_v": 86.69913129282666,
+          "disposal_delta_v": 94.23446257487831,
+          "propellant_required": 62.980356056687924,
+          "propellant_remaining": 134.71281686053024,
+          "initial_altitude": 478.2789851021141,
+          "final_altitude": 478.2789851021141,
+          "orbital_decay": 0.0,
+          "average_density": 3.322805805040615e-13,
+          "average_drag": 0.0002096187924254949
+        }
+      },
+      {
+        "index": 50,
+        "mission": {
+          "mass": 791.9701775876784,
+          "fuel": 196.75041751157792,
+          "lifespan": 5.578530106920009,
+          "target_altitude": 489.21073283032644,
+          "target_inclination": 51.30309610879134,
+          "cross_section_area": 11.367096354266849,
+          "drag_coefficient": 2.145006541107718,
+          "isp": 304.0724863508131
+        },
+        "weather": {
+          "kp": 7.140500777844719,
+          "f107": 221.02909184036125,
+          "solar_wind_speed": 642.7479523608705,
+          "solar_wind_density": 8.57406783302557,
+          "solar_wind_temperature": 166925.90776799392
+        },
+        "ops": {
+          "insertion_altitude_error_km": 13.665832479094538,
+          "insertion_inclination_error_deg": -0.5971336764117686,
+          "cam_scale": 0.6944380551897662
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 661.6551541882709,
+          "required_delta_v": 342.1118887934307,
+          "drag_delta_v": 134.24398088145327,
+          "collision_avoidance_delta_v": 16.006894955535195,
+          "insertion_delta_v": 94.62588393641181,
+          "disposal_delta_v": 97.2351290200304,
+          "propellant_required": 96.27871278123408,
+          "propellant_remaining": 100.47170473034384,
+          "initial_altitude": 489.21073283032644,
+          "final_altitude": 489.21073283032644,
+          "orbital_decay": 0.0,
+          "average_density": 1.0393595297607969e-12,
+          "average_drag": 0.0006789371711084882
+        }
+      },
+      {
+        "index": 51,
+        "mission": {
+          "mass": 714.7504825070196,
+          "fuel": 195.26760208362452,
+          "lifespan": 4.674113691850996,
+          "target_altitude": 504.54684641894266,
+          "target_inclination": 49.80659603972943,
+          "cross_section_area": 11.286273210217463,
+          "drag_coefficient": 2.1096533838569664,
+          "isp": 316.00359497601204
+        },
+        "weather": {
+          "kp": 3.715783965181518,
+          "f107": 151.4026625873358,
+          "solar_wind_speed": 390.72096189964844,
+          "solar_wind_density": 4.806018370646176,
+          "solar_wind_temperature": 120419.89506795323
+        },
+        "ops": {
+          "insertion_altitude_error_km": 11.030204408145586,
+          "insertion_inclination_error_deg": 0.5879939994075877,
+          "cam_scale": 1.338975752709008
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 748.4891644472633,
+          "required_delta_v": 244.08887423212775,
+          "drag_delta_v": 24.134806661110147,
+          "collision_avoidance_delta_v": 28.170412537858468,
+          "insertion_delta_v": 90.35318611381051,
+          "disposal_delta_v": 101.43046891934864,
+          "propellant_required": 58.57410793957717,
+          "propellant_remaining": 136.69349414404735,
+          "initial_altitude": 504.54684641894266,
+          "final_altitude": 504.54684641894266,
+          "orbital_decay": 0.0,
+          "average_density": 2.0950526713927952e-13,
+          "average_drag": 0.0001329236009958912
+        }
+      },
+      {
+        "index": 52,
+        "mission": {
+          "mass": 748.4572901842059,
+          "fuel": 207.4809477134174,
+          "lifespan": 4.820496788753713,
+          "target_altitude": 491.17238677226203,
+          "target_inclination": 54.396493241240464,
+          "cross_section_area": 8.674443065839228,
+          "drag_coefficient": 2.3189747142717887,
+          "isp": 319.91734467431155
+        },
+        "weather": {
+          "kp": 8.28125853718041,
+          "f107": 197.00109851289707,
+          "solar_wind_speed": 653.9700377032954,
+          "solar_wind_density": 11.73077328294352,
+          "solar_wind_temperature": 162074.0862849087
+        },
+        "ops": {
+          "insertion_altitude_error_km": 21.227205893400487,
+          "insertion_inclination_error_deg": -0.6364824817211048,
+          "cam_scale": 0.8966804784708964
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 767.6362072959892,
+          "required_delta_v": 323.8916448227305,
+          "drag_delta_v": 103.90045272492071,
+          "collision_avoidance_delta_v": 13.978378599263513,
+          "insertion_delta_v": 108.24012645196137,
+          "disposal_delta_v": 97.7726870465849,
+          "propellant_required": 81.39900370888495,
+          "propellant_remaining": 126.08194400453246,
+          "initial_altitude": 491.17238677226203,
+          "final_altitude": 491.17238677226203,
+          "orbital_decay": 0.0,
+          "average_density": 1.0737980473219462e-12,
+          "average_drag": 0.0005820523745432166
+        }
+      },
+      {
+        "index": 53,
+        "mission": {
+          "mass": 708.9893608016763,
+          "fuel": 205.58587890586065,
+          "lifespan": 5.511095663586145,
+          "target_altitude": 494.26029139919854,
+          "target_inclination": 49.44761764705691,
+          "cross_section_area": 10.616604044562406,
+          "drag_coefficient": 2.1505467303518526,
+          "isp": 307.75872291146504
+        },
+        "weather": {
+          "kp": 3.3590709688358382,
+          "f107": 149.15713926289627,
+          "solar_wind_speed": 408.913826886392,
+          "solar_wind_density": 5.278981975470842,
+          "solar_wind_temperature": 113288.36332614944
+        },
+        "ops": {
+          "insertion_altitude_error_km": 0.7760030556671349,
+          "insertion_inclination_error_deg": -0.597569411053746,
+          "cam_scale": 1.09955782021074
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 768.4616993681707,
+          "required_delta_v": 234.43241070941878,
+          "drag_delta_v": 31.495392258439548,
+          "collision_avoidance_delta_v": 23.987241469332837,
+          "insertion_delta_v": 80.33145474338579,
+          "disposal_delta_v": 98.61832223826059,
+          "propellant_required": 57.26676094719116,
+          "propellant_remaining": 148.3191179586695,
+          "initial_altitude": 494.26029139919854,
+          "final_altitude": 494.26029139919854,
+          "orbital_decay": 0.0,
+          "average_density": 2.4139603206423894e-13,
+          "average_drag": 0.00014700925703627828
+        }
+      },
+      {
+        "index": 54,
+        "mission": {
+          "mass": 797.9586631491784,
+          "fuel": 184.26210754648613,
+          "lifespan": 5.021890722749981,
+          "target_altitude": 508.2602403741662,
+          "target_inclination": 53.915954693313694,
+          "cross_section_area": 11.87839584539855,
+          "drag_coefficient": 2.1975903974063278,
+          "isp": 331.7184555229053
+        },
+        "weather": {
+          "kp": 8.039229787291209,
+          "f107": 196.6573232876777,
+          "solar_wind_speed": 561.6558762400007,
+          "solar_wind_density": 10.687674203675941,
+          "solar_wind_temperature": 163304.10789900617
+        },
+        "ops": {
+          "insertion_altitude_error_km": 9.61461238066654,
+          "insertion_inclination_error_deg": -1.0070584641466631,
+          "cam_scale": 1.1636604781776303
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 675.8507404540454,
+          "required_delta_v": 369.0197943501115,
+          "drag_delta_v": 93.3385885676829,
+          "collision_avoidance_delta_v": 28.808459903000227,
+          "insertion_delta_v": 144.42894209550298,
+          "disposal_delta_v": 102.44380378392543,
+          "propellant_required": 95.85292569982212,
+          "propellant_remaining": 88.40918184666401,
+          "initial_altitude": 508.2602403741662,
+          "final_altitude": 508.2602403741662,
+          "orbital_decay": 0.0,
+          "average_density": 7.480599490156102e-13,
+          "average_drag": 0.0005242323142751452
+        }
+      },
+      {
+        "index": 55,
+        "mission": {
+          "mass": 792.7500469241197,
+          "fuel": 203.12376926442056,
+          "lifespan": 5.336149922181386,
+          "target_altitude": 460.0,
+          "target_inclination": 53.61422232969686,
+          "cross_section_area": 11.0741660872551,
+          "drag_coefficient": 2.316966230596738,
+          "isp": 299.0
+        },
+        "weather": {
+          "kp": 3.6194798922022375,
+          "f107": 174.00740774231804,
+          "solar_wind_speed": 443.5705623711769,
+          "solar_wind_density": 3.75,
+          "solar_wind_temperature": 93936.56637560278
+        },
+        "ops": {
+          "insertion_altitude_error_km": 4.649726259568617,
+          "insertion_inclination_error_deg": -0.36428988716920124,
+          "cam_scale": 1.391131632646841
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 668.8690682568116,
+          "required_delta_v": 244.7500852636994,
+          "drag_delta_v": 77.21953494070803,
+          "collision_avoidance_delta_v": 24.564911100653514,
+          "insertion_delta_v": 53.76762986448287,
+          "disposal_delta_v": 89.19800935785497,
+          "propellant_required": 69.01105042321323,
+          "propellant_remaining": 134.1127188412073,
+          "initial_altitude": 460.0,
+          "final_altitude": 460.0,
+          "orbital_decay": 0.0,
+          "average_density": 5.910621591136196e-13,
+          "average_drag": 0.00041009475686558703
+        }
+      },
+      {
+        "index": 56,
+        "mission": {
+          "mass": 813.1012713043206,
+          "fuel": 187.80144380184552,
+          "lifespan": 5.2543341627597115,
+          "target_altitude": 478.71401106106225,
+          "target_inclination": 50.0277647599479,
+          "cross_section_area": 11.774527721168333,
+          "drag_coefficient": 2.3248673012910586,
+          "isp": 320.3463766080389
+        },
+        "weather": {
+          "kp": 3.40547865360341,
+          "f107": 179.50739400277527,
+          "solar_wind_speed": 436.4523158158808,
+          "solar_wind_density": 5.252538976447655,
+          "solar_wind_temperature": 110064.76969459234
+        },
+        "ops": {
+          "insertion_altitude_error_km": 5.971296956443317,
+          "insertion_inclination_error_deg": -0.18740851374412823,
+          "cam_scale": 1.0171122372210437
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 652.8148844129344,
+          "required_delta_v": 205.64037265603042,
+          "drag_delta_v": 58.497708123150375,
+          "collision_avoidance_delta_v": 21.18687413617024,
+          "insertion_delta_v": 31.601754675957693,
+          "disposal_delta_v": 94.35403572075211,
+          "propellant_required": 55.005264548245606,
+          "propellant_remaining": 132.79617925359992,
+          "initial_altitude": 478.71401106106225,
+          "final_altitude": 478.71401106106225,
+          "orbital_decay": 0.0,
+          "average_density": 4.3663396780940466e-13,
+          "average_drag": 0.0003199819172139177
+        }
+      },
+      {
+        "index": 57,
+        "mission": {
+          "mass": 755.6812075229227,
+          "fuel": 199.28828156164587,
+          "lifespan": 4.989271574043851,
+          "target_altitude": 500.9510107325429,
+          "target_inclination": 52.43063268964119,
+          "cross_section_area": 10.837964522585661,
+          "drag_coefficient": 2.5432913118541545,
+          "isp": 321.9288350741585
+        },
+        "weather": {
+          "kp": 3.092790877308958,
+          "f107": 153.43105479398838,
+          "solar_wind_speed": 443.2807710812982,
+          "solar_wind_density": 5.228353911683904,
+          "solar_wind_temperature": 105780.75039360422
+        },
+        "ops": {
+          "insertion_altitude_error_km": -3.2400206472943798,
+          "insertion_inclination_error_deg": -1.1428038012382196,
+          "cam_scale": 0.5195940427398029
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 738.9369091297299,
+          "required_delta_v": 296.67537838704766,
+          "drag_delta_v": 29.657666112470185,
+          "collision_avoidance_delta_v": 11.074058119184631,
+          "insertion_delta_v": 155.49536738517742,
+          "disposal_delta_v": 100.44828677021542,
+          "propellant_required": 74.45694932778395,
+          "propellant_remaining": 124.83133223386193,
+          "initial_altitude": 500.9510107325429,
+          "final_altitude": 500.9510107325429,
+          "orbital_decay": 0.0,
+          "average_density": 2.1810717850977412e-13,
+          "average_drag": 0.00016111174572148017
+        }
+      },
+      {
+        "index": 58,
+        "mission": {
+          "mass": 768.1422433801729,
+          "fuel": 193.88712508478437,
+          "lifespan": 5.112523225067353,
+          "target_altitude": 460.0,
+          "target_inclination": 51.512758157718096,
+          "cross_section_area": 11.72363072323668,
+          "drag_coefficient": 2.3727639691832203,
+          "isp": 328.7245545746058
+        },
+        "weather": {
+          "kp": 2.5008466259318696,
+          "f107": 158.3351975161877,
+          "solar_wind_speed": 404.8241691118861,
+          "solar_wind_density": 4.434330529860806,
+          "solar_wind_temperature": 104001.2678894873
+        },
+        "ops": {
+          "insertion_altitude_error_km": 1.6080269554643227,
+          "insertion_inclination_error_deg": -1.532232268748441,
+          "cam_scale": 1.1028940140370151
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 725.5553162568358,
+          "required_delta_v": 379.6501401941122,
+          "drag_delta_v": 64.79082554348874,
+          "collision_avoidance_delta_v": 19.587852640742412,
+          "insertion_delta_v": 206.0734526520261,
+          "disposal_delta_v": 89.19800935785497,
+          "propellant_required": 96.0055942883724,
+          "propellant_remaining": 97.88153079641198,
+          "initial_altitude": 460.0,
+          "final_altitude": 460.0,
+          "orbital_decay": 0.0,
+          "average_density": 4.637472882733692e-13,
+          "average_drag": 0.0003474028995519437
+        }
+      },
+      {
+        "index": 59,
+        "mission": {
+          "mass": 765.043433910972,
+          "fuel": 195.13761774881232,
+          "lifespan": 5.052527318053056,
+          "target_altitude": 488.8980244555448,
+          "target_inclination": 53.69789457914085,
+          "cross_section_area": 9.509487124094303,
+          "drag_coefficient": 2.2230014001053444,
+          "isp": 333.1073975887105
+        },
+        "weather": {
+          "kp": 3.048541271577892,
+          "f107": 145.8981409591778,
+          "solar_wind_speed": 396.7560951428771,
+          "solar_wind_density": 4.723465276886833,
+          "solar_wind_temperature": 81481.12044570506
+        },
+        "ops": {
+          "insertion_altitude_error_km": -19.033845735884725,
+          "insertion_inclination_error_deg": 0.1329186634894046,
+          "cam_scale": 1.0669037407103712
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 742.1517875296499,
+          "required_delta_v": 180.53664015493135,
+          "drag_delta_v": 25.77895223449137,
+          "collision_avoidance_delta_v": 18.774152794514027,
+          "insertion_delta_v": 38.83412376642693,
+          "disposal_delta_v": 97.14941135949903,
+          "propellant_required": 43.4713061094979,
+          "propellant_remaining": 151.66631163931442,
+          "initial_altitude": 488.8980244555448,
+          "final_altitude": 488.8980244555448,
+          "orbital_decay": 0.0,
+          "average_density": 2.45085226243071e-13,
+          "average_drag": 0.0001394659668878878
+        }
+      },
+      {
+        "index": 60,
+        "mission": {
+          "mass": 801.6248340981631,
+          "fuel": 197.79671065551133,
+          "lifespan": 5.406730902852058,
+          "target_altitude": 476.36062981855594,
+          "target_inclination": 52.04810294448251,
+          "cross_section_area": 11.013181276889439,
+          "drag_coefficient": 2.397764901801303,
+          "isp": 314.92419766759
+        },
+        "weather": {
+          "kp": 2.5434113363691835,
+          "f107": 158.0663410821424,
+          "solar_wind_speed": 401.06227377016256,
+          "solar_wind_density": 5.274489392452761,
+          "solar_wind_temperature": 98165.41509553113
+        },
+        "ops": {
+          "insertion_altitude_error_km": -21.87705026165932,
+          "insertion_inclination_error_deg": -0.08998638992717278,
+          "cam_scale": 0.6509992257508483
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 681.0924933917639,
+          "required_delta_v": 188.68180880889966,
+          "drag_delta_v": 45.66693383795723,
+          "collision_avoidance_delta_v": 12.948390232550457,
+          "insertion_delta_v": 36.35947056430234,
+          "disposal_delta_v": 93.70701417408964,
+          "propellant_required": 50.50199873896279,
+          "propellant_remaining": 147.29471191654855,
+          "initial_altitude": 476.36062981855594,
+          "final_altitude": 476.36062981855594,
+          "orbital_decay": 0.0,
+          "average_density": 3.3947890109298514e-13,
+          "average_drag": 0.0002410227470862376
+        }
+      },
+      {
+        "index": 61,
+        "mission": {
+          "mass": 738.4875723661646,
+          "fuel": 191.61642923279553,
+          "lifespan": 5.019527477453832,
+          "target_altitude": 503.4191290279311,
+          "target_inclination": 52.5734475737608,
+          "cross_section_area": 9.510723339065477,
+          "drag_coefficient": 1.9848496179516262,
+          "isp": 331.53088051394064
+        },
+        "weather": {
+          "kp": 2.324087461546724,
+          "f107": 139.00078154100635,
+          "solar_wind_speed": 386.03488602187986,
+          "solar_wind_density": 4.705343032483204,
+          "solar_wind_temperature": 98840.89764960491
+        },
+        "ops": {
+          "insertion_altitude_error_km": 5.668289309827757,
+          "insertion_inclination_error_deg": 0.0539792365652674,
+          "cam_scale": 1.1511762043689342
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 750.0279586274058,
+          "required_delta_v": 151.73942176539987,
+          "drag_delta_v": 15.150234996199629,
+          "collision_avoidance_delta_v": 22.014096063179387,
+          "insertion_delta_v": 13.452553141583715,
+          "disposal_delta_v": 101.12253756443715,
+          "propellant_required": 35.2834467381513,
+          "propellant_remaining": 156.33298249464423,
+          "initial_altitude": 503.4191290279311,
+          "final_altitude": 503.4191290279311,
+          "orbital_decay": 0.0,
+          "average_density": 1.5775010854663276e-13,
+          "average_drag": 7.979443734202859e-05
+        }
+      },
+      {
+        "index": 62,
+        "mission": {
+          "mass": 724.8933179358377,
+          "fuel": 197.6719444102446,
+          "lifespan": 4.717979718955243,
+          "target_altitude": 503.5430100444763,
+          "target_inclination": 48.88800654217639,
+          "cross_section_area": 11.845684553805766,
+          "drag_coefficient": 2.2171376229522184,
+          "isp": 308.6684513785191
+        },
+        "weather": {
+          "kp": 8.173069731183798,
+          "f107": 243.48860332227724,
+          "solar_wind_speed": 528.14059052774,
+          "solar_wind_density": 7.9922883957846995,
+          "solar_wind_temperature": 160675.4202362643
+        },
+        "ops": {
+          "insertion_altitude_error_km": -0.7103973582242444,
+          "insertion_inclination_error_deg": -0.6573676430185831,
+          "cam_scale": 1.0261832160401194
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 729.9123106717927,
+          "required_delta_v": 353.199970344428,
+          "drag_delta_v": 141.25495453872549,
+          "collision_avoidance_delta_v": 22.638223157477384,
+          "insertion_delta_v": 88.15042409120606,
+          "disposal_delta_v": 101.15636855701905,
+          "propellant_required": 89.71510694757507,
+          "propellant_remaining": 107.95683746266954,
+          "initial_altitude": 503.5430100444763,
+          "final_altitude": 503.5430100444763,
+          "orbital_decay": 0.0,
+          "average_density": 1.118449756571916e-12,
+          "average_drag": 0.0007814985235112196
+        }
+      },
+      {
+        "index": 63,
+        "mission": {
+          "mass": 793.9672866487481,
+          "fuel": 190.87015975357738,
+          "lifespan": 4.984646714534984,
+          "target_altitude": 497.74781870476914,
+          "target_inclination": 51.34924884399394,
+          "cross_section_area": 10.08787979789124,
+          "drag_coefficient": 2.2735398684735366,
+          "isp": 312.7751954054978
+        },
+        "weather": {
+          "kp": 2.743696815768875,
+          "f107": 166.50513288742746,
+          "solar_wind_speed": 395.7015495389469,
+          "solar_wind_density": 3.953188392848457,
+          "solar_wind_temperature": 98180.5271785703
+        },
+        "ops": {
+          "insertion_altitude_error_km": 9.14593660540757,
+          "insertion_inclination_error_deg": -0.19967826714059903,
+          "cam_scale": 1.3244778801166013
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 660.7967644591943,
+          "required_delta_v": 188.6063848000304,
+          "drag_delta_v": 26.736876457424515,
+          "collision_avoidance_delta_v": 25.605209499868725,
+          "insertion_delta_v": 36.691715222587185,
+          "disposal_delta_v": 99.57258362015,
+          "propellant_required": 50.353166613305824,
+          "propellant_remaining": 140.51699314027155,
+          "initial_altitude": 497.74781870476914,
+          "final_altitude": 497.74781870476914,
+          "orbital_decay": 0.0,
+          "average_density": 2.463475630143279e-13,
+          "average_drag": 0.000151171735759151
+        }
+      }
+    ]
+  }
+}

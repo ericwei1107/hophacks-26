@@ -1,6 +1,6 @@
 from design import MissionConstraints, MissionDesigner
 from environment import get_space_weather
-from insights import print_llm_insights
+from explanations import print_mission_insights
 from simulate import run_monte_carlo, print_summary
 
 def main():
@@ -53,7 +53,7 @@ def main():
     )
 
     print_summary(summary)
-    print_llm_insights(mission, weather, constraints, summary)
+    print_mission_insights(mission, weather, constraints, summary)
 
 if __name__ == "__main__":
     main()

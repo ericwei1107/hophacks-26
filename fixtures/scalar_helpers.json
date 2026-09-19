@@ -1,0 +1,813 @@
+{
+  "fixture": "scalar_helpers",
+  "model_version": "1.0.0",
+  "generator": "export_fixtures.py (Python reference)",
+  "payload": {
+    "orbital_velocity": [
+      {
+        "altitude_km": 120.0,
+        "value": 7836.336618052743
+      },
+      {
+        "altitude_km": 150.0,
+        "value": 7818.290221292519
+      },
+      {
+        "altitude_km": 200.0,
+        "value": 7788.487984973157
+      },
+      {
+        "altitude_km": 300.0,
+        "value": 7729.891847355842
+      },
+      {
+        "altitude_km": 400.0,
+        "value": 7672.598648385013
+      },
+      {
+        "altitude_km": 500.0,
+        "value": 7616.560806262885
+      },
+      {
+        "altitude_km": 600.0,
+        "value": 7561.733136872838
+      },
+      {
+        "altitude_km": 850.0,
+        "value": 7429.681821628783
+      },
+      {
+        "altitude_km": 1500.0,
+        "value": 7116.294812700136
+      }
+    ],
+    "atmospheric_relative_velocity": [
+      {
+        "altitude_km": 120.0,
+        "inclination_deg": 0.0,
+        "value": 7362.578181386599
+      },
+      {
+        "altitude_km": 120.0,
+        "inclination_deg": 28.5,
+        "value": 7423.432348203826
+      },
+      {
+        "altitude_km": 120.0,
+        "inclination_deg": 51.6,
+        "value": 7551.195824710502
+      },
+      {
+        "altitude_km": 120.0,
+        "inclination_deg": 90.0,
+        "value": 7850.644473401318
+      },
+      {
+        "altitude_km": 120.0,
+        "inclination_deg": 97.4,
+        "value": 7911.316820280553
+      },
+      {
+        "altitude_km": 150.0,
+        "inclination_deg": 0.0,
+        "value": 7342.34217545984
+      },
+      {
+        "altitude_km": 150.0,
+        "inclination_deg": 28.5,
+        "value": 7403.502947537047
+      },
+      {
+        "altitude_km": 150.0,
+        "inclination_deg": 51.6,
+        "value": 7531.897674239634
+      },
+      {
+        "altitude_km": 150.0,
+        "inclination_deg": 90.0,
+        "value": 7832.763785962792
+      },
+      {
+        "altitude_km": 150.0,
+        "inclination_deg": 97.4,
+        "value": 7893.713391257878
+      },
+      {
+        "altitude_km": 200.0,
+        "inclination_deg": 0.0,
+        "value": 7308.890590529584
+      },
+      {
+        "altitude_km": 200.0,
+        "inclination_deg": 28.5,
+        "value": 7370.563064263543
+      },
+      {
+        "altitude_km": 200.0,
+        "inclination_deg": 51.6,
+        "value": 7500.010950800854
+      },
+      {
+        "altitude_km": 200.0,
+        "inclination_deg": 90.0,
+        "value": 7803.240272657782
+      },
+      {
+        "altitude_km": 200.0,
+        "inclination_deg": 97.4,
+        "value": 7864.65187184274
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 0.0,
+        "value": 7242.995755690485
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 28.5,
+        "value": 7305.694249395672
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 51.6,
+        "value": 7437.252514160174
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 90.0,
+        "value": 7745.211151149936
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 97.4,
+        "value": 7807.54634528234
+      },
+      {
+        "altitude_km": 400.0,
+        "inclination_deg": 0.0,
+        "value": 7178.403859497868
+      },
+      {
+        "altitude_km": 400.0,
+        "inclination_deg": 28.5,
+        "value": 7242.131896090137
+      },
+      {
+        "altitude_km": 400.0,
+        "inclination_deg": 51.6,
+        "value": 7375.805992836587
+      },
+      {
+        "altitude_km": 400.0,
+        "inclination_deg": 90.0,
+        "value": 7688.497805720096
+      },
+      {
+        "altitude_km": 400.0,
+        "inclination_deg": 97.4,
+        "value": 7751.756062034963
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 0.0,
+        "value": 7115.067320153954
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 28.5,
+        "value": 7179.828463570705
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 51.6,
+        "value": 7315.623896770228
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 90.0,
+        "value": 7633.0527465824325
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 97.4,
+        "value": 7697.233521435683
+      },
+      {
+        "altitude_km": 600.0,
+        "inclination_deg": 0.0,
+        "value": 7052.940953542121
+      },
+      {
+        "altitude_km": 600.0,
+        "inclination_deg": 28.5,
+        "value": 7118.738808948597
+      },
+      {
+        "altitude_km": 600.0,
+        "inclination_deg": 51.6,
+        "value": 7256.661133681844
+      },
+      {
+        "altitude_km": 600.0,
+        "inclination_deg": 90.0,
+        "value": 7578.830880755895
+      },
+      {
+        "altitude_km": 600.0,
+        "inclination_deg": 97.4,
+        "value": 7643.9336195189135
+      },
+      {
+        "altitude_km": 850.0,
+        "inclination_deg": 0.0,
+        "value": 6902.6428952436
+      },
+      {
+        "altitude_km": 850.0,
+        "inclination_deg": 28.5,
+        "value": 6971.048575724286
+      },
+      {
+        "altitude_km": 850.0,
+        "inclination_deg": 51.6,
+        "value": 7114.312763978153
+      },
+      {
+        "altitude_km": 850.0,
+        "inclination_deg": 90.0,
+        "value": 7448.351629761208
+      },
+      {
+        "altitude_km": 850.0,
+        "inclination_deg": 97.4,
+        "value": 7515.756778769716
+      },
+      {
+        "altitude_km": 1500.0,
+        "inclination_deg": 0.0,
+        "value": 6541.814354373344
+      },
+      {
+        "altitude_km": 1500.0,
+        "inclination_deg": 28.5,
+        "value": 6617.1117638240285
+      },
+      {
+        "altitude_km": 1500.0,
+        "inclination_deg": 51.6,
+        "value": 6774.434393529769
+      },
+      {
+        "altitude_km": 1500.0,
+        "inclination_deg": 90.0,
+        "value": 7139.445332675518
+      },
+      {
+        "altitude_km": 1500.0,
+        "inclination_deg": 97.4,
+        "value": 7212.8189246842
+      }
+    ],
+    "density": [
+      {
+        "altitude_km": 120.0,
+        "inclination_deg": 0.0,
+        "value": 3.135968336911787e-10
+      },
+      {
+        "altitude_km": 120.0,
+        "inclination_deg": 28.5,
+        "value": 3.1658954321888713e-10
+      },
+      {
+        "altitude_km": 120.0,
+        "inclination_deg": 51.6,
+        "value": 3.185121094272162e-10
+      },
+      {
+        "altitude_km": 120.0,
+        "inclination_deg": 90.0,
+        "value": 3.198687703650023e-10
+      },
+      {
+        "altitude_km": 120.0,
+        "inclination_deg": 97.4,
+        "value": 3.198165324229024e-10
+      },
+      {
+        "altitude_km": 150.0,
+        "inclination_deg": 0.0,
+        "value": 1.757315616175113e-10
+      },
+      {
+        "altitude_km": 150.0,
+        "inclination_deg": 28.5,
+        "value": 1.7740859869910924e-10
+      },
+      {
+        "altitude_km": 150.0,
+        "inclination_deg": 51.6,
+        "value": 1.7848595511921722e-10
+      },
+      {
+        "altitude_km": 150.0,
+        "inclination_deg": 90.0,
+        "value": 1.7924619284986154e-10
+      },
+      {
+        "altitude_km": 150.0,
+        "inclination_deg": 97.4,
+        "value": 1.7921692005704396e-10
+      },
+      {
+        "altitude_km": 200.0,
+        "inclination_deg": 0.0,
+        "value": 6.69339724309945e-11
+      },
+      {
+        "altitude_km": 200.0,
+        "inclination_deg": 28.5,
+        "value": 6.757273505708299e-11
+      },
+      {
+        "altitude_km": 200.0,
+        "inclination_deg": 51.6,
+        "value": 6.798308675633447e-11
+      },
+      {
+        "altitude_km": 200.0,
+        "inclination_deg": 90.0,
+        "value": 6.827265187961439e-11
+      },
+      {
+        "altitude_km": 200.0,
+        "inclination_deg": 97.4,
+        "value": 6.826150223586574e-11
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 0.0,
+        "value": 9.710470311069567e-12
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 28.5,
+        "value": 9.80313903057292e-12
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 51.6,
+        "value": 9.862670952076407e-12
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 90.0,
+        "value": 9.904679717290958e-12
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 97.4,
+        "value": 9.903062178682864e-12
+      },
+      {
+        "altitude_km": 400.0,
+        "inclination_deg": 0.0,
+        "value": 1.4087499999999998e-12
+      },
+      {
+        "altitude_km": 400.0,
+        "inclination_deg": 28.5,
+        "value": 1.4221939480703143e-12
+      },
+      {
+        "altitude_km": 400.0,
+        "inclination_deg": 51.6,
+        "value": 1.4308305631601554e-12
+      },
+      {
+        "altitude_km": 400.0,
+        "inclination_deg": 90.0,
+        "value": 1.4369249999999998e-12
+      },
+      {
+        "altitude_km": 400.0,
+        "inclination_deg": 97.4,
+        "value": 1.4366903350001435e-12
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 0.0,
+        "value": 2.0437491686037673e-13
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 28.5,
+        "value": 2.0632530249952189e-13
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 51.6,
+        "value": 2.0757826256407653e-13
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 90.0,
+        "value": 2.0846241519758426e-13
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 97.4,
+        "value": 2.0842837108767428e-13
+      },
+      {
+        "altitude_km": 600.0,
+        "inclination_deg": 0.0,
+        "value": 2.9649765140504644e-14
+      },
+      {
+        "altitude_km": 600.0,
+        "inclination_deg": 28.5,
+        "value": 2.993271804403328e-14
+      },
+      {
+        "altitude_km": 600.0,
+        "inclination_deg": 51.6,
+        "value": 3.011449167954187e-14
+      },
+      {
+        "altitude_km": 600.0,
+        "inclination_deg": 90.0,
+        "value": 3.024276044331474e-14
+      },
+      {
+        "altitude_km": 600.0,
+        "inclination_deg": 97.4,
+        "value": 3.023782148173004e-14
+      },
+      {
+        "altitude_km": 850.0,
+        "inclination_deg": 0.0,
+        "value": 2.376869940563013e-16
+      },
+      {
+        "altitude_km": 850.0,
+        "inclination_deg": 28.5,
+        "value": 2.3995528268457607e-16
+      },
+      {
+        "altitude_km": 850.0,
+        "inclination_deg": 51.6,
+        "value": 2.414124688989687e-16
+      },
+      {
+        "altitude_km": 850.0,
+        "inclination_deg": 90.0,
+        "value": 2.4244073393742735e-16
+      },
+      {
+        "altitude_km": 850.0,
+        "inclination_deg": 97.4,
+        "value": 2.424011408098844e-16
+      },
+      {
+        "altitude_km": 1500.0,
+        "inclination_deg": 0.0,
+        "value": 1e-16
+      },
+      {
+        "altitude_km": 1500.0,
+        "inclination_deg": 28.5,
+        "value": 1e-16
+      },
+      {
+        "altitude_km": 1500.0,
+        "inclination_deg": 51.6,
+        "value": 1e-16
+      },
+      {
+        "altitude_km": 1500.0,
+        "inclination_deg": 90.0,
+        "value": 1e-16
+      },
+      {
+        "altitude_km": 1500.0,
+        "inclination_deg": 97.4,
+        "value": 1e-16
+      }
+    ],
+    "disposal_delta_v": [
+      {
+        "altitude_km": 120.0,
+        "value": 0.0
+      },
+      {
+        "altitude_km": 150.0,
+        "value": 0.0
+      },
+      {
+        "altitude_km": 200.0,
+        "value": 14.886836471989227
+      },
+      {
+        "altitude_km": 300.0,
+        "value": 44.07211322987314
+      },
+      {
+        "altitude_km": 400.0,
+        "value": 72.49679422013378
+      },
+      {
+        "altitude_km": 500.0,
+        "value": 100.18837085561881
+      },
+      {
+        "altitude_km": 600.0,
+        "value": 127.17300968543077
+      },
+      {
+        "altitude_km": 850.0,
+        "value": 191.70244712221938
+      },
+      {
+        "altitude_km": 1500.0,
+        "value": 341.97876256674044
+      }
+    ],
+    "collision_avoidance_delta_v": [
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 0.0,
+        "area": 5.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 1.151017374053852
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 0.0,
+        "area": 10.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 2.302034748107704
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 0.0,
+        "area": 20.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 4.604069496215408
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 51.6,
+        "area": 5.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 1.6367337969154374
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 51.6,
+        "area": 10.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 3.273467593830875
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 51.6,
+        "area": 20.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 6.54693518766175
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 97.4,
+        "area": 5.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 1.7656339248813762
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 97.4,
+        "area": 10.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 3.5312678497627523
+      },
+      {
+        "altitude_km": 300.0,
+        "inclination_deg": 97.4,
+        "area": 20.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 7.062535699525505
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 0.0,
+        "area": 5.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 6.864481512084187
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 0.0,
+        "area": 10.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 13.728963024168374
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 0.0,
+        "area": 20.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 27.45792604833675
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 51.6,
+        "area": 5.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 9.761215723059722
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 51.6,
+        "area": 10.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 19.522431446119445
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 51.6,
+        "area": 20.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 39.04486289223889
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 97.4,
+        "area": 5.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 10.529955244524212
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 97.4,
+        "area": 10.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 21.059910489048423
+      },
+      {
+        "altitude_km": 500.0,
+        "inclination_deg": 97.4,
+        "area": 20.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 42.11982097809685
+      },
+      {
+        "altitude_km": 800.0,
+        "inclination_deg": 0.0,
+        "area": 5.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 14.756248682037452
+      },
+      {
+        "altitude_km": 800.0,
+        "inclination_deg": 0.0,
+        "area": 10.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 29.512497364074903
+      },
+      {
+        "altitude_km": 800.0,
+        "inclination_deg": 0.0,
+        "area": 20.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 59.02499472814981
+      },
+      {
+        "altitude_km": 800.0,
+        "inclination_deg": 51.6,
+        "area": 5.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 20.983220130306727
+      },
+      {
+        "altitude_km": 800.0,
+        "inclination_deg": 51.6,
+        "area": 10.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 41.96644026061345
+      },
+      {
+        "altitude_km": 800.0,
+        "inclination_deg": 51.6,
+        "area": 20.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 83.9328805212269
+      },
+      {
+        "altitude_km": 800.0,
+        "inclination_deg": 97.4,
+        "area": 5.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 22.63574283438439
+      },
+      {
+        "altitude_km": 800.0,
+        "inclination_deg": 97.4,
+        "area": 10.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 45.27148566876878
+      },
+      {
+        "altitude_km": 800.0,
+        "inclination_deg": 97.4,
+        "area": 20.0,
+        "lifespan": 5.0,
+        "cam_scale": 1.0,
+        "value": 90.54297133753757
+      }
+    ],
+    "stationkeeping": [
+      {
+        "mission": {
+          "mass": 750.0,
+          "fuel": 200.0,
+          "lifespan": 5.0,
+          "target_altitude": 500.0,
+          "target_inclination": 51.6,
+          "cross_section_area": 10.0,
+          "drag_coefficient": 2.2,
+          "isp": 325.0
+        },
+        "altitude_km": 300.0,
+        "value": 1113.954184469739
+      },
+      {
+        "mission": {
+          "mass": 750.0,
+          "fuel": 200.0,
+          "lifespan": 5.0,
+          "target_altitude": 500.0,
+          "target_inclination": 51.6,
+          "cross_section_area": 10.0,
+          "drag_coefficient": 2.2,
+          "isp": 325.0
+        },
+        "altitude_km": 400.0,
+        "value": 158.94794188917845
+      },
+      {
+        "mission": {
+          "mass": 750.0,
+          "fuel": 200.0,
+          "lifespan": 5.0,
+          "target_altitude": 500.0,
+          "target_inclination": 51.6,
+          "cross_section_area": 10.0,
+          "drag_coefficient": 2.2,
+          "isp": 325.0
+        },
+        "altitude_km": 500.0,
+        "value": 22.684663593874273
+      },
+      {
+        "mission": {
+          "mass": 750.0,
+          "fuel": 200.0,
+          "lifespan": 5.0,
+          "target_altitude": 500.0,
+          "target_inclination": 51.6,
+          "cross_section_area": 10.0,
+          "drag_coefficient": 2.2,
+          "isp": 325.0
+        },
+        "altitude_km": 600.0,
+        "value": 3.2381499365645188
+      }
+    ]
+  }
+}

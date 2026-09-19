@@ -1,0 +1,111 @@
+{
+  "fixture": "missions",
+  "model_version": "1.0.0",
+  "generator": "export_fixtures.py (Python reference)",
+  "payload": {
+    "weather": {
+      "kp": 3.0,
+      "f107": 150.0,
+      "solar_wind_speed": 400.0,
+      "solar_wind_density": 5.0,
+      "solar_wind_temperature": 100000.0
+    },
+    "cases": [
+      {
+        "name": "passing",
+        "mission": {
+          "mass": 750.0,
+          "fuel": 200.0,
+          "lifespan": 5.0,
+          "target_altitude": 500.0,
+          "target_inclination": 51.6,
+          "cross_section_area": 10.0,
+          "drag_coefficient": 2.2,
+          "isp": 325.0
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 753.4091533811649,
+          "required_delta_v": 142.39546589561252,
+          "drag_delta_v": 22.684663593874273,
+          "collision_avoidance_delta_v": 19.522431446119445,
+          "insertion_delta_v": 0.0,
+          "disposal_delta_v": 100.18837085561881,
+          "propellant_required": 34.26819082260879,
+          "propellant_remaining": 165.7318091773912,
+          "initial_altitude": 500.0,
+          "final_altitude": 500.0,
+          "orbital_decay": 0.0,
+          "average_density": 2.0757826256407653e-13,
+          "average_drag": 0.00012220171403904692
+        }
+      },
+      {
+        "name": "marginal",
+        "mission": {
+          "mass": 900.0,
+          "fuel": 120.0,
+          "lifespan": 5.0,
+          "target_altitude": 420.0,
+          "target_inclination": 51.6,
+          "cross_section_area": 14.0,
+          "drag_coefficient": 2.2,
+          "isp": 300.0
+        },
+        "expected": {
+          "passed": true,
+          "failure_reasons": [],
+          "available_delta_v": 368.22934075497085,
+          "required_delta_v": 226.696511333117,
+          "drag_delta_v": 133.48086832151975,
+          "collision_avoidance_delta_v": 15.122740993249693,
+          "insertion_delta_v": 0.0,
+          "disposal_delta_v": 78.09290201834756,
+          "propellant_required": 72.09169134249551,
+          "propellant_remaining": 47.90830865750449,
+          "initial_altitude": 420.0,
+          "final_altitude": 420.0,
+          "orbital_decay": 0.0,
+          "average_density": 9.725388097997785e-13,
+          "average_drag": 0.0008121126675581093
+        }
+      },
+      {
+        "name": "failing",
+        "mission": {
+          "mass": 1000.0,
+          "fuel": 60.0,
+          "lifespan": 7.0,
+          "target_altitude": 400.0,
+          "target_inclination": 97.4,
+          "cross_section_area": 20.0,
+          "drag_coefficient": 2.5,
+          "isp": 220.0
+        },
+        "expected": {
+          "passed": false,
+          "failure_reasons": [
+            "insufficient_delta_v",
+            "insufficient_propellant",
+            "below_operating_altitude",
+            "orbital_decay"
+          ],
+          "available_delta_v": 125.71301332787723,
+          "required_delta_v": 562.8078131413511,
+          "drag_delta_v": 462.8797229274221,
+          "collision_avoidance_delta_v": 27.431295993795093,
+          "insertion_delta_v": 0.0,
+          "disposal_delta_v": 72.49679422013378,
+          "propellant_required": 298.0531551504839,
+          "propellant_remaining": -238.05315515048392,
+          "initial_altitude": 400.0,
+          "final_altitude": -252.80226690325162,
+          "orbital_decay": 652.8022669032516,
+          "average_density": 1.4366903350001435e-12,
+          "average_drag": 0.002158258072383038
+        }
+      }
+    ]
+  }
+}

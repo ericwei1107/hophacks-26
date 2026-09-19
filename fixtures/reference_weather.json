@@ -1,0 +1,15 @@
+{
+  "fixture": "reference_weather",
+  "model_version": "1.0.0",
+  "generator": "export_fixtures.py (Python reference)",
+  "payload": {
+    "description": "Deterministic reference snapshot bundled with the game.",
+    "weather": {
+      "kp": 3.0,
+      "f107": 150.0,
+      "solar_wind_speed": 400.0,
+      "solar_wind_density": 5.0,
+      "solar_wind_temperature": 100000.0
+    }
+  }
+}
