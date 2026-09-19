@@ -14,6 +14,8 @@ import type { GuidanceCoefficients } from "../sim/ascent/guidance";
 import type { FlightPerturbations } from "../sim/ascent/flight";
 import type { SerializableFlightResult, SerializedFlightInput } from "./protocol";
 
+export type { SerializableFlightResult, SerializedFlightInput } from "./protocol";
+
 export function serializeFlightInput(
   config: RocketConfig,
   environment: FlightEnvironment,

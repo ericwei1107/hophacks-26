@@ -1,10 +1,33 @@
-import { MODEL_VERSION } from "./domain/version";
+import { useEffect } from "react";
+
+import { AssemblyScreen } from "./ui/screens/AssemblyScreen";
+import { FlightScreen } from "./ui/screens/FlightScreen";
+import { DebriefScreen } from "./ui/screens/DebriefScreen";
+import { useAppStore } from "./ui/store";
+import { loadWeatherSnapshot } from "./sim/orbital/weather";
 
 export function App() {
+  const screen = useAppStore((s) => s.screen);
+  const setWeather = useAppStore((s) => s.setWeather);
+
+  // Load space weather once at startup (live NOAA, else reference snapshot).
+  useEffect(() => {
+    let cancelled = false;
+    loadWeatherSnapshot().then((snapshot) => {
+      if (!cancelled) {
+        setWeather(snapshot);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [setWeather]);
+
   return (
-    <main>
-      <h1>APOGEE — Launch Lab</h1>
-      <p>Model version {MODEL_VERSION}. Assembly screen arrives in Step 9.</p>
-    </main>
+    <>
+      {screen === "assembly" && <AssemblyScreen />}
+      {screen === "flight" && <FlightScreen />}
+      {screen === "debrief" && <DebriefScreen />}
+    </>
   );
 }
