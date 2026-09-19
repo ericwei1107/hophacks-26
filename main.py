@@ -2,6 +2,7 @@ from design import MissionConstraints, MissionDesigner
 from emissions import estimate_mission_footprint, print_footprint
 from environment import get_space_weather
 from explanations import print_mission_insights
+from insights import print_llm_briefing
 from simulate import run_monte_carlo, print_summary
 
 def main():
@@ -58,7 +59,8 @@ def main():
     )
 
     print_summary(summary)
-    print_mission_insights(mission, weather, constraints, summary)
+    print_mission_insights(mission, weather, constraints, summary, footprint)
+    print_llm_briefing(mission, weather, constraints, summary, footprint)
 
 if __name__ == "__main__":
     main()

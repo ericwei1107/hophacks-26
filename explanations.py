@@ -49,6 +49,7 @@ def build_insights(
     weather: SpaceWeather,
     constraints: MissionConstraints,
     summary: MonteCarloSummary,
+    footprint = None,
 ) -> list[str]:
     baseline = summary.baseline
     insights = []
@@ -99,6 +100,21 @@ def build_insights(
             f"mean |delta-v| change {top.mean_abs_delta_v_change:.2f} m/s)."
         )
 
+    if footprint is not None:
+        analog = footprint.analog
+        insights.append(
+            f"Launch analog: {analog.vehicle} {analog.tag} "
+            f"({analog.perigee_km:.0f} x {analog.apogee_km:.0f} km at {analog.inclination_deg:.1f} deg)."
+        )
+        insights.append(
+            f"Payload share: {footprint.spacecraft_wet_mass_kg:.0f} kg / "
+            f"{footprint.payload_capacity_kg:.0f} kg ({footprint.payload_share:.2%})."
+        )
+        insights.append(
+            f"Attributed launch exhaust: {footprint.attributed.total_kg / 1000:.2f} t "
+            f"({footprint.co2e_attributed_kg / 1000:.2f} t CO2e)."
+        )
+
     return insights
 
 
@@ -107,7 +123,8 @@ def print_mission_insights(
     weather: SpaceWeather,
     constraints: MissionConstraints,
     summary: MonteCarloSummary,
+    footprint = None,
 ) -> None:
     print("\nDeterministic mission insights:")
-    for line in build_insights(mission, weather, constraints, summary):
+    for line in build_insights(mission, weather, constraints, summary, footprint):
         print(f"  {line}")
