@@ -46,6 +46,29 @@ body,
   color: var(--dim);
 }
 
+.side-inset {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 160px;
+  height: 320px;
+  border: 1px solid #1d2d42;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0a1626;
+}
+
+.inset-caption {
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--dim);
+}
+
 .cyan { color: var(--cyan); }
 .orange { color: var(--orange); }
 .dim { color: var(--dim); }

@@ -117,6 +117,17 @@ export function AssemblyScreen() {
           <OrbitControls enablePan={false} />
         </SafeCanvas>
         <div className="viewport-caption">CM <span className="cyan">●</span> / CP <span className="orange">●</span></div>
+
+        {/* Side-profile inset showing the complete stack. */}
+        <div className="side-inset">
+          <SafeCanvas orthographic camera={{ position: [derived.totalLengthM * 1.4, derived.totalLengthM / 2, 0], zoom: 18 }}>
+            <color attach="background" args={["#0a1626"]} />
+            <ambientLight intensity={0.7} />
+            <directionalLight position={[5, 10, 5]} intensity={1} />
+            <RocketMesh rocket={derived} />
+          </SafeCanvas>
+          <div className="inset-caption">SIDE PROFILE</div>
+        </div>
       </div>
 
       <div className="panel">
