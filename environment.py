@@ -6,10 +6,10 @@ BASE_URL = 'https://services.swpc.noaa.gov'
 
 @dataclass
 class SpaceWeather:
-    # Geomagnetic activity
+    # geomagnetic activity
     kp: Optional[float] = None
 
-    # Solar activity
+    # solar activity
     f107: Optional[float] = None
     solar_wind_speed: Optional[float] = None       # km/s
     solar_wind_density: Optional[float] = None     # particles/cm^3
@@ -53,11 +53,11 @@ def get_space_weather() -> SpaceWeather:
     solar_wind = get_solar_wind()
 
     weather = SpaceWeather(
-        kp=get_kp(),
-        f107=get_f107(),
-        solar_wind_speed=solar_wind['speed'],
-        solar_wind_density=solar_wind['density'],
-        solar_wind_temperature=solar_wind['temperature']
+        kp = get_kp(),
+        f107 = get_f107(),
+        solar_wind_speed = solar_wind['speed'],
+        solar_wind_density = solar_wind['density'],
+        solar_wind_temperature = solar_wind['temperature']
     )
 
     if not weather.validate():
@@ -71,5 +71,5 @@ if __name__ == '__main__':
     print(f'Kp: {weather.kp}')
     print(f'F10.7: {weather.f107}')
     print(f'Speed: {weather.solar_wind_speed} km/s')
-    print(f'Density: {weather.solar_wind_density} particles/cm³')
+    print(f'Density: {weather.solar_wind_density} particles/cm^3')
     print(f'Temperature: {weather.solar_wind_temperature} K')

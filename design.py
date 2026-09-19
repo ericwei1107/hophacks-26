@@ -23,7 +23,13 @@ class MissionConstraints:
     inclination_min: float
     inclination_max: float
 
+    # m^2
+    area_min: float
+    area_max: float
 
+    # dimensionless
+    drag_coefficient_min: float
+    drag_coefficient_max: float
 @dataclass
 class SpacecraftMission:
     mass: float
@@ -31,16 +37,19 @@ class SpacecraftMission:
     lifespan: float
     target_altitude: float
     target_inclination: float
+    cross_section_area: float
+    drag_coefficient: float
 
     def to_dict(self):
         return {
-            "mass": self.mass,
-            "fuel": self.fuel,
-            "lifespan": self.lifespan,
-            "target_altitude": self.target_altitude,
-            "target_inclination": self.target_inclination,
+            'mass': self.mass,
+            'fuel': self.fuel,
+            'lifespan': self.lifespan,
+            'target_altitude': self.target_altitude,
+            'target_inclination': self.target_inclination,
+            'cross_section_area' : self.cross_section_area,
+            'drag_coefficient' : self.drag_coefficient
         }
-
 
 class MissionDesigner:
     def __init__(self, constraints: MissionConstraints):
@@ -70,6 +79,7 @@ class MissionDesigner:
             lifespan = self.rng.uniform(c.life_min, c.life_max),
             target_altitude = self.rng.uniform(c.altitude_min, c.altitude_max),
             target_inclination = self.rng.uniform(c.inclination_min, c.inclination_max),
+            cross_section_area = self.rng.uniform(c.cross)
         )
 
     def validate(self, mission: SpacecraftMission) -> tuple[bool, list[str]]:
@@ -91,6 +101,12 @@ class MissionDesigner:
         if not c.inclination_min <= mission.target_inclination <= c.inclination_max:
             errors.append("Target inclination outside allowed range.")
 
+        if not c.area_min <= mission.cross_section_area <= c.area_max:
+            errors.append("Cross-sectional area outside allowed range.")
+
+        if not c.drag_coefficient_min <= mission.drag_coefficient <= c.drag_coefficient_max:
+            errors.append("Drag coefficient outside allowed range.")
+        
         return len(errors) == 0, errors
 
     # generate a valid candidate
@@ -118,6 +134,12 @@ if __name__ == "__main__":
 
         inclination_min = 50,
         inclination_max = 100,
+
+        area_min = 5,
+        area_max = 20,
+        
+        drag_coefficient_min = 1.5,
+        drag_coefficient_max = 2.5
     )
 
     designer = MissionDesigner(constraints)
