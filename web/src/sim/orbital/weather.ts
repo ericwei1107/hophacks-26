@@ -84,7 +84,7 @@ function toTimedValues(data: unknown, valueKey: string): TimedValue[] {
   return data
     .filter((row): row is Record<string, unknown> => row !== null && typeof row === "object")
     .map((row) => ({
-      timeTag: typeof row.time_tag === "string" ? row.time_tag : "",
+      timeTag: typeof row["time_tag"] === "string" ? row["time_tag"] : "",
       value: Number(row[valueKey]),
     }));
 }

@@ -68,7 +68,7 @@ describe("fetchNoaaSnapshot", () => {
     expect(snapshot.weather.solar_wind_speed).toBe(460);
     expect(snapshot.weather.solar_wind_density).toBe(6.2);
     expect(snapshot.weather.solar_wind_temperature).toBe(153_000);
-    expect(snapshot.sourceTimestamps.kp).toBe("2026-09-19T13:00:00Z");
+    expect(snapshot.sourceTimestamps["kp"]).toBe("2026-09-19T13:00:00Z");
     expect(snapshot.freshnessMs).not.toBeNull();
   });
 
