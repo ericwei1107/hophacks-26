@@ -183,12 +183,20 @@ def atmospheric_relative_velocity(altitude_km: float, inclination_deg: float) ->
     relative_sq = inertial ** 2 + co_rotation ** 2 - 2 * inertial * co_rotation * math.cos(inclination)
     return math.sqrt(max(relative_sq, 0.0))
 
+def _finite_or(value: float | None, fallback: float) -> float:
+    # Missing, NaN, or infinite weather must never produce an invalid simulation.
+    if value is None or not math.isfinite(value):
+        return fallback
+    return value
+
 def estimate_atmospheric_density(altitude_km: float, weather: SpaceWeather, inclination_deg: float = 0.0) -> float:
-    f107 = max(weather.f107 or 70.0, 60.0)
-    kp = max(weather.kp or 0.0, 0.0)
-    speed = weather.solar_wind_speed or 400.0
-    sw_density = weather.solar_wind_density or 5.0
-    sw_temp = weather.solar_wind_temperature or 1.0e5
+    if not math.isfinite(altitude_km) or not math.isfinite(inclination_deg):
+        return 1e-16
+    f107 = max(_finite_or(weather.f107, 70.0), 60.0)
+    kp = max(_finite_or(weather.kp, 0.0), 0.0)
+    speed = _finite_or(weather.solar_wind_speed, 400.0)
+    sw_density = _finite_or(weather.solar_wind_density, 5.0)
+    sw_temp = _finite_or(weather.solar_wind_temperature, 1.0e5)
 
     # Thermosphere expands under solar EUV and geomagnetic heating.
     scale_height = 42.0 + 0.07 * (f107 - 70.0) + 1.4 * kp
@@ -302,18 +310,23 @@ def simulate(mission: SpacecraftMission, weather: SpaceWeather, ops: Operational
     ops = ops or OperationalDraw()
     failures = []
 
-    if mission.mass <= 0:
+    # Reject non-finite values and invalid physical inputs before calculation.
+    if not math.isfinite(mission.mass) or mission.mass <= 0:
         failures.append("invalid_mass")
-    if mission.fuel <= 0:
+    if not math.isfinite(mission.fuel) or mission.fuel <= 0:
         failures.append("no_fuel")
-    if mission.cross_section_area <= 0:
+    if not math.isfinite(mission.cross_section_area) or mission.cross_section_area <= 0:
         failures.append("invalid_cross_section_area")
-    if mission.drag_coefficient <= 0:
+    if not math.isfinite(mission.drag_coefficient) or mission.drag_coefficient <= 0:
         failures.append("invalid_drag_coefficient")
-    if mission.isp <= 0:
+    if not math.isfinite(mission.isp) or mission.isp <= 0:
         failures.append("invalid_isp")
-    if mission.lifespan <= 0:
+    if not math.isfinite(mission.lifespan) or mission.lifespan <= 0:
         failures.append("invalid_lifespan")
+    if not math.isfinite(mission.target_altitude) or mission.target_altitude <= 0:
+        failures.append("invalid_target_altitude")
+    if not math.isfinite(mission.target_inclination) or not 0.0 <= mission.target_inclination <= 180.0:
+        failures.append("invalid_target_inclination")
 
     if failures:
         return SimulationResult(passed = False, failure_reasons = failures)
@@ -368,6 +381,8 @@ def simulate(mission: SpacecraftMission, weather: SpaceWeather, ops: Operational
     )
 
 def run_overall_monte_carlo(mission: SpacecraftMission, weather: SpaceWeather, n: int = 10_000, seed: int | None = None):
+    if n <= 0:
+        raise ValueError("Monte Carlo run count must be positive.")
     rng = random.Random(seed)
     baseline = simulate(mission, weather)
     passes = 0
@@ -404,6 +419,8 @@ def _sensitivity_stats(parameter: str, n: int, passes: int, failures: int, total
     )
 
 def run_parameter_sensitivity(mission: SpacecraftMission, weather: SpaceWeather, n: int = 1_000, seed: int | None = None):
+    if n <= 0:
+        raise ValueError("Sensitivity run count must be positive.")
     rng = random.Random(seed)
     baseline = simulate(mission, weather)
     baseline_margin = baseline.available_delta_v - baseline.required_delta_v
@@ -517,6 +534,10 @@ def run_parameter_sensitivity(mission: SpacecraftMission, weather: SpaceWeather,
     return sorted(results, key = lambda result: (result.failure_rate, result.mean_abs_delta_v_change), reverse = True)
 
 def run_monte_carlo(mission: SpacecraftMission, weather: SpaceWeather, n: int = 10_000, sensitivity_runs: int = 1_000, seed: int | None = None) -> MonteCarloSummary:
+    if n <= 0:
+        raise ValueError("Monte Carlo run count must be positive.")
+    if sensitivity_runs <= 0:
+        raise ValueError("Sensitivity run count must be positive.")
     passes, failures, failure_modes, baseline = run_overall_monte_carlo(mission, weather, n, seed)
 
     sensitivity_results = run_parameter_sensitivity(mission, weather, sensitivity_runs, seed)
