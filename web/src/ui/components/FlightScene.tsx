@@ -1,6 +1,6 @@
 /**
  * 3D flight scene. Floating origin: the rocket stays near the scene origin
- * and the world (Earth, pad, trail) is rebased around it each frame. Scene
+ * and the world (Earth, pad, trails) is rebased around it each frame. Scene
  * units are kilometers; authoritative positions are double-precision ECI and
  * are rebased in double precision before touching GPU buffers.
  *
@@ -17,51 +17,109 @@ import { playbackClock } from "../playbackClock";
 import { sampleTelemetry } from "../telemetry";
 import type { CameraMode } from "../store";
 import type { SerializableFlightResult } from "../../workers/serialize";
-import { RocketMesh } from "./RocketMesh";
 import { deriveRocket } from "../../domain/derive";
 import { createEngineCatalog } from "../../domain/engines";
+import { Earth } from "./Earth";
+import { Trajectory } from "./Trajectory";
+import { RocketMesh } from "./RocketMesh";
 
-const EARTH_RADIUS_KM = EARTH_RADIUS / 1000;
 const UP = new THREE.Vector3(0, 1, 0);
 
 function eciKmToScene(x: number, y: number, z: number, out: THREE.Vector3): THREE.Vector3 {
   return out.set(x / 1000, z / 1000, -y / 1000);
 }
 
-export function FlightScene({ flight, cameraMode }: { flight: SerializableFlightResult; cameraMode: CameraMode }) {
+/** Launch range rings + a pad marker, in a local scene around the pad. */
+function RangeRings() {
+  const rings = useMemo(() => {
+    const geoms: THREE.BufferGeometry[] = [];
+    for (const radiusKm of [0.05, 0.1, 0.2]) {
+      const pts: number[] = [];
+      const segments = 48;
+      for (let i = 0; i <= segments; i++) {
+        const a = (i / segments) * Math.PI * 2;
+        pts.push(Math.cos(a) * radiusKm, 0, Math.sin(a) * radiusKm);
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+      geoms.push(g);
+    }
+    return geoms;
+  }, []);
+  return (
+    <group>
+      {rings.map((g, i) => (
+        <primitive key={i} object={new THREE.Line(g, new THREE.LineBasicMaterial({ color: "#1d4a5c", transparent: true, opacity: 0.5 }))} />
+      ))}
+      <mesh>
+        <boxGeometry args={[0.02, 0.05, 0.02]} />
+        <meshStandardMaterial color="#63ddeb" emissive="#2a6a78" />
+      </mesh>
+    </group>
+  );
+}
+
+export function FlightScene({
+  flight,
+  cameraMode,
+  lowEffects,
+}: {
+  flight: SerializableFlightResult;
+  cameraMode: CameraMode;
+  lowEffects: boolean;
+}) {
   const rocket = useMemo(() => deriveRocket(flight.config, createEngineCatalog()), [flight.config]);
   const telemetry = flight.telemetry;
 
-  // Full trajectory as a fixed ECI-km line; the group is rebased each frame.
-  const trailLine = useMemo(() => {
-    const n = telemetry.sampleCount;
-    const positions = new Float32Array(n * 3);
-    const v = new THREE.Vector3();
-    for (let i = 0; i < n; i++) {
-      eciKmToScene(telemetry.posX[i], telemetry.posY[i], telemetry.posZ[i], v);
-      positions[i * 3] = v.x;
-      positions[i * 3 + 1] = v.y;
-      positions[i * 3 + 2] = v.z;
-    }
-    const geom = new THREE.BufferGeometry();
-    geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    const mat = new THREE.LineBasicMaterial({ color: "#63ddeb", transparent: true, opacity: 0.7 });
-    return new THREE.Line(geom, mat);
-  }, [telemetry]);
-
-  const earthRef = useRef<THREE.Mesh>(null);
-  const trailRef = useRef<THREE.Group>(null);
+  const earthRef = useRef<THREE.Group>(null);
+  const worldRef = useRef<THREE.Group>(null);
   const padRef = useRef<THREE.Group>(null);
   const rocketRef = useRef<THREE.Group>(null);
   const exhaustRef = useRef<THREE.Mesh>(null);
+  const spentRef = useRef<THREE.Mesh>(null);
+  const maxQRef = useRef<THREE.Mesh>(null);
 
   const padEciM = useMemo(() => new THREE.Vector3(EARTH_RADIUS, 0, 0), []);
+  // The pad sits at a fixed absolute scene position (inside worldRef).
+  const padScenePos = useMemo(() => eciKmToScene(EARTH_RADIUS, 0, 0, new THREE.Vector3()), []);
 
-  // Scratch objects reused every frame (no per-frame allocation). A ref holds
-  // these mutable buffers; they never trigger or depend on React renders.
+  // Max-Q event position (scene km, fixed for the flight).
+  const maxQScene = useMemo(() => {
+    const event = flight.events.find((e) => e.id === "max_q");
+    if (!event) {
+      return null;
+    }
+    const i = Math.min(telemetry.sampleCount - 1, Math.round(event.t / 0.05));
+    const v = new THREE.Vector3();
+    return eciKmToScene(telemetry.posX[i], telemetry.posY[i], telemetry.posZ[i], v);
+  }, [flight, telemetry]);
+
+  // Spent stage recorded path (dashed), fixed for the flight.
+  const spentPath = useMemo(() => {
+    const n = telemetry.sampleCount;
+    const pts: number[] = [];
+    const v = new THREE.Vector3();
+    for (let i = 0; i < n; i++) {
+      if (Number.isFinite(telemetry.spentX[i])) {
+        eciKmToScene(telemetry.spentX[i], telemetry.spentY[i], telemetry.spentZ[i], v);
+        pts.push(v.x, v.y, v.z);
+      }
+    }
+    if (pts.length < 6) {
+      return null;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+    const line = new THREE.Line(
+      g,
+      new THREE.LineDashedMaterial({ color: "#ff9b54", dashSize: 2, gapSize: 2, transparent: true, opacity: 0.6 }),
+    );
+    line.computeLineDistances();
+    return line;
+  }, [telemetry]);
+
   const scratchRef = useRef<{
     rocketScene: THREE.Vector3;
-    earthCenter: THREE.Vector3;
     padScene: THREE.Vector3;
     camPos: THREE.Vector3;
     up: THREE.Vector3;
@@ -72,7 +130,6 @@ export function FlightScene({ flight, cameraMode }: { flight: SerializableFlight
   if (scratchRef.current === null) {
     scratchRef.current = {
       rocketScene: new THREE.Vector3(),
-      earthCenter: new THREE.Vector3(),
       padScene: new THREE.Vector3(),
       camPos: new THREE.Vector3(),
       up: new THREE.Vector3(),
@@ -88,15 +145,12 @@ export function FlightScene({ flight, cameraMode }: { flight: SerializableFlight
     const [rx, ry, rz] = sample.positionEciM;
     const rocketScene = eciKmToScene(rx, ry, rz, scratch.rocketScene);
 
-    // Rebase the world around the rocket.
-    earthRef.current?.position.copy(scratch.earthCenter.copy(rocketScene).negate());
-    trailRef.current?.position.copy(rocketScene).negate();
-    if (padRef.current) {
-      eciKmToScene(padEciM.x, padEciM.y, padEciM.z, scratch.padScene).sub(rocketScene);
-      padRef.current.position.copy(scratch.padScene);
+    // Rebase the world around the rocket (floating origin).
+    if (worldRef.current) {
+      worldRef.current.position.copy(rocketScene).negate();
     }
 
-    // Orientation: along velocity (prograde), or radially outward when slow.
+    // Rocket orientation: prograde, or radially outward when slow.
     if (rocketRef.current) {
       rocketRef.current.position.set(0, 0, 0);
       const i0 = Math.min(telemetry.sampleCount - 1, Math.floor(playbackClock.timeS / 0.05));
@@ -115,8 +169,7 @@ export function FlightScene({ flight, cameraMode }: { flight: SerializableFlight
       rocketRef.current.quaternion.copy(scratch.quat);
     }
 
-    // Exhaust follows the actual throttle and burning phases (1, 5, 7).
-    // The exhaust lives inside the rocket group, so units are meters.
+    // Exhaust follows the real throttle and burning phases (1, 5, 7).
     if (exhaustRef.current) {
       const burningPhase = sample.phase === 1 || sample.phase === 5 || sample.phase === 7;
       const throttle = burningPhase ? sample.throttle : 0;
@@ -125,6 +178,30 @@ export function FlightScene({ flight, cameraMode }: { flight: SerializableFlight
         const len = 2.5 * throttle + 0.5;
         exhaustRef.current.scale.set(1, len / 2.5, 1);
         exhaustRef.current.position.y = -len / 2 - 0.4;
+      }
+    }
+
+    // Spent stage marker at its recorded position (rebased: outside worldRef).
+    if (spentRef.current) {
+      const i = Math.min(telemetry.sampleCount - 1, Math.floor(playbackClock.timeS / 0.05));
+      if (Number.isFinite(telemetry.spentX[i])) {
+        spentRef.current.visible = true;
+        eciKmToScene(telemetry.spentX[i], telemetry.spentY[i], telemetry.spentZ[i], scratch.side);
+        spentRef.current.position.copy(scratch.side.sub(rocketScene));
+      } else {
+        spentRef.current.visible = false;
+      }
+    }
+
+    // Max-Q ring pulses at the event location once reached. It lives inside
+    // worldRef, so its position is the absolute scene coordinate.
+    if (maxQRef.current && maxQScene) {
+      const reached = flight.events.some((e) => e.id === "max_q" && playbackClock.timeS >= e.t);
+      maxQRef.current.visible = reached;
+      if (reached) {
+        maxQRef.current.position.copy(maxQScene);
+        const pulse = 1 + 0.15 * Math.sin(playbackClock.timeS * 6);
+        maxQRef.current.scale.setScalar(pulse);
       }
     }
 
@@ -158,25 +235,28 @@ export function FlightScene({ flight, cameraMode }: { flight: SerializableFlight
 
   return (
     <>
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[1, 0.5, 0.5]} intensity={1.4} />
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[1, 0.5, 0.5]} intensity={1.2} />
 
-      <mesh ref={earthRef}>
-        <sphereGeometry args={[EARTH_RADIUS_KM, 48, 48]} />
-        <meshStandardMaterial color="#0a2136" roughness={1} metalness={0} />
-      </mesh>
-
-      <group ref={padRef}>
-        <mesh>
-          <boxGeometry args={[0.03, 0.06, 0.03]} />
-          <meshStandardMaterial color="#63ddeb" emissive="#1a4a55" />
-        </mesh>
+      {/* World group rebased around the rocket each frame. */}
+      <group ref={worldRef}>
+        <group ref={earthRef}>
+          <Earth />
+        </group>
+        <group ref={padRef} position={padScenePos} rotation={[0, 0, -Math.PI / 2]}>
+          <RangeRings />
+        </group>
+        <Trajectory telemetry={telemetry} lowEffects={lowEffects} />
+        {spentPath && <primitive object={spentPath} />}
+        {maxQScene && (
+          <mesh ref={maxQRef} visible={false}>
+            <ringGeometry args={[0.5, 0.6, 32]} />
+            <meshBasicMaterial color="#ff9b54" transparent opacity={0.8} side={THREE.DoubleSide} />
+          </mesh>
+        )}
       </group>
 
-      <group ref={trailRef}>
-        <primitive object={trailLine} />
-      </group>
-
+      {/* The vehicle stays at the scene origin. */}
       <group ref={rocketRef} scale={0.001}>
         <RocketMesh rocket={rocket} />
         <mesh ref={exhaustRef} visible={false} rotation={[Math.PI, 0, 0]}>
@@ -184,6 +264,12 @@ export function FlightScene({ flight, cameraMode }: { flight: SerializableFlight
           <meshBasicMaterial color="#ffb066" transparent opacity={0.75} side={THREE.DoubleSide} />
         </mesh>
       </group>
+
+      {/* Spent stage marker (rebased). */}
+      <mesh ref={spentRef} visible={false}>
+        <boxGeometry args={[0.01, 0.02, 0.01]} />
+        <meshStandardMaterial color="#8a8f9a" />
+      </mesh>
     </>
   );
 }

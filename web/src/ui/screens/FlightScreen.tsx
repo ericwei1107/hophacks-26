@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
+import { EffectComposer, Bloom } from "@react-three/postprocessing";
 
 import { playbackClock, resetPlaybackClock } from "../playbackClock";
 import { useAppStore, type CameraMode } from "../store";
@@ -38,7 +39,7 @@ function HudReadout({ label, value, unit }: { label: string; value: string; unit
 }
 
 export function FlightScreen() {
-  const { flight, playing, playbackSpeed, cameraMode, setPlaying, setPlaybackSpeed, setCameraMode, setScreen } =
+  const { flight, playing, playbackSpeed, cameraMode, settings, setPlaying, setPlaybackSpeed, setCameraMode, setScreen } =
     useAppStore();
   const [sample, setSample] = useState<FlightSample | null>(null);
 
@@ -89,7 +90,12 @@ export function FlightScreen() {
       <div className="viewport">
         <Canvas camera={{ fov: 50, near: 0.0001, far: 100_000 }} gl={{ logarithmicDepthBuffer: true }}>
           <color attach="background" args={["#07111f"]} />
-          <FlightScene flight={flight} cameraMode={cameraMode} />
+          <FlightScene flight={flight} cameraMode={cameraMode} lowEffects={settings.lowEffects} />
+          {!settings.lowEffects && (
+            <EffectComposer>
+              <Bloom intensity={0.6} luminanceThreshold={0.35} luminanceSmoothing={0.2} mipmapBlur />
+            </EffectComposer>
+          )}
         </Canvas>
 
         {/* HUD overlay */}

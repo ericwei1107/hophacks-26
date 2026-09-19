@@ -77,7 +77,7 @@ export function telemetryTransferBuffers(result: SerializableFlightResult): Tran
   return [
     t.tS, t.altitudeKm, t.speedMs, t.airspeedMs, t.dynamicPressurePa, t.properAccelG,
     t.propellantKg, t.massKg, t.throttle, t.aoaDeg, t.apogeeKm, t.perigeeKm,
-    t.posX, t.posY, t.posZ,
+    t.posX, t.posY, t.posZ, t.spentX, t.spentY, t.spentZ,
   ].map((a) => a.buffer);
 }
 

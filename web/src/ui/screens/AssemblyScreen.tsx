@@ -10,6 +10,7 @@ import type { BuildCheck } from "../../domain/derive";
 import type { EngineId } from "../../domain/engines";
 import { useAppStore } from "../store";
 import { RocketMesh } from "../components/RocketMesh";
+import { SettingsToggle } from "../components/SettingsToggle";
 
 function Slider({
   label,
@@ -164,6 +165,7 @@ export function AssemblyScreen() {
           <button onClick={resetToReference}>Reset to reference build</button>
         </div>
         {analysisStale && <p className="dim small">Build edited — prior analysis invalidated until rerun.</p>}
+        <SettingsToggle />
       </div>
     </div>
   );

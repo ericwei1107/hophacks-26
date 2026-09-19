@@ -1087,6 +1087,10 @@ export interface Telemetry {
   posX: Float64Array;
   posY: Float64Array;
   posZ: Float64Array;
+  /** Spent stage-1 ECI position (NaN before separation / when absent). */
+  spentX: Float64Array;
+  spentY: Float64Array;
+  spentZ: Float64Array;
 }
 
 const PHASE_INDEX: Record<FlightPhase, number> = {
@@ -1168,6 +1172,9 @@ export function runFlight(input: FlightInput): FlightResult {
     posX: new Float64Array(maxSamples),
     posY: new Float64Array(maxSamples),
     posZ: new Float64Array(maxSamples),
+    spentX: new Float64Array(maxSamples).fill(Number.NaN),
+    spentY: new Float64Array(maxSamples).fill(Number.NaN),
+    spentZ: new Float64Array(maxSamples).fill(Number.NaN),
   };
 
   const record = () => {
@@ -1203,6 +1210,12 @@ export function runFlight(input: FlightInput): FlightResult {
     telemetry.posX[i] = state.position[0];
     telemetry.posY[i] = state.position[1];
     telemetry.posZ[i] = state.position[2];
+    const spent = state.detachedStages[0];
+    if (spent) {
+      telemetry.spentX[i] = spent.position[0];
+      telemetry.spentY[i] = spent.position[1];
+      telemetry.spentZ[i] = spent.position[2];
+    }
     telemetry.sampleCount += 1;
   };
 

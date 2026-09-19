@@ -25,4 +25,12 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // R3F scene components mutate Three.js objects inside animation frames —
+    // the idiomatic R3F pattern — which the immutability rule false-flags.
+    files: ["src/ui/components/**/*.tsx"],
+    rules: {
+      "react-hooks/immutability": "off",
+    },
+  },
 );
