@@ -74,6 +74,7 @@ def result_to_dict(result: s.SimulationResult) -> dict:
         "insertion_delta_v": result.insertion_delta_v,
         "disposal_delta_v": result.disposal_delta_v,
         "propellant_required": result.propellant_required,
+        "propellant_consumed": result.propellant_consumed,
         "propellant_remaining": result.propellant_remaining,
         "initial_altitude": result.initial_altitude,
         "final_altitude": result.final_altitude,
@@ -196,7 +197,27 @@ def export_corrections() -> dict:
     """
     failing = MISSIONS["failing"]
     after = s.simulate(failing, REFERENCE_WEATHER)
+    passing = MISSIONS["passing"]
+    after_passing = s.simulate(passing, REFERENCE_WEATHER)
     return envelope("corrections", {
+        "propellant_consumed_vs_required": {
+            "description": (
+                "Remaining fuel used to be loaded fuel minus the minimum "
+                "starting propellant, overstating what is left. It is now "
+                "loaded fuel minus the propellant actually consumed starting "
+                "from full tanks; the reserve check uses the corrected value."
+            ),
+            "mission": passing.to_dict(),
+            "before": {
+                "propellant_required": 34.26819082260879,
+                "propellant_remaining": 165.7318091773912,
+            },
+            "after": {
+                "propellant_required": after_passing.propellant_required,
+                "propellant_consumed": after_passing.propellant_consumed,
+                "propellant_remaining": after_passing.propellant_remaining,
+            },
+        },
         "decay_stops_at_reentry_boundary": {
             "description": (
                 "Unpowered decay used to overshoot the reentry boundary in "

@@ -3,6 +3,28 @@
   "model_version": "1.0.0",
   "generator": "export_fixtures.py (Python reference)",
   "payload": {
+    "propellant_consumed_vs_required": {
+      "description": "Remaining fuel used to be loaded fuel minus the minimum starting propellant, overstating what is left. It is now loaded fuel minus the propellant actually consumed starting from full tanks; the reserve check uses the corrected value.",
+      "mission": {
+        "mass": 750.0,
+        "fuel": 200.0,
+        "lifespan": 5.0,
+        "target_altitude": 500.0,
+        "target_inclination": 51.6,
+        "cross_section_area": 10.0,
+        "drag_coefficient": 2.2,
+        "isp": 325.0
+      },
+      "before": {
+        "propellant_required": 34.26819082260879,
+        "propellant_remaining": 165.7318091773912
+      },
+      "after": {
+        "propellant_required": 34.26819082260879,
+        "propellant_consumed": 41.50975605338781,
+        "propellant_remaining": 158.4902439466122
+      }
+    },
     "decay_stops_at_reentry_boundary": {
       "description": "Unpowered decay used to overshoot the reentry boundary in one 7-day step and report negative altitudes. It now stops at the boundary with a shortened final timestep.",
       "mission": {

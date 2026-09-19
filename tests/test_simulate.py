@@ -67,7 +67,8 @@ def test_passing_mission(passing_mission, reference_weather):
     assert result.insertion_delta_v == pytest.approx(0.0)
     assert result.disposal_delta_v == pytest.approx(100.18837085561881)
     assert result.propellant_required == pytest.approx(34.26819082260879)
-    assert result.propellant_remaining == pytest.approx(165.7318091773912)
+    assert result.propellant_consumed == pytest.approx(41.50975605338781)
+    assert result.propellant_remaining == pytest.approx(158.4902439466122)
     assert result.final_altitude == pytest.approx(500.0)
     assert result.orbital_decay == pytest.approx(0.0)
 
@@ -77,7 +78,8 @@ def test_marginal_mission(marginal_mission, reference_weather):
     assert result.passed
     assert result.available_delta_v == pytest.approx(368.22934075497085)
     assert result.required_delta_v == pytest.approx(226.696511333117)
-    assert result.propellant_remaining == pytest.approx(47.90830865750449)
+    assert result.propellant_consumed == pytest.approx(75.64463910579543)
+    assert result.propellant_remaining == pytest.approx(44.355360894204566)
 
 
 def test_failing_mission(failing_mission, reference_weather):

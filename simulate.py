@@ -56,6 +56,7 @@ class SimulationResult:
     insertion_delta_v: float = 0.0
     disposal_delta_v: float = 0.0
     propellant_required: float = 0.0
+    propellant_consumed: float = 0.0
     propellant_remaining: float = 0.0
     initial_altitude: float = 0.0
     final_altitude: float = 0.0
@@ -226,6 +227,8 @@ def estimate_delta_v_available(mission: SpacecraftMission) -> float:
     return mission.isp * G0 * math.log(initial_mass / mission.mass)
 
 def estimate_propellant_required(mission: SpacecraftMission, required_delta_v: float) -> float:
+    """Minimum starting propellant: the propellant load for which burning it
+    all produces exactly required_delta_v and ends at dry mass."""
     if required_delta_v <= 0:
         return 0.0
 
@@ -234,6 +237,21 @@ def estimate_propellant_required(mission: SpacecraftMission, required_delta_v: f
 
     mass_ratio = math.exp(required_delta_v / (mission.isp * G0))
     return mission.mass * (mass_ratio - 1)
+
+def estimate_propellant_consumed(mission: SpacecraftMission, required_delta_v: float) -> float:
+    """Propellant actually consumed producing required_delta_v starting from
+    the loaded tanks (dry mass + loaded fuel). Burning while heavier than the
+    minimum-load case consumes more than the minimum starting propellant, so
+    remaining fuel must be computed from this, not from
+    estimate_propellant_required."""
+    if required_delta_v <= 0:
+        return 0.0
+
+    if mission.isp <= 0 or mission.mass <= 0 or mission.fuel <= 0:
+        return float("inf")
+
+    full_mass = mission.mass + mission.fuel
+    return full_mass * (1.0 - math.exp(-required_delta_v / (mission.isp * G0)))
 
 def estimate_unpowered_decay(mission: SpacecraftMission, weather: SpaceWeather, duration_s: float, spacecraft_mass: float) -> float:
     """Altitude lost to drag over duration_s with no stationkeeping.
@@ -349,7 +367,8 @@ def simulate(mission: SpacecraftMission, weather: SpaceWeather, ops: Operational
     required_delta_v, drag_delta_v, cam_delta_v, insertion_delta_v, disposal_delta_v, average_density, average_drag = estimate_mission_delta_v(mission, weather, ops)
     available_delta_v = estimate_delta_v_available(mission)
     propellant_required = estimate_propellant_required(mission, required_delta_v)
-    propellant_remaining = mission.fuel - propellant_required
+    propellant_consumed = estimate_propellant_consumed(mission, required_delta_v)
+    propellant_remaining = mission.fuel - propellant_consumed
     reserve_required = mission.fuel * PROPULSION_RESERVE_FRACTION
     operations_delta_v = drag_delta_v + cam_delta_v + insertion_delta_v
 
@@ -388,6 +407,7 @@ def simulate(mission: SpacecraftMission, weather: SpaceWeather, ops: Operational
         insertion_delta_v = insertion_delta_v,
         disposal_delta_v = disposal_delta_v,
         propellant_required = propellant_required,
+        propellant_consumed = propellant_consumed,
         propellant_remaining = propellant_remaining,
         initial_altitude = mission.target_altitude,
         final_altitude = final_altitude,
@@ -591,7 +611,8 @@ def print_summary(summary: MonteCarloSummary):
     print(f"  End-of-life disposal: {summary.baseline.disposal_delta_v:.2f} m/s")
     print(f"  Required Δv: {summary.baseline.required_delta_v:.2f} m/s")
     print(f"  Available Δv: {summary.baseline.available_delta_v:.2f} m/s")
-    print(f"  Required propellant: {summary.baseline.propellant_required:.2f} kg")
+    print(f"  Minimum required propellant: {summary.baseline.propellant_required:.2f} kg")
+    print(f"  Consumed propellant: {summary.baseline.propellant_consumed:.2f} kg")
     print(f"  Remaining propellant: {summary.baseline.propellant_remaining:.2f} kg")
     print(f"  Predicted final altitude: {summary.baseline.final_altitude:.2f} km")
 
