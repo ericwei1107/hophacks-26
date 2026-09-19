@@ -1,46 +1,80 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import math
 import random
-
 from design import SpacecraftMission
 from environment import SpaceWeather
 
+# covers mass growth, array deployment, and Cd underestimates.
 MISSION_STRESS_RANGES = {
-    'mass': (-0.02, 0.02),
-    'fuel': (-0.03, 0.03),
-    'lifespan': (-0.05, 0.05),
-    'target_altitude': (-0.01, 0.01),
-    'target_inclination': (-0.5, 0.5),
-    'cross_section_area': (-0.05, 0.05),
-    'drag_coefficient': (-0.05, 0.05),
-    'isp': (-0.02, 0.02)
+    "mass": (-0.10, 0.12),
+    "fuel": (-0.08, 0.05),
+    "lifespan": (-0.10, 0.15),
+    "target_altitude": (-0.08, 0.05),
+    "target_inclination": (-3.0, 3.0),
+    "cross_section_area": (-0.15, 0.20),
+    "drag_coefficient": (-0.15, 0.22),
+    "isp": (-0.08, 0.05)
 }
 
 WEATHER_STRESS_RANGES = {
-    'kp': (-0.20, 0.20),
-    'f107': (-0.10, 0.10),
-    'solar_wind_speed': (-0.05, 0.05),
-    'solar_wind_density': (-0.10, 0.10),
-    'solar_wind_temperature': (-0.10, 0.10)
+    "kp": (-0.40, 0.45),
+    "f107": (-0.22, 0.25),
+    "solar_wind_speed": (-0.18, 0.22),
+    "solar_wind_density": (-0.25, 0.30),
+    "solar_wind_temperature": (-0.20, 0.25)
 }
+
+MU_EARTH = 3.986004418e14
+EARTH_RADIUS = 6_371_000
+G0 = 9.80665
+SECONDS_PER_DAY = 86_400
+DAYS_PER_YEAR = 365.25
+PROPULSION_RESERVE_FRACTION = 0.10
+MIN_OPERATING_ALTITUDE_KM = 220.0
+REENTRY_ALTITUDE_KM = 120.0
+STORM_PROBABILITY = 0.12
+
+DISPOSAL_PERIGEE_KM = 150.0
+INSERTION_ALTITUDE_SIGMA_KM = 12.0
+INSERTION_INCLINATION_SIGMA_DEG = 0.70
+BAD_LAUNCH_PROBABILITY = 0.08
+
+@dataclass
+class OperationalDraw:
+    insertion_altitude_error_km: float = 0.0
+    insertion_inclination_error_deg: float = 0.0
+    cam_scale: float = 1.0
 
 @dataclass
 class SimulationResult:
     passed: bool
-    failure_reasons: list[str] = field(default_factory=list)
-
+    failure_reasons: list[str] = field(default_factory = list)
     available_delta_v: float = 0.0
     required_delta_v: float = 0.0
-
+    drag_delta_v: float = 0.0
+    collision_avoidance_delta_v: float = 0.0
+    insertion_delta_v: float = 0.0
+    disposal_delta_v: float = 0.0
     propellant_required: float = 0.0
     propellant_remaining: float = 0.0
-
     initial_altitude: float = 0.0
     final_altitude: float = 0.0
     orbital_decay: float = 0.0
-
     average_density: float = 0.0
     average_drag: float = 0.0
+
+@dataclass
+class SensitivityResult:
+    parameter: str
+    runs: int
+    passes: int
+    failures: int
+    failure_rate: float
+    average_delta_v_change: float
+    average_altitude_change: float
+    average_propellant_change: float
+    average_margin_change: float
+    mean_abs_delta_v_change: float
 
 @dataclass
 class MonteCarloSummary:
@@ -50,224 +84,292 @@ class MonteCarloSummary:
     probability_pass: float
     probability_fail: float
     failure_modes: dict[str, int]
+    sensitivity_results: list[SensitivityResult]
+    baseline: SimulationResult
 
-MU_EARTH = 3.986004418e14
-EARTH_RADIUS = 6_371_000
-G0 = 9.80665
-SECONDS_PER_DAY = 86_400
-DAYS_PER_YEAR = 365.25
+def clip(value: float, minimum: float, maximum: float) -> float:
+    return max(minimum, min(maximum, value))
 
 def perturb(value: float, minimum: float, maximum: float, rng: random.Random) -> float:
-    percentage = rng.uniform(minimum, maximum)
-    return value * (1 + percentage)
+    midpoint = (minimum + maximum) / 2
+    sigma = (maximum - minimum) / 4
+    if sigma <= 0:
+        return value
+
+    fraction = rng.gauss(midpoint, sigma)
+    fraction = clip(fraction, minimum, maximum)
+    return value * (1 + fraction)
+
+def perturb_parameter(mission: SpacecraftMission, parameter: str, rng: random.Random) -> SpacecraftMission:
+    if parameter == "target_inclination":
+        low, high = MISSION_STRESS_RANGES[parameter]
+        delta = rng.gauss((low + high) / 2, (high - low) / 4)
+        delta = clip(delta, low, high)
+        inclination = clip(mission.target_inclination + delta, 0.0, 180.0)
+        return replace(mission, target_inclination = inclination)
+
+    new_value = perturb(getattr(mission, parameter), *MISSION_STRESS_RANGES[parameter], rng)
+    return replace(mission, **{parameter: max(new_value, 1e-9)})
+
+def perturb_weather_parameter(weather: SpaceWeather, parameter: str, rng: random.Random) -> SpaceWeather:
+    new_value = perturb(getattr(weather, parameter), *WEATHER_STRESS_RANGES[parameter], rng)
+    return replace(weather, **{parameter: _clip_weather_value(parameter, new_value)})
+
+def _clip_weather_value(parameter: str, value: float) -> float:
+    bounds = {
+        "kp": (0.0, 9.0),
+        "f107": (60.0, 280.0),
+        "solar_wind_speed": (250.0, 1200.0),
+        "solar_wind_density": (0.5, 80.0),
+        "solar_wind_temperature": (1.0e4, 1.0e6)
+    }
+    return clip(value, *bounds[parameter])
 
 def create_stressed_mission(mission: SpacecraftMission, rng: random.Random) -> SpacecraftMission:
-    return SpacecraftMission(
-        mass = perturb(mission.mass, *MISSION_STRESS_RANGES['mass'], rng),
-        fuel = perturb(mission.fuel, *MISSION_STRESS_RANGES['fuel'], rng),
-        lifespan = perturb(mission.lifespan, *MISSION_STRESS_RANGES['lifespan'], rng),
-        target_altitude = perturb(mission.target_altitude, *MISSION_STRESS_RANGES['target_altitude'], rng),
-        target_inclination = mission.target_inclination + rng.uniform(*MISSION_STRESS_RANGES['target_inclination']),
-        cross_section_area = perturb(mission.cross_section_area, *MISSION_STRESS_RANGES['cross_section_area'], rng),
-        drag_coefficient = perturb(mission.drag_coefficient, *MISSION_STRESS_RANGES['drag_coefficient'], rng),
-        isp = perturb(mission.isp, *MISSION_STRESS_RANGES['isp'], rng)
-    )
+    stressed = mission
+    for parameter in MISSION_STRESS_RANGES:
+        stressed = perturb_parameter(stressed, parameter, rng)
+    return stressed
 
 def create_stressed_weather(weather: SpaceWeather, rng: random.Random) -> SpaceWeather:
+    # most years look like today, plus or minus forecast noise.
+    if rng.random() < STORM_PROBABILITY:
+        return SpaceWeather(
+            kp = _clip_weather_value("kp", rng.uniform(5.2, 8.4)),
+            f107 = _clip_weather_value("f107", weather.f107 * rng.uniform(1.25, 1.70)),
+            solar_wind_speed = _clip_weather_value("solar_wind_speed", weather.solar_wind_speed * rng.uniform(1.20, 1.65)),
+            solar_wind_density = _clip_weather_value("solar_wind_density", weather.solar_wind_density * rng.uniform(1.40, 2.50)),
+            solar_wind_temperature = _clip_weather_value("solar_wind_temperature", weather.solar_wind_temperature * rng.uniform(1.15, 1.80))
+        )
+
     return SpaceWeather(
-        kp = perturb(weather.kp, *WEATHER_STRESS_RANGES['kp'], rng),
-        f107 = perturb(weather.f107, *WEATHER_STRESS_RANGES['f107'], rng),
-        solar_wind_speed = perturb(weather.solar_wind_speed, *WEATHER_STRESS_RANGES['solar_wind_speed'], rng),
-        solar_wind_density = perturb(weather.solar_wind_density, *WEATHER_STRESS_RANGES['solar_wind_density'], rng),
-        solar_wind_temperature = perturb(weather.solar_wind_temperature, *WEATHER_STRESS_RANGES['solar_wind_temperature'], rng)
+        kp = _clip_weather_value("kp", perturb(weather.kp, *WEATHER_STRESS_RANGES["kp"], rng)),
+        f107 = _clip_weather_value("f107", perturb(weather.f107, *WEATHER_STRESS_RANGES["f107"], rng)),
+        solar_wind_speed = _clip_weather_value("solar_wind_speed", perturb(weather.solar_wind_speed, *WEATHER_STRESS_RANGES["solar_wind_speed"], rng)),
+        solar_wind_density = _clip_weather_value("solar_wind_density", perturb(weather.solar_wind_density, *WEATHER_STRESS_RANGES["solar_wind_density"], rng)),
+        solar_wind_temperature = _clip_weather_value("solar_wind_temperature", perturb(weather.solar_wind_temperature, *WEATHER_STRESS_RANGES["solar_wind_temperature"], rng))
     )
+
+def create_stressed_ops(rng: random.Random) -> OperationalDraw:
+    if rng.random() < BAD_LAUNCH_PROBABILITY:
+        inclination_error = rng.gauss(0.0, 1.15)
+    else:
+        inclination_error = rng.gauss(0.0, INSERTION_INCLINATION_SIGMA_DEG)
+
+    return OperationalDraw(
+        insertion_altitude_error_km = clip(rng.gauss(0.0, INSERTION_ALTITUDE_SIGMA_KM), -40.0, 40.0),
+        insertion_inclination_error_deg = clip(inclination_error, -2.4, 2.4),
+        cam_scale = clip(rng.gauss(1.0, 0.28), 0.45, 2.3)
+    )
+
+def perturb_ops_parameter(ops: OperationalDraw, parameter: str, rng: random.Random) -> OperationalDraw:
+    if parameter == "insertion_altitude_error_km":
+        return replace(ops, insertion_altitude_error_km = clip(rng.gauss(0.0, INSERTION_ALTITUDE_SIGMA_KM), -40.0, 40.0))
+    if parameter == "insertion_inclination_error_deg":
+        return replace(ops, insertion_inclination_error_deg = clip(rng.gauss(0.0, INSERTION_INCLINATION_SIGMA_DEG), -2.4, 2.4))
+    if parameter == "debris_environment":
+        return replace(ops, cam_scale = clip(rng.gauss(1.0, 0.35), 0.45, 2.3))
+    return ops
 
 def orbital_velocity(altitude_km: float) -> float:
     radius = EARTH_RADIUS + altitude_km * 1000
     return math.sqrt(MU_EARTH / radius)
 
-def estimate_atmospheric_density(altitude_km: float, f107: float, kp: float) -> float:
-    """
-    captures the important dependency:
-    altitude + solar activity + geomagnetic activity -> density.
-    """
+def atmospheric_relative_velocity(altitude_km: float, inclination_deg: float) -> float:
+    inertial = orbital_velocity(altitude_km)
+    radius = EARTH_RADIUS + altitude_km * 1000
+    co_rotation = 465.0 * radius / EARTH_RADIUS
+    inclination = math.radians(inclination_deg)
+    relative_sq = inertial ** 2 + co_rotation ** 2 - 2 * inertial * co_rotation * math.cos(inclination)
+    return math.sqrt(max(relative_sq, 0.0))
 
-    base_density = 1.225e-9 * math.exp(-(altitude_km - 400) / 50)
+def estimate_atmospheric_density(altitude_km: float, weather: SpaceWeather, inclination_deg: float = 0.0) -> float:
+    f107 = max(weather.f107 or 70.0, 60.0)
+    kp = max(weather.kp or 0.0, 0.0)
+    speed = weather.solar_wind_speed or 400.0
+    sw_density = weather.solar_wind_density or 5.0
+    sw_temp = weather.solar_wind_temperature or 1.0e5
 
-    solar_factor = max(0.1, 1 + 0.002 * (f107 - 70))
-    geomagnetic_factor = max(0.1, 1 + 0.05 * kp)
+    # Thermosphere expands under solar EUV and geomagnetic heating.
+    scale_height = 42.0 + 0.07 * (f107 - 70.0) + 1.4 * kp
+    base_density = 1.225e-12 * math.exp(-(altitude_km - 400.0) / scale_height)
 
-    return base_density * solar_factor * geomagnetic_factor
+    solar_factor = (f107 / 150.0) ** 1.2
+    geomagnetic_factor = 1.0 + 0.05 * kp + 0.12 * max(0.0, kp - 4.5) ** 1.3
+    wind_factor = 1.0 + 0.0004 * (speed - 400.0) + 0.008 * (sw_density - 5.0) + 0.04 * ((sw_temp / 1.0e5) - 1.0)
+    polar_factor = 1.0 + 0.08 * abs(math.sin(math.radians(inclination_deg))) * max(0.0, kp - 2.0) / 4.0
 
-def estimate_drag_force(mission: SpacecraftMission, weather: SpaceWeather) -> float:
-    density = estimate_atmospheric_density(mission.target_altitude, weather.f107, weather.kp)
-    velocity = orbital_velocity(mission.target_altitude)
+    return max(1e-16, base_density * solar_factor * max(0.25, geomagnetic_factor) * max(0.4, wind_factor) * max(1.0, polar_factor))
 
+def estimate_drag_force(mission: SpacecraftMission, weather: SpaceWeather, altitude_km: float | None = None) -> float:
+    altitude = mission.target_altitude if altitude_km is None else altitude_km
+    density = estimate_atmospheric_density(altitude, weather, mission.target_inclination)
+    velocity = atmospheric_relative_velocity(altitude, mission.target_inclination)
     return 0.5 * density * velocity ** 2 * mission.drag_coefficient * mission.cross_section_area
 
-def estimate_drag_acceleration(mission: SpacecraftMission, weather: SpaceWeather) -> float:
-    drag_force = estimate_drag_force(mission, weather)
-    return drag_force / (mission.mass * 1000)
-
-def estimate_orbital_decay_rate(mission: SpacecraftMission, weather: SpaceWeather) -> float:
-    """
-    calculates da/dt for a circular orbit.
-
-    dE/dt from atmospheric drag is converted into
-    a change in orbital semi-major axis.
-    """
-
-    radius = EARTH_RADIUS + mission.target_altitude * 1000
-    velocity = orbital_velocity(mission.target_altitude)
-    acceleration = estimate_drag_acceleration(mission, weather)
-
-    return -2 * radius ** 2 * acceleration * velocity / MU_EARTH
-
-
-def estimate_stationkeeping_delta_v(mission: SpacecraftMission, weather: SpaceWeather) -> tuple[float, float, float, float]:
-    """
-    returns:
-        required delta-v,
-        total altitude loss,
-        average density,
-        average drag force
-    """
-
-    radius = EARTH_RADIUS + mission.target_altitude * 1000
-    altitude = mission.target_altitude * 1000
-
-    total_seconds = mission.lifespan * DAYS_PER_YEAR * SECONDS_PER_DAY
-    timestep = SECONDS_PER_DAY
-
-    steps = max(1, math.ceil(total_seconds / timestep))
-
-    total_delta_v = 0.0
-    total_density = 0.0
-    total_drag = 0.0
-
-    for _ in range(steps):
-        current_altitude_km = altitude / 1000
-
-        if current_altitude_km <= 120:
-            break
-
-        density = estimate_atmospheric_density(
-            current_altitude_km,
-            weather.f107,
-            weather.kp
-        )
-
-        velocity = orbital_velocity(current_altitude_km)
-        drag_force = 0.5 * density * velocity ** 2 * mission.drag_coefficient * mission.cross_section_area
-        drag_acceleration = drag_force / (mission.mass * 1000)
-
-        # Orbital energy loss caused by drag.
-        decay_rate = -2 * radius ** 2 * drag_acceleration * velocity / MU_EARTH
-        altitude_change = decay_rate * timestep
-
-        # Δv required to restore the lost orbital energy.
-        delta_v = abs(altitude_change) * velocity / (2 * radius)
-
-        total_delta_v += delta_v
-        total_density += density
-        total_drag += drag_force
-
-        altitude += altitude_change
-        radius = EARTH_RADIUS + altitude
-
-    average_density = total_density / steps
-    average_drag = total_drag / steps
-    altitude_loss = mission.target_altitude - altitude / 1000
-
-    return total_delta_v, altitude_loss, average_density, average_drag
+def average_spacecraft_mass(mission: SpacecraftMission) -> float:
+    return max(mission.mass + 0.5 * max(mission.fuel, 0.0), 1e-9)
 
 def estimate_delta_v_available(mission: SpacecraftMission) -> float:
     if mission.fuel <= 0 or mission.mass <= 0 or mission.isp <= 0:
         return 0.0
 
     initial_mass = mission.mass + mission.fuel
-    final_mass = mission.mass
-
-    return mission.isp * G0 * math.log(initial_mass / final_mass)
+    return mission.isp * G0 * math.log(initial_mass / mission.mass)
 
 def estimate_propellant_required(mission: SpacecraftMission, required_delta_v: float) -> float:
     if required_delta_v <= 0:
         return 0.0
 
     if mission.isp <= 0 or mission.mass <= 0:
-        return float('inf')
+        return float("inf")
 
     mass_ratio = math.exp(required_delta_v / (mission.isp * G0))
-    final_mass = mission.mass
+    return mission.mass * (mass_ratio - 1)
 
-    initial_mass = final_mass * mass_ratio
+def estimate_unpowered_decay(mission: SpacecraftMission, weather: SpaceWeather, duration_s: float, spacecraft_mass: float) -> float:
+    altitude = mission.target_altitude * 1000
+    timestep = 7 * SECONDS_PER_DAY
+    steps = max(1, math.ceil(duration_s / timestep))
+    total_altitude_loss = 0.0
 
-    return initial_mass - final_mass
+    for _ in range(steps):
+        current_altitude_km = altitude / 1000
+        if current_altitude_km <= REENTRY_ALTITUDE_KM:
+            break
 
+        radius = EARTH_RADIUS + altitude
+        density = estimate_atmospheric_density(current_altitude_km, weather, mission.target_inclination)
+        velocity = atmospheric_relative_velocity(current_altitude_km, mission.target_inclination)
+        drag_force = 0.5 * density * velocity ** 2 * mission.drag_coefficient * mission.cross_section_area
+        drag_acceleration = drag_force / spacecraft_mass
+        decay_rate = -2 * radius ** 2 * drag_acceleration * velocity / MU_EARTH
+        altitude_change = decay_rate * timestep
+        total_altitude_loss += abs(altitude_change) / 1000
+        altitude += altitude_change
 
-def simulate(mission: SpacecraftMission, weather: SpaceWeather) -> SimulationResult:
+    return total_altitude_loss
+
+def estimate_stationkeeping_delta_v(mission: SpacecraftMission, weather: SpaceWeather) -> tuple[float, float, float, float]:
+    # Stationkeeping holds the target orbit, so budget Δv at that altitude.
+    # Natural decay is only used later if the spacecraft cannot afford that budget.
+    duration = mission.lifespan * DAYS_PER_YEAR * SECONDS_PER_DAY
+    spacecraft_mass = average_spacecraft_mass(mission)
+    density = estimate_atmospheric_density(mission.target_altitude, weather, mission.target_inclination)
+    velocity = atmospheric_relative_velocity(mission.target_altitude, mission.target_inclination)
+    drag_force = 0.5 * density * velocity ** 2 * mission.drag_coefficient * mission.cross_section_area
+    drag_acceleration = drag_force / spacecraft_mass
+    total_delta_v = drag_acceleration * duration
+
+    return total_delta_v, 0.0, density, drag_force
+
+def estimate_disposal_delta_v(altitude_km: float) -> float:
+    r_apogee = EARTH_RADIUS + altitude_km * 1000
+    r_perigee = EARTH_RADIUS + DISPOSAL_PERIGEE_KM * 1000
+    if r_apogee <= r_perigee:
+        return 0.0
+
+    circular_velocity = math.sqrt(MU_EARTH / r_apogee)
+    transfer_a = 0.5 * (r_apogee + r_perigee)
+    transfer_velocity = math.sqrt(MU_EARTH * (2.0 / r_apogee - 1.0 / transfer_a))
+    return max(0.0, circular_velocity - transfer_velocity)
+
+def estimate_collision_avoidance_delta_v(mission: SpacecraftMission, cam_scale: float = 1.0) -> float:
+    # Debris flux peaks near 750-850 km and is higher on polar/SSO paths.
+    debris_environment = math.exp(-((mission.target_altitude - 750.0) / 280.0) ** 2)
+    inclination_factor = 0.65 + 0.35 * abs(math.sin(math.radians(mission.target_inclination)))
+    area_factor = mission.cross_section_area / 8.0
+    annual = 7.5 * debris_environment * inclination_factor * area_factor
+    return max(0.0, annual * mission.lifespan * cam_scale)
+
+def estimate_insertion_delta_v(mission: SpacecraftMission, ops: OperationalDraw) -> float:
+    radius = EARTH_RADIUS + mission.target_altitude * 1000
+    velocity = orbital_velocity(mission.target_altitude)
+    altitude_dv = velocity * abs(ops.insertion_altitude_error_km) * 1000.0 / radius
+    inclination_dv = 2.0 * velocity * math.sin(math.radians(abs(ops.insertion_inclination_error_deg)) / 2.0)
+    return altitude_dv + inclination_dv
+
+def estimate_mission_delta_v(mission: SpacecraftMission, weather: SpaceWeather, ops: OperationalDraw | None = None):
+    ops = ops or OperationalDraw()
+    drag_delta_v, _, density, drag_force = estimate_stationkeeping_delta_v(mission, weather)
+    cam_delta_v = estimate_collision_avoidance_delta_v(mission, ops.cam_scale)
+    insertion_delta_v = estimate_insertion_delta_v(mission, ops)
+    disposal_delta_v = estimate_disposal_delta_v(mission.target_altitude)
+    required_delta_v = drag_delta_v + cam_delta_v + insertion_delta_v + disposal_delta_v
+    return required_delta_v, drag_delta_v, cam_delta_v, insertion_delta_v, disposal_delta_v, density, drag_force
+
+def simulate(mission: SpacecraftMission, weather: SpaceWeather, ops: OperationalDraw | None = None) -> SimulationResult:
+    ops = ops or OperationalDraw()
     failures = []
 
     if mission.mass <= 0:
-        failures.append('invalid_mass')
-
+        failures.append("invalid_mass")
     if mission.fuel <= 0:
-        failures.append('no_fuel')
-
+        failures.append("no_fuel")
     if mission.cross_section_area <= 0:
-        failures.append('invalid_cross_section_area')
-
+        failures.append("invalid_cross_section_area")
     if mission.drag_coefficient <= 0:
-        failures.append('invalid_drag_coefficient')
-
+        failures.append("invalid_drag_coefficient")
     if mission.isp <= 0:
-        failures.append('invalid_isp')
-
+        failures.append("invalid_isp")
     if mission.lifespan <= 0:
-        failures.append('invalid_lifespan')
+        failures.append("invalid_lifespan")
 
     if failures:
-        return SimulationResult(
-            passed=False,
-            failure_reasons=failures
-        )
+        return SimulationResult(passed = False, failure_reasons = failures)
 
-    required_delta_v, altitude_loss, average_density, average_drag = estimate_stationkeeping_delta_v(
-        mission,
-        weather
-    )
-
+    required_delta_v, drag_delta_v, cam_delta_v, insertion_delta_v, disposal_delta_v, average_density, average_drag = estimate_mission_delta_v(mission, weather, ops)
     available_delta_v = estimate_delta_v_available(mission)
     propellant_required = estimate_propellant_required(mission, required_delta_v)
     propellant_remaining = mission.fuel - propellant_required
+    reserve_required = mission.fuel * PROPULSION_RESERVE_FRACTION
+    operations_delta_v = drag_delta_v + cam_delta_v + insertion_delta_v
+
+    if operations_delta_v > available_delta_v:
+        failures.append("insufficient_delta_v")
+    elif required_delta_v > available_delta_v:
+        failures.append("failed_disposal")
 
     if propellant_required > mission.fuel:
-        failures.append('insufficient_propellant')
+        failures.append("insufficient_propellant")
+    elif propellant_remaining < reserve_required:
+        failures.append("insufficient_propellant_reserve")
 
-    if required_delta_v > available_delta_v:
-        failures.append('insufficient_delta_v')
+    if available_delta_v >= operations_delta_v:
+        final_altitude = mission.target_altitude
+        orbital_decay = 0.0
+    else:
+        duration = mission.lifespan * DAYS_PER_YEAR * SECONDS_PER_DAY
+        natural_altitude_loss = estimate_unpowered_decay(mission, weather, duration, average_spacecraft_mass(mission))
+        final_altitude = mission.target_altitude - natural_altitude_loss
+        orbital_decay = natural_altitude_loss
 
-    final_altitude = mission.target_altitude - altitude_loss
-
-    if final_altitude < 120:
-        failures.append('orbital_decay')
+        if final_altitude < MIN_OPERATING_ALTITUDE_KM:
+            failures.append("below_operating_altitude")
+        if final_altitude < REENTRY_ALTITUDE_KM:
+            failures.append("orbital_decay")
 
     return SimulationResult(
         passed = len(failures) == 0,
         failure_reasons = failures,
         available_delta_v = available_delta_v,
         required_delta_v = required_delta_v,
+        drag_delta_v = drag_delta_v,
+        collision_avoidance_delta_v = cam_delta_v,
+        insertion_delta_v = insertion_delta_v,
+        disposal_delta_v = disposal_delta_v,
         propellant_required = propellant_required,
         propellant_remaining = propellant_remaining,
         initial_altitude = mission.target_altitude,
         final_altitude = final_altitude,
-        orbital_decay = altitude_loss,
+        orbital_decay = orbital_decay,
         average_density = average_density,
         average_drag = average_drag
     )
 
-def run_stress_test(mission: SpacecraftMission, weather: SpaceWeather, n: int = 10_000, seed: int | None = 42) -> MonteCarloSummary:
+def run_overall_monte_carlo(mission: SpacecraftMission, weather: SpaceWeather, n: int = 10_000, seed: int | None = None):
     rng = random.Random(seed)
+    baseline = simulate(mission, weather)
     passes = 0
     failures = 0
     failure_modes = {}
@@ -275,15 +377,149 @@ def run_stress_test(mission: SpacecraftMission, weather: SpaceWeather, n: int = 
     for _ in range(n):
         stressed_mission = create_stressed_mission(mission, rng)
         stressed_weather = create_stressed_weather(weather, rng)
-        result = simulate(stressed_mission, stressed_weather)
+        stressed_ops = create_stressed_ops(rng)
+        result = simulate(stressed_mission, stressed_weather, stressed_ops)
 
         if result.passed:
             passes += 1
         else:
             failures += 1
-
             for reason in result.failure_reasons:
                 failure_modes[reason] = failure_modes.get(reason, 0) + 1
+
+    return passes, failures, failure_modes, baseline
+
+def _sensitivity_stats(parameter: str, n: int, passes: int, failures: int, total_delta_v_change: float, total_altitude_change: float, total_propellant_change: float, total_margin_change: float, total_abs_delta_v_change: float) -> SensitivityResult:
+    return SensitivityResult(
+        parameter = parameter,
+        runs = n,
+        passes = passes,
+        failures = failures,
+        failure_rate = failures / n,
+        average_delta_v_change = total_delta_v_change / n,
+        average_altitude_change = total_altitude_change / n,
+        average_propellant_change = total_propellant_change / n,
+        average_margin_change = total_margin_change / n,
+        mean_abs_delta_v_change = total_abs_delta_v_change / n
+    )
+
+def run_parameter_sensitivity(mission: SpacecraftMission, weather: SpaceWeather, n: int = 1_000, seed: int | None = None):
+    rng = random.Random(seed)
+    baseline = simulate(mission, weather)
+    baseline_margin = baseline.available_delta_v - baseline.required_delta_v
+    results = []
+
+    for parameter in MISSION_STRESS_RANGES:
+        passes = 0
+        failures = 0
+        total_delta_v_change = 0.0
+        total_altitude_change = 0.0
+        total_propellant_change = 0.0
+        total_margin_change = 0.0
+        total_abs_delta_v_change = 0.0
+
+        for _ in range(n):
+            stressed_mission = perturb_parameter(mission, parameter, rng)
+            result = simulate(stressed_mission, weather)
+
+            if result.passed:
+                passes += 1
+            else:
+                failures += 1
+
+            delta_v_change = result.required_delta_v - baseline.required_delta_v
+            total_delta_v_change += delta_v_change
+            total_abs_delta_v_change += abs(delta_v_change)
+            total_altitude_change += result.final_altitude - baseline.final_altitude
+            total_propellant_change += result.propellant_required - baseline.propellant_required
+            total_margin_change += (result.available_delta_v - result.required_delta_v) - baseline_margin
+
+        results.append(
+            _sensitivity_stats(parameter, n, passes, failures,
+                total_delta_v_change,
+                total_altitude_change,
+                total_propellant_change,
+                total_margin_change,
+                total_abs_delta_v_change
+            )
+        )
+
+    for parameter in WEATHER_STRESS_RANGES:
+        passes = 0
+        failures = 0
+        total_delta_v_change = 0.0
+        total_altitude_change = 0.0
+        total_propellant_change = 0.0
+        total_margin_change = 0.0
+        total_abs_delta_v_change = 0.0
+
+        for _ in range(n):
+            stressed_weather = perturb_weather_parameter(weather, parameter, rng)
+            result = simulate(mission, stressed_weather)
+
+            if result.passed:
+                passes += 1
+            else:
+                failures += 1
+
+            delta_v_change = result.required_delta_v - baseline.required_delta_v
+            total_delta_v_change += delta_v_change
+            total_abs_delta_v_change += abs(delta_v_change)
+            total_altitude_change += result.final_altitude - baseline.final_altitude
+            total_propellant_change += result.propellant_required - baseline.propellant_required
+            total_margin_change += (result.available_delta_v - result.required_delta_v) - baseline_margin
+
+        results.append(
+            _sensitivity_stats(parameter, n, passes, failures,
+                total_delta_v_change,
+                total_altitude_change,
+                total_propellant_change,
+                total_margin_change,
+                total_abs_delta_v_change
+            )
+        )
+
+    for parameter in ("insertion_altitude_error_km", "insertion_inclination_error_deg", "debris_environment"):
+        passes = 0
+        failures = 0
+        total_delta_v_change = 0.0
+        total_altitude_change = 0.0
+        total_propellant_change = 0.0
+        total_margin_change = 0.0
+        total_abs_delta_v_change = 0.0
+
+        for _ in range(n):
+            stressed_ops = perturb_ops_parameter(OperationalDraw(), parameter, rng)
+            result = simulate(mission, weather, stressed_ops)
+
+            if result.passed:
+                passes += 1
+            else:
+                failures += 1
+
+            delta_v_change = result.required_delta_v - baseline.required_delta_v
+            total_delta_v_change += delta_v_change
+            total_abs_delta_v_change += abs(delta_v_change)
+            total_altitude_change += result.final_altitude - baseline.final_altitude
+            total_propellant_change += result.propellant_required - baseline.propellant_required
+            total_margin_change += (result.available_delta_v - result.required_delta_v) - baseline_margin
+
+        results.append(
+            _sensitivity_stats(parameter, n, passes, failures,
+                total_delta_v_change,
+                total_altitude_change,
+                total_propellant_change,
+                total_margin_change,
+                total_abs_delta_v_change
+            )
+        )
+
+    return sorted(results, key = lambda result: (result.failure_rate, result.mean_abs_delta_v_change), reverse = True)
+
+def run_monte_carlo(mission: SpacecraftMission, weather: SpaceWeather, n: int = 10_000, sensitivity_runs: int = 1_000, seed: int | None = None) -> MonteCarloSummary:
+    passes, failures, failure_modes, baseline = run_overall_monte_carlo(mission, weather, n, seed)
+
+    sensitivity_results = run_parameter_sensitivity(mission, weather, sensitivity_runs, seed)
 
     return MonteCarloSummary(
         total_runs = n,
@@ -291,5 +527,45 @@ def run_stress_test(mission: SpacecraftMission, weather: SpaceWeather, n: int = 
         failures = failures,
         probability_pass = passes / n,
         probability_fail = failures / n,
-        failure_modes = failure_modes
+        failure_modes = failure_modes,
+        sensitivity_results = sensitivity_results,
+        baseline = baseline
     )
+
+def print_summary(summary: MonteCarloSummary):
+    print("MONTE CARLO MISSION ANALYSIS")
+    print(f"Total simulations: {summary.total_runs:,}")
+    print(f"Passes: {summary.passes:,}")
+    print(f"Failures: {summary.failures:,}")
+    print(f"Pass rate: {summary.probability_pass:.2%}")
+    print(f"Failure rate: {summary.probability_fail:.2%}")
+
+    print("\nFailure modes:")
+    if summary.failure_modes:
+        for reason, count in sorted(summary.failure_modes.items(), key = lambda item: item[1], reverse = True):
+            print(f"  {reason}: {count:,} ({count / summary.total_runs:.2%})")
+    else:
+        print("  None")
+
+    print("\nBaseline mission:")
+    print(f"  Drag stationkeeping: {summary.baseline.drag_delta_v:.2f} m/s")
+    print(f"  Collision avoidance: {summary.baseline.collision_avoidance_delta_v:.2f} m/s")
+    print(f"  Insertion correction: {summary.baseline.insertion_delta_v:.2f} m/s")
+    print(f"  End-of-life disposal: {summary.baseline.disposal_delta_v:.2f} m/s")
+    print(f"  Required Δv: {summary.baseline.required_delta_v:.2f} m/s")
+    print(f"  Available Δv: {summary.baseline.available_delta_v:.2f} m/s")
+    print(f"  Required propellant: {summary.baseline.propellant_required:.2f} kg")
+    print(f"  Remaining propellant: {summary.baseline.propellant_remaining:.2f} kg")
+    print(f"  Predicted final altitude: {summary.baseline.final_altitude:.2f} km")
+
+    print("\nParameter sensitivity:")
+    if summary.failures and all(result.failure_rate == 0 for result in summary.sensitivity_results):
+        print("  Single-parameter sweeps still pass; combined error + storm years do not.")
+    for result in summary.sensitivity_results:
+        print(f"\n  {result.parameter}")
+        print(f"    failure rate: {result.failure_rate:.2%}")
+        print(f"    avg Δv change: {result.average_delta_v_change:+.2f} m/s")
+        print(f"    mean |Δv| change: {result.mean_abs_delta_v_change:.2f} m/s")
+        print(f"    avg margin change: {result.average_margin_change:+.2f} m/s")
+        print(f"    avg altitude change: {result.average_altitude_change:+.2f} km")
+        print(f"    avg propellant change: {result.average_propellant_change:+.2f} kg")

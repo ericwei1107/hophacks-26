@@ -8,7 +8,7 @@ BASE_URL = 'https://services.swpc.noaa.gov'
 class SpaceWeather:
     # geomagnetic activity
     kp: Optional[float] = None
-
+    
     # solar activity
     f107: Optional[float] = None
     solar_wind_speed: Optional[float] = None       # km/s

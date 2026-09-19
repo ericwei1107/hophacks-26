@@ -1,35 +1,24 @@
 from dataclasses import dataclass
-import random
 
 @dataclass
 class MissionConstraints:
-    # kg
     mass_min: float
     mass_max: float
-
-    # kg
     fuel_min: float
     fuel_max: float
-
-    # years
     life_min: float
     life_max: float
-
-    # km
     altitude_min: float
     altitude_max: float
-
-    # degrees
     inclination_min: float
     inclination_max: float
-
-    # m^2
     area_min: float
     area_max: float
-
-    # dimensionless
     drag_coefficient_min: float
     drag_coefficient_max: float
+    isp_min: float
+    isp_max: float
+
 @dataclass
 class SpacecraftMission:
     mass: float
@@ -39,111 +28,81 @@ class SpacecraftMission:
     target_inclination: float
     cross_section_area: float
     drag_coefficient: float
+    isp: float
 
     def to_dict(self):
         return {
-            'mass': self.mass,
-            'fuel': self.fuel,
-            'lifespan': self.lifespan,
-            'target_altitude': self.target_altitude,
-            'target_inclination': self.target_inclination,
-            'cross_section_area' : self.cross_section_area,
-            'drag_coefficient' : self.drag_coefficient
+            "mass": self.mass,
+            "fuel": self.fuel,
+            "lifespan": self.lifespan,
+            "target_altitude": self.target_altitude,
+            "target_inclination": self.target_inclination,
+            "cross_section_area": self.cross_section_area,
+            "drag_coefficient": self.drag_coefficient,
+            "isp": self.isp
         }
 
 class MissionDesigner:
     def __init__(self, constraints: MissionConstraints):
         self.constraints = constraints
-        self.rng = random.Random()
         self._validate_constraints()
 
     def _validate_constraints(self):
         c = self.constraints
         ranges = {
-            'mass': (c.mass_min, c.mass_max),
-            'fuel': (c.fuel_min, c.fuel_max),
-            'lifespan': (c.life_min, c.life_max),
-            'altitude': (c.altitude_min, c.altitude_max),
-            'inclination': (c.inclination_min, c.inclination_max),
+            "mass": (c.mass_min, c.mass_max),
+            "fuel": (c.fuel_min, c.fuel_max),
+            "lifespan": (c.life_min, c.life_max),
+            "altitude": (c.altitude_min, c.altitude_max),
+            "inclination": (c.inclination_min, c.inclination_max),
+            "area": (c.area_min, c.area_max),
+            "drag_coefficient": (c.drag_coefficient_min, c.drag_coefficient_max),
+            "isp": (c.isp_min, c.isp_max)
         }
-
         for name, (minimum, maximum) in ranges.items():
             if minimum > maximum:
                 raise ValueError(f"{name}: minimum cannot be greater than maximum.")
 
-    def generate_candidate(self) -> SpacecraftMission:
-        c = self.constraints
-        return SpacecraftMission(
-            mass = self.rng.uniform(c.mass_min, c.mass_max),
-            fuel = self.rng.uniform(c.fuel_min, c.fuel_max),
-            lifespan = self.rng.uniform(c.life_min, c.life_max),
-            target_altitude = self.rng.uniform(c.altitude_min, c.altitude_max),
-            target_inclination = self.rng.uniform(c.inclination_min, c.inclination_max),
-            cross_section_area = self.rng.uniform(c.cross)
-        )
-
     def validate(self, mission: SpacecraftMission) -> tuple[bool, list[str]]:
         c = self.constraints
         errors = []
-
-        if not c.mass_min <= mission.mass <= c.mass_max:
-            errors.append("Mass outside allowed range.")
-
-        if not c.fuel_min <= mission.fuel <= c.fuel_max:
-            errors.append("Fuel outside allowed range.")
-
-        if not c.life_min <= mission.lifespan <= c.life_max:
-            errors.append("Mission life outside allowed range.")
-
-        if not c.altitude_min <= mission.target_altitude <= c.altitude_max:
-            errors.append("Target altitude outside allowed range.")
-
-        if not c.inclination_min <= mission.target_inclination <= c.inclination_max:
-            errors.append("Target inclination outside allowed range.")
-
-        if not c.area_min <= mission.cross_section_area <= c.area_max:
-            errors.append("Cross-sectional area outside allowed range.")
-
-        if not c.drag_coefficient_min <= mission.drag_coefficient <= c.drag_coefficient_max:
-            errors.append("Drag coefficient outside allowed range.")
-        
+        checks = {
+            "mass": (mission.mass, c.mass_min, c.mass_max, "Mass outside allowed range."),
+            "fuel": (mission.fuel, c.fuel_min, c.fuel_max, "Fuel outside allowed range."),
+            "lifespan": (mission.lifespan, c.life_min, c.life_max, "Mission lifespan outside allowed range."),
+            "target_altitude": (mission.target_altitude, c.altitude_min, c.altitude_max, "Target altitude outside allowed range."),
+            "target_inclination": (mission.target_inclination, c.inclination_min, c.inclination_max, "Target inclination outside allowed range."),
+            "cross_section_area": (mission.cross_section_area, c.area_min, c.area_max, "Cross-sectional area outside allowed range."),
+            "drag_coefficient": (mission.drag_coefficient, c.drag_coefficient_min, c.drag_coefficient_max, "Drag coefficient outside allowed range."),
+            "isp": (mission.isp, c.isp_min, c.isp_max, "Isp outside allowed range.")
+        }
+        for _, (value, minimum, maximum, message) in checks.items():
+            if not minimum <= value <= maximum:
+                errors.append(message)
         return len(errors) == 0, errors
 
-    # generate a valid candidate
-    def design(self) -> SpacecraftMission:
-        mission = self.generate_candidate()
-        valid, errors = self.validate(mission)
-        if not valid:
-            raise RuntimeError(f"Generated mission is invalid: {errors}")
+    def prompt_user(self) -> SpacecraftMission:
+        c = self.constraints
+        print("\n=== Mission Specification ===")
+        print("Enter values within the displayed ranges.\n")
 
-        return mission
+        def get_float(label: str, minimum: float, maximum: float) -> float:
+            while True:
+                try:
+                    value = float(input(f"{label} [{minimum} - {maximum}]: "))
+                    if minimum <= value <= maximum:
+                        return value
+                    print(f"Value must be between {minimum} and {maximum}.")
+                except ValueError:
+                    print("Please enter a valid number.")
 
-if __name__ == "__main__":
-    constraints = MissionConstraints(
-        mass_min = 500,
-        mass_max = 1000,
-
-        fuel_min = 100,
-        fuel_max = 300,
-
-        life_min = 3,
-        life_max = 7,
-
-        altitude_min = 400,
-        altitude_max = 600,
-
-        inclination_min = 50,
-        inclination_max = 100,
-
-        area_min = 5,
-        area_max = 20,
-        
-        drag_coefficient_min = 1.5,
-        drag_coefficient_max = 2.5
-    )
-
-    designer = MissionDesigner(constraints)
-    mission = designer.design()
-
-    for key, value in mission.to_dict().items():
-        print(f"{key}: {value:.2f}")
+        return SpacecraftMission(
+            mass = get_float("Spacecraft mass (kg)", c.mass_min, c.mass_max),
+            fuel = get_float("Fuel (kg)", c.fuel_min, c.fuel_max),
+            lifespan = get_float("Mission lifespan (years)", c.life_min, c.life_max),
+            target_altitude = get_float("Target altitude (km)", c.altitude_min, c.altitude_max),
+            target_inclination = get_float("Target inclination (degrees)", c.inclination_min, c.inclination_max),
+            cross_section_area = get_float("Cross-sectional area (m²)", c.area_min, c.area_max),
+            drag_coefficient = get_float("Drag coefficient", c.drag_coefficient_min, c.drag_coefficient_max),
+            isp = get_float("Specific impulse / Isp (seconds)", c.isp_min, c.isp_max)
+        )
