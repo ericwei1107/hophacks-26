@@ -2,9 +2,9 @@
  * Assembly screen: build the rocket, see live engineering readouts, launch.
  */
 
-import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 
+import { SafeCanvas } from "../components/SafeCanvas";
 import { CONFIG_RANGES } from "../../domain/config";
 import type { BuildCheck } from "../../domain/derive";
 import type { EngineId } from "../../domain/engines";
@@ -109,13 +109,13 @@ export function AssemblyScreen() {
   return (
     <div className="screen assembly">
       <div className="viewport">
-        <Canvas camera={{ position: [derived.totalLengthM * 1.2, derived.totalLengthM * 0.45, derived.totalLengthM * 1.2], fov: 45 }}>
+        <SafeCanvas camera={{ position: [derived.totalLengthM * 1.2, derived.totalLengthM * 0.45, derived.totalLengthM * 1.2], fov: 45 }}>
           <color attach="background" args={["#07111f"]} />
           <ambientLight intensity={0.5} />
           <directionalLight position={[10, 20, 10]} intensity={1.2} />
           <RocketMesh rocket={derived} showMarkers />
           <OrbitControls enablePan={false} />
-        </Canvas>
+        </SafeCanvas>
         <div className="viewport-caption">CM <span className="cyan">●</span> / CP <span className="orange">●</span></div>
       </div>
 

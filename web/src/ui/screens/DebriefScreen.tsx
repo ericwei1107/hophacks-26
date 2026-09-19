@@ -11,6 +11,12 @@ import type { MonteCarloSummary } from "../../sim/orbital/types";
 import type { AscentRobustnessResult } from "../../sim/ascent/robustness";
 import { useAppStore, simClient } from "../store";
 import { TelemetryChart, type ChartChannel } from "../components/TelemetryChart";
+import {
+  buildRunReport,
+  compareRunToCurrent,
+  copyConfigToClipboard,
+  downloadText,
+} from "../../persistence/report";
 import type { FlightOutcome } from "../../sim/ascent/flight";
 
 const OUTCOME_PRESENTATION: Record<FlightOutcome, { title: string; suggestion: string }> = {
@@ -35,12 +41,14 @@ function outcomeTitle(outcome: FlightOutcome): string {
 }
 
 export function DebriefScreen() {
-  const { flight, setScreen, returnToBuild } = useAppStore();
+  const { flight, setScreen, returnToBuild, runSummaries } = useAppStore();
   const [hoverTimeS, setHoverTimeS] = useState<number | null>(null);
   const [payloadAnalysis, setPayloadAnalysis] = useState<PayloadAnalysis | null>(null);
   const [monteCarlo, setMonteCarlo] = useState<MonteCarloSummary | null>(null);
   const [robustness, setRobustness] = useState<AscentRobustnessResult | null>(null);
   const [analysisProgress, setAnalysisProgress] = useState<string | null>(null);
+  const [compareRunId, setCompareRunId] = useState<string>("");
+  const [copied, setCopied] = useState(false);
 
   const handoff = useMemo(
     () =>
@@ -179,8 +187,58 @@ export function DebriefScreen() {
         <button onClick={runRobustness} disabled={analysisProgress !== null}>
           Run robustness analysis
         </button>
+        <button onClick={() => downloadText(`apogee-run-${flight.seed}.json`, buildRunReport(flight))}>
+          Download report (JSON)
+        </button>
+        <button
+          onClick={async () => {
+            setCopied(await copyConfigToClipboard(flight.config));
+            setTimeout(() => setCopied(false), 1500);
+          }}
+        >
+          {copied ? "Copied!" : "Copy build config"}
+        </button>
       </div>
       {analysisProgress && <p className="dim">{analysisProgress}</p>}
+
+      {runSummaries.length > 1 && (
+        <section className="analysis">
+          <h2>Compare with a saved run</h2>
+          <select value={compareRunId} onChange={(e) => setCompareRunId(e.target.value)} aria-label="Compare run">
+            <option value="">Select a previous run…</option>
+            {runSummaries
+              .filter((r) => r.config !== flight.config || r.outcome !== flight.outcome)
+              .slice(0, 10)
+              .map((r) => (
+                <option key={r.id} value={r.id}>
+                  {new Date(r.timestamp).toLocaleTimeString()} — {r.outcome}
+                </option>
+              ))}
+          </select>
+          {compareRunId &&
+            (() => {
+              const previous = runSummaries.find((r) => r.id === compareRunId);
+              if (!previous) {
+                return null;
+              }
+              const { configDiffs, outcomeChange } = compareRunToCurrent(flight, previous);
+              return (
+                <div>
+                  <p className="analysis-line">Outcome: {outcomeChange}</p>
+                  {configDiffs.length > 0 ? (
+                    <ul>
+                      {configDiffs.map((d) => (
+                        <li key={d}>{d}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="analysis-line">Identical build configuration.</p>
+                  )}
+                </div>
+              );
+            })()}
+        </section>
+      )}
 
       {payloadAnalysis && (
         <section className="analysis">

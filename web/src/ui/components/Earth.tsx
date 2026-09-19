@@ -6,7 +6,7 @@
  * correctly with the renderer's logarithmic depth buffer.
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 
 const EARTH_RADIUS_KM = 6371;
@@ -89,6 +89,15 @@ export function Earth() {
       }),
     [],
   );
+
+  // Dispose GPU resources on unmount.
+  useEffect(() => {
+    return () => {
+      graticule.dispose();
+      (graticuleLines.material as THREE.Material).dispose();
+      atmosphereMaterial.dispose();
+    };
+  }, [graticule, graticuleLines, atmosphereMaterial]);
 
   return (
     <group>

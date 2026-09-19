@@ -3,14 +3,43 @@
  * No piloting controls — the autopilot flies the recorded trajectory.
  */
 
-import { useEffect, useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import { useEffect, useRef, useState } from "react";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
+import { useFrame, useThree } from "@react-three/fiber";
 
+import { SafeCanvas } from "../components/SafeCanvas";
 import { playbackClock, resetPlaybackClock } from "../playbackClock";
 import { useAppStore, type CameraMode } from "../store";
 import { PHASE_NAMES, sampleTelemetry, type FlightSample } from "../telemetry";
 import { FlightScene } from "../components/FlightScene";
+
+/** Lowers pixel ratio (and reports sustained low fps) when the frame rate drops. */
+function AdaptiveQuality() {
+  const setDpr = useThree((s) => s.setDpr);
+  const lowEffects = useAppStore((s) => s.settings.lowEffects);
+  const acc = useRef({ frames: 0, time: 0, level: 0 });
+  useFrame((_, delta) => {
+    const a = acc.current;
+    a.frames++;
+    a.time += delta;
+    if (a.time >= 2) {
+      const fps = a.frames / a.time;
+      a.frames = 0;
+      a.time = 0;
+      if (fps < 30 && a.level < 2) {
+        a.level++;
+        setDpr(Math.max(0.75, 1.5 - a.level * 0.25));
+      } else if (fps > 55 && a.level > 0) {
+        a.level--;
+        setDpr(Math.max(0.75, 1.5 - a.level * 0.25));
+      }
+    }
+  });
+  // Bloom cost scales with resolution; nothing to do here when lowEffects
+  // (the composer is already absent).
+  void lowEffects;
+  return null;
+}
 
 const SPEEDS = [1, 5, 20];
 const CAMERAS: { id: CameraMode; label: string }[] = [
@@ -42,6 +71,14 @@ export function FlightScreen() {
   const { flight, playing, playbackSpeed, cameraMode, settings, setPlaying, setPlaybackSpeed, setCameraMode, setScreen } =
     useAppStore();
   const [sample, setSample] = useState<FlightSample | null>(null);
+  const [hidden, setHidden] = useState(document.hidden);
+
+  // Suspend rendering while the tab is hidden.
+  useEffect(() => {
+    const onVisibility = () => setHidden(document.hidden);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
 
   // Reset the clock when a new flight loads.
   useEffect(() => {
@@ -88,15 +125,21 @@ export function FlightScreen() {
   return (
     <div className="screen flight">
       <div className="viewport">
-        <Canvas camera={{ fov: 50, near: 0.0001, far: 100_000 }} gl={{ logarithmicDepthBuffer: true }}>
+        <SafeCanvas
+          camera={{ fov: 50, near: 0.0001, far: 100_000 }}
+          gl={{ logarithmicDepthBuffer: true }}
+          frameloop={hidden ? "never" : "always"}
+          dpr={settings.lowEffects ? 1 : [1, 1.5]}
+        >
           <color attach="background" args={["#07111f"]} />
           <FlightScene flight={flight} cameraMode={cameraMode} lowEffects={settings.lowEffects} />
+          <AdaptiveQuality />
           {!settings.lowEffects && (
             <EffectComposer>
               <Bloom intensity={0.6} luminanceThreshold={0.35} luminanceSmoothing={0.2} mipmapBlur />
             </EffectComposer>
           )}
-        </Canvas>
+        </SafeCanvas>
 
         {/* HUD overlay */}
         {sample && (

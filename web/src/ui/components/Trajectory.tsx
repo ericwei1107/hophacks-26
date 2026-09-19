@@ -5,7 +5,7 @@
  * when the flight changes.
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { Line2 } from "three/examples/jsm/lines/Line2.js";
@@ -79,6 +79,17 @@ export function Trajectory({ telemetry, lowEffects }: { telemetry: Telemetry; lo
     const pointCount = positions.length / 3;
     return { trail: trailLine, groundTrack: groundLine, maxSegments: pointCount - 1, stride };
   }, [telemetry]);
+
+  // Dispose replaced geometries and materials so repeated launches don't
+  // accumulate GPU resources.
+  useEffect(() => {
+    return () => {
+      trail.geometry.dispose();
+      (trail.material as LineMaterial).dispose();
+      groundTrack.geometry.dispose();
+      (groundTrack.material as THREE.Material).dispose();
+    };
+  }, [trail, groundTrack]);
 
   // Keep line resolution in sync with the canvas.
   useFrame(() => {

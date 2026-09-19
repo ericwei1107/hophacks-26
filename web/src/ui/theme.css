@@ -454,6 +454,35 @@ button.active {
   accent-color: var(--cyan);
 }
 
+.webgl-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  background: var(--ink);
+}
+
+.webgl-message {
+  max-width: 420px;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid #1d2d42;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.webgl-message h2 {
+  margin: 0 0 8px;
+  color: var(--orange);
+}
+
+.webgl-message p {
+  margin: 0;
+  color: var(--dim);
+  line-height: 1.5;
+}
+
 /* Narrow screens */
 @media (max-width: 900px) {
   .screen.assembly {
