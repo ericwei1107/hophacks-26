@@ -8,7 +8,7 @@ import { useMemo, useState } from "react";
 
 import { analyzePayload, createPayloadHandoff, type PayloadAnalysis } from "../../sim/orbital/payload";
 import type { MonteCarloSummary } from "../../sim/orbital/types";
-import type { AscentRobustnessResult } from "../../sim/ascent/robustness";
+import type { AscentRobustnessResult, AscentSensitivityResult } from "../../sim/ascent/robustness";
 import { useAppStore, simClient } from "../store";
 import { TelemetryChart, type ChartChannel } from "../components/TelemetryChart";
 import {
@@ -46,6 +46,7 @@ export function DebriefScreen() {
   const [payloadAnalysis, setPayloadAnalysis] = useState<PayloadAnalysis | null>(null);
   const [monteCarlo, setMonteCarlo] = useState<MonteCarloSummary | null>(null);
   const [robustness, setRobustness] = useState<AscentRobustnessResult | null>(null);
+  const [sensitivity, setSensitivity] = useState<AscentSensitivityResult | null>(null);
   const [analysisProgress, setAnalysisProgress] = useState<string | null>(null);
   const [compareRunId, setCompareRunId] = useState<string>("");
   const [copied, setCopied] = useState(false);
@@ -116,24 +117,40 @@ export function DebriefScreen() {
     setAnalysisProgress(null);
   };
 
+  const serializedInput = {
+    config: flight.config,
+    weather: flight.weather,
+    launchLatitudeDeg: 0,
+    launchLongitudeDeg: 0,
+    localWindEastMs: 0,
+    localWindNorthMs: 0,
+    seed: flight.seed,
+  };
+
   const runRobustness = async () => {
     setAnalysisProgress("Ascent robustness…");
     setRobustness(null);
-    const serialized = {
-      config: flight.config,
-      weather: flight.weather,
-      launchLatitudeDeg: 0,
-      launchLongitudeDeg: 0,
-      localWindEastMs: 0,
-      localWindNorthMs: 0,
-      seed: flight.seed,
-    };
     const { promise } = simClient.runAscentAnalysis(
-      { input: serialized, runs: 200, seed: flight.seed },
+      { input: serializedInput, runs: 200, seed: flight.seed },
       (completed, total) => setAnalysisProgress(`Robustness ${Math.round((completed / total) * 100)}%`),
     );
     try {
       setRobustness(await promise);
+    } catch {
+      // canceled
+    }
+    setAnalysisProgress(null);
+  };
+
+  const runSensitivity = async () => {
+    setAnalysisProgress("Parameter sensitivity…");
+    setSensitivity(null);
+    const { promise } = simClient.runAscentSensitivity(
+      { input: serializedInput, runsPerParameter: 100, seed: flight.seed },
+      (completed, total) => setAnalysisProgress(`Sensitivity ${Math.round((completed / total) * 100)}%`),
+    );
+    try {
+      setSensitivity(await promise);
     } catch {
       // canceled
     }
@@ -186,6 +203,9 @@ export function DebriefScreen() {
         )}
         <button onClick={runRobustness} disabled={analysisProgress !== null}>
           Run robustness analysis
+        </button>
+        <button onClick={runSensitivity} disabled={analysisProgress !== null}>
+          Parameter sensitivity
         </button>
         <button onClick={() => downloadText(`apogee-run-${flight.seed}.json`, buildRunReport(flight))}>
           Download report (JSON)
@@ -268,6 +288,18 @@ export function DebriefScreen() {
                 </ul>
               )}
               <p className="dim small">Failure modes overlap; percentages are not exclusive slices.</p>
+              {monteCarlo.sensitivity_results.length > 0 && (
+                <>
+                  <h3>Most sensitive parameters</h3>
+                  <ul>
+                    {monteCarlo.sensitivity_results.slice(0, 5).map((s) => (
+                      <li key={s.parameter}>
+                        {s.parameter}: {(s.failure_rate * 100).toFixed(1)}% failure rate, mean |Δv| change {s.mean_abs_delta_v_change.toFixed(2)} m/s
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
             </div>
           )}
         </section>
@@ -284,6 +316,24 @@ export function DebriefScreen() {
           <ul>
             {Object.entries(robustness.outcomeCounts).map(([outcome, count]) => (
               <li key={outcome}>{outcomeTitle(outcome as FlightOutcome)}: {count}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {sensitivity && (
+        <section className="analysis">
+          <h2>Ascent parameter sensitivity (100 runs each)</h2>
+          <p className="dim small">
+            Nominal orbit rate {(sensitivity.nominal.orbitProbability * 100).toFixed(0)}%. Change when each
+            parameter is perturbed alone:
+          </p>
+          <ul>
+            {sensitivity.entries.map((e) => (
+              <li key={e.parameter}>
+                {e.parameter}: {(e.probabilityChange * 100).toFixed(0)} pp
+                ({(e.orbitProbability * 100).toFixed(0)}% reaches orbit)
+              </li>
             ))}
           </ul>
         </section>
