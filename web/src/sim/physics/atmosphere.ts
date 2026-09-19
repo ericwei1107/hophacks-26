@@ -110,11 +110,19 @@ export class Atmosphere {
   private readonly density150: number;
   private readonly pressure150: number;
 
-  constructor(private readonly weather: SpaceWeather) {
-    this.density85 = tableSample(85, 2);
+  constructor(
+    private readonly weather: SpaceWeather,
+    private readonly densityScale = 1,
+  ) {
+    this.density85 = tableSample(85, 2) * densityScale;
     this.pressure85 = tableSample(85, 1);
-    this.density150 = estimateAtmosphericDensity(TRANSITION_TOP_KM, weather, 0);
+    this.density150 = estimateAtmosphericDensity(TRANSITION_TOP_KM, weather, 0) * densityScale;
     this.pressure150 = this.density150 * SPECIFIC_GAS_CONSTANT * TRANSITION_TOP_TEMPERATURE_K;
+  }
+
+  /** A copy of this atmosphere with density scaled (ascent uncertainty). */
+  withDensityScale(scale: number): Atmosphere {
+    return new Atmosphere(this.weather, this.densityScale * scale);
   }
 
   /** Density in kg/m^3 at altitude (km above the launch site). */
@@ -123,10 +131,10 @@ export class Atmosphere {
       return 0;
     }
     if (altitudeKm <= 85) {
-      return tableSample(Math.max(altitudeKm, 0), 2);
+      return tableSample(Math.max(altitudeKm, 0), 2) * this.densityScale;
     }
     if (altitudeKm >= TRANSITION_TOP_KM) {
-      return estimateAtmosphericDensity(altitudeKm, this.weather, 0);
+      return estimateAtmosphericDensity(altitudeKm, this.weather, 0) * this.densityScale;
     }
     const fraction = (altitudeKm - 85) / (TRANSITION_TOP_KM - 85);
     return Math.exp(

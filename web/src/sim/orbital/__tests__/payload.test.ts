@@ -7,14 +7,27 @@ import {
   analyzePayload,
   circularizationDeltaV,
   createPayloadHandoff,
+  type HandoffSource,
 } from "../payload";
 import { GAME_MISSION_RULES } from "../types";
+import type { FlightResult } from "../../ascent/flight";
 
 function flyReference() {
   return runFlight({
     config: referenceConfig(),
     environment: defaultEnvironment(referenceSnapshot()),
   });
+}
+
+function toHandoffSource(result: FlightResult): HandoffSource {
+  return {
+    orbitAchieved: result.orbitAchieved,
+    finalElements: result.finalElements,
+    stage2PropellantRemainingKg: result.stage2PropellantRemainingKg,
+    payloadWetMassKg: result.finalState.rocket.config.payloadWetMassKg,
+    weather: result.finalState.environment.weather,
+    seed: result.seed,
+  };
 }
 
 describe("circularizationDeltaV", () => {
@@ -33,17 +46,17 @@ describe("circularizationDeltaV", () => {
 describe("payload handoff", () => {
   it("is created only for achieved orbits", () => {
     const success = flyReference();
-    expect(createPayloadHandoff(success)).not.toBeNull();
+    expect(createPayloadHandoff(toHandoffSource(success))).not.toBeNull();
 
     const failure = runFlight({
       config: { ...referenceConfig(), finSpanM: 0 },
       environment: defaultEnvironment(referenceSnapshot()),
     });
-    expect(createPayloadHandoff(failure)).toBeNull();
+    expect(createPayloadHandoff(toHandoffSource(failure))).toBeNull();
   });
 
   it("carries the achieved orbit and leaves upper-stage fuel separate", () => {
-    const handoff = createPayloadHandoff(flyReference())!;
+    const handoff = createPayloadHandoff(toHandoffSource(flyReference()))!;
     expect(handoff.achievedPerigeeKm).toBeGreaterThanOrEqual(180);
     expect(handoff.achievedApogeeKm).toBeGreaterThanOrEqual(180);
     expect(handoff.stage2PropellantRemainingKg).toBeGreaterThan(0);
@@ -52,7 +65,7 @@ describe("payload handoff", () => {
 
 describe("analyzePayload", () => {
   it("builds the fixed educational spacecraft spec", () => {
-    const handoff = createPayloadHandoff(flyReference())!;
+    const handoff = createPayloadHandoff(toHandoffSource(flyReference()))!;
     const analysis = analyzePayload(handoff)!;
     expect(analysis.dryMassKg).toBe(4_000);
     expect(analysis.onboardPropellantKg).toBe(1_000);
@@ -62,7 +75,7 @@ describe("analyzePayload", () => {
   });
 
   it("charges circularization against payload propellant exactly once", () => {
-    const handoff = createPayloadHandoff(flyReference())!;
+    const handoff = createPayloadHandoff(toHandoffSource(flyReference()))!;
     const analysis = analyzePayload(handoff)!;
     expect(analysis.insertionBudgetOk).toBe(true);
     expect(analysis.circularizationDeltaVMs).toBeGreaterThan(0);
@@ -78,7 +91,7 @@ describe("analyzePayload", () => {
   });
 
   it("reports all four delta-v budget components", () => {
-    const analysis = analyzePayload(createPayloadHandoff(flyReference())!)!;
+    const analysis = analyzePayload(createPayloadHandoff(toHandoffSource(flyReference()))!)!;
     const r = analysis.result!;
     expect(r.drag_delta_v).toBeGreaterThanOrEqual(0);
     expect(r.collision_avoidance_delta_v).toBeGreaterThanOrEqual(0);
@@ -91,7 +104,7 @@ describe("analyzePayload", () => {
   });
 
   it("fails the insertion budget when circularization is unaffordable", () => {
-    const handoff = createPayloadHandoff(flyReference())!;
+    const handoff = createPayloadHandoff(toHandoffSource(flyReference()))!;
     const wild: typeof handoff = {
       ...handoff,
       achievedPerigeeKm: 150,
@@ -106,7 +119,7 @@ describe("analyzePayload", () => {
   it("a successful launch can still have poor three-year survival at low altitude", () => {
     // A barely-sustained 150-160 km perigee orbit circularized low faces
     // strong drag over three years.
-    const handoff = createPayloadHandoff(flyReference())!;
+    const handoff = createPayloadHandoff(toHandoffSource(flyReference()))!;
     const low: typeof handoff = {
       ...handoff,
       achievedPerigeeKm: 150,

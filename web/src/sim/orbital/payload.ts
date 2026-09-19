@@ -19,7 +19,7 @@
  */
 
 import { EARTH_RADIUS, MU_EARTH } from "../physics/constants";
-import type { FlightResult } from "../ascent/flight";
+import type { OrbitalElements } from "../physics/orbital";
 import { estimatePropellantConsumed, simulate } from "./simulate";
 import {
   GAME_MISSION_RULES,
@@ -68,21 +68,31 @@ export interface PayloadAnalysis {
   explanations: string[];
 }
 
+/** Minimal plain-data shape a handoff needs (crosses the worker boundary). */
+export interface HandoffSource {
+  orbitAchieved: boolean;
+  finalElements: OrbitalElements | null;
+  stage2PropellantRemainingKg: number;
+  payloadWetMassKg: number;
+  weather: WeatherSnapshot;
+  seed: number;
+}
+
 /** Create the immutable handoff from a successful flight result. */
-export function createPayloadHandoff(result: FlightResult): PayloadHandoff | null {
-  const elements = result.finalElements;
-  if (!result.orbitAchieved || elements === null || elements.apogeeAltitudeKm === null) {
+export function createPayloadHandoff(source: HandoffSource): PayloadHandoff | null {
+  const elements = source.finalElements;
+  if (!source.orbitAchieved || elements === null || elements.apogeeAltitudeKm === null) {
     return null;
   }
   return {
     modelVersion: MODEL_VERSION,
-    payloadWetMassKg: result.finalState.rocket.config.payloadWetMassKg,
+    payloadWetMassKg: source.payloadWetMassKg,
     achievedPerigeeKm: elements.perigeeAltitudeKm,
     achievedApogeeKm: elements.apogeeAltitudeKm,
     achievedInclinationDeg: elements.inclinationDeg,
-    stage2PropellantRemainingKg: result.stage2PropellantRemainingKg,
-    weather: result.finalState.environment.weather,
-    seed: result.seed,
+    stage2PropellantRemainingKg: source.stage2PropellantRemainingKg,
+    weather: source.weather,
+    seed: source.seed,
   };
 }
 

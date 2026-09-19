@@ -177,6 +177,8 @@ export interface FlightInput {
   maxTimeS?: number;
   /** Test-only timestep override; production flights always use 0.05 s. */
   timestepS?: number;
+  /** Batch analysis runs skip telemetry recording (faster, lighter). */
+  recordTelemetry?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -1145,8 +1147,9 @@ export function runFlight(input: FlightInput): FlightResult {
   const state = createFlight(input.config, input.environment, seed, guidance, perturbations);
   const maxTimeS = input.maxTimeS ?? MAX_SIM_TIME_S;
   const dt = input.timestepS ?? FIXED_TIMESTEP_S;
+  const recordTelemetry = input.recordTelemetry ?? true;
 
-  const maxSamples = Math.ceil(maxTimeS / dt) + 2;
+  const maxSamples = recordTelemetry ? Math.ceil(maxTimeS / dt) + 2 : 0;
   const telemetry: Telemetry = {
     sampleCount: 0,
     tS: new Float64Array(maxSamples),
@@ -1168,6 +1171,9 @@ export function runFlight(input: FlightInput): FlightResult {
   };
 
   const record = () => {
+    if (!recordTelemetry) {
+      return;
+    }
     const i = telemetry.sampleCount;
     if (i >= maxSamples) {
       return;
