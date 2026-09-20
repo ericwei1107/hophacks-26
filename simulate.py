@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field, replace
 import math
 import random
@@ -33,6 +35,25 @@ PROPULSION_RESERVE_FRACTION = 0.10
 MIN_OPERATING_ALTITUDE_KM = 220.0
 REENTRY_ALTITUDE_KM = 120.0
 STORM_PROBABILITY = 0.12
+
+_OPERATING_FLOOR_KM: ContextVar[float] = ContextVar(
+    "operating_floor_km", default=MIN_OPERATING_ALTITUDE_KM
+)
+
+
+def _operating_floor_km() -> float:
+    return _OPERATING_FLOOR_KM.get()
+
+
+@contextmanager
+def operating_altitude_floor(floor_km: float):
+    """Temporarily use a different operating-altitude floor (game: 150 km)."""
+    token = _OPERATING_FLOOR_KM.set(floor_km)
+    try:
+        yield
+    finally:
+        _OPERATING_FLOOR_KM.reset(token)
+
 
 DISPOSAL_PERIGEE_KM = 150.0
 INSERTION_ALTITUDE_SIGMA_KM = 12.0
@@ -116,15 +137,16 @@ def perturb_weather_parameter(weather: SpaceWeather, parameter: str, rng: random
     new_value = perturb(getattr(weather, parameter), *WEATHER_STRESS_RANGES[parameter], rng)
     return replace(weather, **{parameter: _clip_weather_value(parameter, new_value)})
 
+WEATHER_BOUNDS = {
+    "kp": (0.0, 9.0),
+    "f107": (60.0, 280.0),
+    "solar_wind_speed": (250.0, 1200.0),
+    "solar_wind_density": (0.5, 80.0),
+    "solar_wind_temperature": (1.0e4, 1.0e6)
+}
+
 def _clip_weather_value(parameter: str, value: float) -> float:
-    bounds = {
-        "kp": (0.0, 9.0),
-        "f107": (60.0, 280.0),
-        "solar_wind_speed": (250.0, 1200.0),
-        "solar_wind_density": (0.5, 80.0),
-        "solar_wind_temperature": (1.0e4, 1.0e6)
-    }
-    return clip(value, *bounds[parameter])
+    return clip(value, *WEATHER_BOUNDS[parameter])
 
 def create_stressed_mission(mission: SpacecraftMission, rng: random.Random) -> SpacecraftMission:
     stressed = mission
@@ -190,9 +212,8 @@ def _finite_or(value: float | None, fallback: float) -> float:
         return fallback
     return value
 
-def estimate_atmospheric_density(altitude_km: float, weather: SpaceWeather, inclination_deg: float = 0.0) -> float:
-    if not math.isfinite(altitude_km) or not math.isfinite(inclination_deg):
-        return 1e-16
+def _thermosphere_profile(weather: SpaceWeather, inclination_deg: float) -> tuple[float, float]:
+    """Scale height (km) and weather multiplier; independent of altitude."""
     f107 = max(_finite_or(weather.f107, 70.0), 60.0)
     kp = max(_finite_or(weather.kp, 0.0), 0.0)
     speed = _finite_or(weather.solar_wind_speed, 400.0)
@@ -201,20 +222,20 @@ def estimate_atmospheric_density(altitude_km: float, weather: SpaceWeather, incl
 
     # Thermosphere expands under solar EUV and geomagnetic heating.
     scale_height = 42.0 + 0.07 * (f107 - 70.0) + 1.4 * kp
-    base_density = 1.225e-12 * math.exp(-(altitude_km - 400.0) / scale_height)
-
     solar_factor = (f107 / 150.0) ** 1.2
     geomagnetic_factor = 1.0 + 0.05 * kp + 0.12 * max(0.0, kp - 4.5) ** 1.3
     wind_factor = 1.0 + 0.0004 * (speed - 400.0) + 0.008 * (sw_density - 5.0) + 0.04 * ((sw_temp / 1.0e5) - 1.0)
     polar_factor = 1.0 + 0.08 * abs(math.sin(math.radians(inclination_deg))) * max(0.0, kp - 2.0) / 4.0
+    weather_factor = solar_factor * max(0.25, geomagnetic_factor) * max(0.4, wind_factor) * max(1.0, polar_factor)
+    return scale_height, weather_factor
 
-    return max(1e-16, base_density * solar_factor * max(0.25, geomagnetic_factor) * max(0.4, wind_factor) * max(1.0, polar_factor))
 
-def estimate_drag_force(mission: SpacecraftMission, weather: SpaceWeather, altitude_km: float | None = None) -> float:
-    altitude = mission.target_altitude if altitude_km is None else altitude_km
-    density = estimate_atmospheric_density(altitude, weather, mission.target_inclination)
-    velocity = atmospheric_relative_velocity(altitude, mission.target_inclination)
-    return 0.5 * density * velocity ** 2 * mission.drag_coefficient * mission.cross_section_area
+def estimate_atmospheric_density(altitude_km: float, weather: SpaceWeather, inclination_deg: float = 0.0) -> float:
+    if not math.isfinite(altitude_km) or not math.isfinite(inclination_deg):
+        return 1e-16
+    scale_height, weather_factor = _thermosphere_profile(weather, inclination_deg)
+    base_density = 1.225e-12 * math.exp(-(altitude_km - 400.0) / scale_height)
+    return max(1e-16, base_density * weather_factor)
 
 def average_spacecraft_mass(mission: SpacecraftMission) -> float:
     return max(mission.mass + 0.5 * max(mission.fuel, 0.0), 1e-9)
@@ -266,6 +287,8 @@ def estimate_unpowered_decay(mission: SpacecraftMission, weather: SpaceWeather, 
     timestep = 7 * SECONDS_PER_DAY
     steps = max(1, math.ceil(duration_s / timestep))
     total_altitude_loss = 0.0
+    scale_height, weather_factor = _thermosphere_profile(weather, mission.target_inclination)
+    drag_area = mission.drag_coefficient * mission.cross_section_area
 
     for _ in range(steps):
         if altitude <= reentry_m:
@@ -273,9 +296,9 @@ def estimate_unpowered_decay(mission: SpacecraftMission, weather: SpaceWeather, 
 
         current_altitude_km = altitude / 1000
         radius = EARTH_RADIUS + altitude
-        density = estimate_atmospheric_density(current_altitude_km, weather, mission.target_inclination)
+        density = max(1e-16, 1.225e-12 * math.exp(-(current_altitude_km - 400.0) / scale_height) * weather_factor)
         velocity = atmospheric_relative_velocity(current_altitude_km, mission.target_inclination)
-        drag_force = 0.5 * density * velocity ** 2 * mission.drag_coefficient * mission.cross_section_area
+        drag_force = 0.5 * density * velocity ** 2 * drag_area
         drag_acceleration = drag_force / spacecraft_mass
         decay_rate = -2 * radius ** 2 * drag_acceleration * velocity / MU_EARTH
         altitude_change = decay_rate * timestep
@@ -391,7 +414,7 @@ def simulate(mission: SpacecraftMission, weather: SpaceWeather, ops: Operational
         final_altitude = mission.target_altitude - natural_altitude_loss
         orbital_decay = natural_altitude_loss
 
-        if final_altitude < MIN_OPERATING_ALTITUDE_KM:
+        if final_altitude < _operating_floor_km():
             failures.append("below_operating_altitude")
         # Decay stops at the reentry boundary; reaching it means reentry.
         if final_altitude <= REENTRY_ALTITUDE_KM + 1e-6:
@@ -588,42 +611,3 @@ def run_monte_carlo(mission: SpacecraftMission, weather: SpaceWeather, n: int = 
         sensitivity_results = sensitivity_results,
         baseline = baseline
     )
-
-def print_summary(summary: MonteCarloSummary):
-    print("MONTE CARLO MISSION ANALYSIS")
-    print(f"Total simulations: {summary.total_runs:,}")
-    print(f"Passes: {summary.passes:,}")
-    print(f"Failures: {summary.failures:,}")
-    print(f"Pass rate: {summary.probability_pass:.2%}")
-    print(f"Failure rate: {summary.probability_fail:.2%}")
-
-    print("\nFailure modes:")
-    if summary.failure_modes:
-        for reason, count in sorted(summary.failure_modes.items(), key = lambda item: item[1], reverse = True):
-            print(f"  {reason}: {count:,} ({count / summary.total_runs:.2%})")
-    else:
-        print("  None")
-
-    print("\nBaseline mission:")
-    print(f"  Drag stationkeeping: {summary.baseline.drag_delta_v:.2f} m/s")
-    print(f"  Collision avoidance: {summary.baseline.collision_avoidance_delta_v:.2f} m/s")
-    print(f"  Insertion correction: {summary.baseline.insertion_delta_v:.2f} m/s")
-    print(f"  End-of-life disposal: {summary.baseline.disposal_delta_v:.2f} m/s")
-    print(f"  Required Δv: {summary.baseline.required_delta_v:.2f} m/s")
-    print(f"  Available Δv: {summary.baseline.available_delta_v:.2f} m/s")
-    print(f"  Minimum required propellant: {summary.baseline.propellant_required:.2f} kg")
-    print(f"  Consumed propellant: {summary.baseline.propellant_consumed:.2f} kg")
-    print(f"  Remaining propellant: {summary.baseline.propellant_remaining:.2f} kg")
-    print(f"  Predicted final altitude: {summary.baseline.final_altitude:.2f} km")
-
-    print("\nParameter sensitivity:")
-    if summary.failures and all(result.failure_rate == 0 for result in summary.sensitivity_results):
-        print("  Single-parameter sweeps still pass; combined error + storm years do not.")
-    for result in summary.sensitivity_results:
-        print(f"\n  {result.parameter}")
-        print(f"    failure rate: {result.failure_rate:.2%}")
-        print(f"    avg Δv change: {result.average_delta_v_change:+.2f} m/s")
-        print(f"    mean |Δv| change: {result.mean_abs_delta_v_change:.2f} m/s")
-        print(f"    avg margin change: {result.average_margin_change:+.2f} m/s")
-        print(f"    avg altitude change: {result.average_altitude_change:+.2f} km")
-        print(f"    avg propellant change: {result.average_propellant_change:+.2f} kg")

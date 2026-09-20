@@ -7,7 +7,13 @@
 import { useMemo, useState } from "react";
 
 import { analyzePayload, createPayloadHandoff, type PayloadAnalysis } from "../../sim/orbital/payload";
+import {
+  analyzeLaunchedPayload,
+  usePythonBackendStatus,
+  type PythonPayloadReport,
+} from "../../api/pythonBackend";
 import { MOON_RADIUS_M } from "../../sim/lunar/moon";
+import { GAME_MISSION_RULES } from "../../sim/orbital/types";
 import type { MonteCarloSummary } from "../../sim/orbital/types";
 import type { AscentRobustnessResult, AscentSensitivityResult } from "../../sim/ascent/robustness";
 import { useAppStore, simClient } from "../store";
@@ -25,10 +31,44 @@ function outcomeTitle(outcome: string): string {
   return outcome.replaceAll("_", " ").toUpperCase();
 }
 
+function prettyLabel(value: string): string {
+  if (value === "f107") {
+    return "F10.7";
+  }
+  const text = value
+    .replace(/_error_deg$/, " error")
+    .replace(/_error_km$/, " error")
+    .replace(/delta_v/g, "Δv")
+    .replace(/_deg$/, "")
+    .replace(/_km$/, "")
+    .replaceAll("_", " ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function StatTile({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "pass" | "fail" | "neutral";
+}) {
+  return (
+    <div className={`stat-tile${tone ? ` ${tone}` : ""}`}>
+      <span className="stat-value">{value}</span>
+      <span className="stat-label">{label}</span>
+    </div>
+  );
+}
+
 export function DebriefScreen() {
   const { flight, setScreen, returnToBuild, startExperiment, runSummaries, persistenceNotice } = useAppStore();
   const [hoverTimeS, setHoverTimeS] = useState<number | null>(null);
   const [payloadAnalysis, setPayloadAnalysis] = useState<PayloadAnalysis | null>(null);
+  const [pythonReport, setPythonReport] = useState<PythonPayloadReport | null>(null);
+  const [pythonError, setPythonError] = useState<string | null>(null);
+  const pythonStatus = usePythonBackendStatus();
   const [monteCarlo, setMonteCarlo] = useState<MonteCarloSummary | null>(null);
   const [robustness, setRobustness] = useState<AscentRobustnessResult | null>(null);
   const [sensitivity, setSensitivity] = useState<AscentSensitivityResult | null>(null);
@@ -91,11 +131,48 @@ export function DebriefScreen() {
     }
     const analysis = analyzePayload(handoff);
     setPayloadAnalysis(analysis);
+    setMonteCarlo(null);
+    setPythonReport(null);
+    setPythonError(null);
+
+    setAnalysisProgress("Python payload analysis…");
+    try {
+      const report = await analyzeLaunchedPayload(handoff, {
+        runs: 1_000,
+        sensitivityRuns: 200,
+        includeBriefing: false,
+      });
+      setPythonReport(report);
+      setPayloadAnalysis({
+        handoff,
+        rules: GAME_MISSION_RULES,
+        dryMassKg: report.dryMassKg,
+        onboardPropellantKg: report.onboardPropellantKg,
+        crossSectionAreaM2: report.crossSectionAreaM2,
+        ispS: report.ispS,
+        missionYears: report.missionYears,
+        circularizationDeltaVMs: report.circularizationDeltaVMs,
+        circularizationPropellantKg: report.circularizationPropellantKg,
+        insertionBudgetOk: report.insertionBudgetOk,
+        mission: report.mission,
+        result: report.result,
+        explanations: report.explanations,
+      });
+      if (report.monteCarlo) {
+        setMonteCarlo(report.monteCarlo);
+      }
+      setAnalysisProgress(null);
+      return;
+    } catch (error) {
+      setPythonError(error instanceof Error ? error.message : String(error));
+    }
+
     if (!analysis.mission) {
+      setAnalysisProgress(null);
       return;
     }
-    setAnalysisProgress("Monte Carlo…");
-    setMonteCarlo(null);
+
+    setAnalysisProgress("Monte Carlo (local TypeScript)…");
     const { promise } = simClient.runOrbitalMonteCarlo(
       {
         mission: analysis.mission,
@@ -179,6 +256,13 @@ export function DebriefScreen() {
           <span>Peak g {flight.maxG.toFixed(2)} (limit 5.0)</span>
           {el && <span>Perigee {el.perigeeAltitudeKm.toFixed(0)} km (sustained ≥ 150)</span>}
         </div>
+        <p className="dim small">
+          {pythonStatus === "up"
+            ? "Python backend is live — payload analysis uses the original operations model."
+            : pythonStatus === "down"
+              ? "Python backend is off — payload analysis will use the local TypeScript port."
+              : "Checking Python backend…"}
+        </p>
       </section>
 
       {lunar && (
@@ -317,88 +401,209 @@ export function DebriefScreen() {
         </section>
       )}
 
-      {payloadAnalysis && (
-        <section className="analysis">
-          <h2>Payload three-year mission</h2>
-          {payloadAnalysis.explanations.map((line, i) => (
-            <NarratedText key={i} className="analysis-line">{line}</NarratedText>
-          ))}
-          {payloadAnalysis.result && (
-          <div className="evidence">
-            <span>Baseline: {payloadAnalysis.result.passed ? "PASS" : "FAIL"}</span>
-            <span>Required Δv {payloadAnalysis.result.required_delta_v.toFixed(1)} m/s</span>
-            <span>Available Δv {payloadAnalysis.result.available_delta_v.toFixed(1)} m/s</span>
-            <span>Remaining propellant {payloadAnalysis.result.propellant_remaining.toFixed(1)} kg</span>
+      {payloadAnalysis && (() => {
+        const extraInsights = (pythonReport?.insights ?? []).filter((line) => {
+          if (payloadAnalysis.explanations.includes(line)) {
+            return false;
+          }
+          if (/^(Baseline mission|Monte Carlo pass rate|Most common failure|Most sensitive parameter|Launch analog|Payload share|Attributed launch)/.test(line)) {
+            return false;
+          }
+          return true;
+        });
+        return (
+        <section className="analysis report">
+          <div className="report-head">
+            <div>
+              <p className="report-kicker">Payload operations</p>
+              <h2>Three-year mission</h2>
+            </div>
+            <span className={`report-badge${pythonReport ? " live" : pythonError ? " local" : ""}`}>
+              {pythonReport ? "Python" : pythonError ? "TypeScript fallback" : "Local"}
+            </span>
           </div>
+          {pythonError && <p className="check warning">⚠ {pythonError}</p>}
+          {payloadAnalysis.explanations[0] && (
+            <p className="report-lead">{payloadAnalysis.explanations[0].replace("m^2", "m²")}</p>
           )}
+          {payloadAnalysis.result && (
+            <div className="stat-grid">
+              <StatTile
+                label="Baseline"
+                value={payloadAnalysis.result.passed ? "PASS" : "FAIL"}
+                tone={payloadAnalysis.result.passed ? "pass" : "fail"}
+              />
+              <StatTile label="Required Δv" value={`${payloadAnalysis.result.required_delta_v.toFixed(0)} m/s`} />
+              <StatTile label="Available Δv" value={`${payloadAnalysis.result.available_delta_v.toFixed(0)} m/s`} />
+              <StatTile label="Propellant left" value={`${payloadAnalysis.result.propellant_remaining.toFixed(0)} kg`} />
+            </div>
+          )}
+          {payloadAnalysis.explanations.slice(1).filter((line) => !line.startsWith("Baseline mission")).map((line) => (
+            <p key={line} className="report-note">{line.replace("m^2", "m²")}</p>
+          ))}
           {monteCarlo && (
-            <div className="monte-carlo">
-              <h3>Monte Carlo ({monteCarlo.total_runs.toLocaleString()} runs)</h3>
-              <NarratedText narration={`Pass rate ${(monteCarlo.probability_pass * 100).toFixed(1)} percent.`}>Pass rate {(monteCarlo.probability_pass * 100).toFixed(1)}%</NarratedText>
+            <div className="report-block">
+              <div className="pass-hero">
+                <p className={`pass-hero-value${monteCarlo.probability_pass >= 0.5 ? " pass" : monteCarlo.probability_pass >= 0.2 ? " warn" : " fail"}`}>
+                  {(monteCarlo.probability_pass * 100).toFixed(1)}%
+                </p>
+                <p className="pass-hero-label">
+                  pass rate across {monteCarlo.total_runs.toLocaleString()} Monte Carlo runs
+                  {pythonReport ? " · Python" : pythonError ? " · TypeScript" : ""}
+                </p>
+              </div>
               {Object.keys(monteCarlo.failure_modes).length > 0 && (
-                <ul>
+                <div className="mode-list">
                   {Object.entries(monteCarlo.failure_modes)
                     .sort((a, b) => b[1] - a[1])
-                    .map(([reason, count]) => (
-                      <li key={reason}>{reason}: {((count / monteCarlo.total_runs) * 100).toFixed(1)}%</li>
-                    ))}
-                </ul>
+                    .map(([reason, count]) => {
+                      const pct = (count / monteCarlo.total_runs) * 100;
+                      return (
+                        <div key={reason} className="mode-row">
+                          <span className="mode-name">{prettyLabel(reason)}</span>
+                          <div className="mode-track" aria-hidden="true">
+                            <div className="mode-fill" style={{ width: `${Math.min(100, pct)}%` }} />
+                          </div>
+                          <span className="mode-pct">{pct.toFixed(1)}%</span>
+                        </div>
+                      );
+                    })}
+                </div>
               )}
-              <NarratedText className="dim small">Failure modes overlap; percentages are not exclusive slices.</NarratedText>
+              <p className="report-footnote">Failure modes overlap, so the percentages are not exclusive slices.</p>
               {monteCarlo.sensitivity_results.length > 0 && (
                 <>
                   <h3>Most sensitive parameters</h3>
-                  <ul>
+                  <div className="mode-list">
                     {monteCarlo.sensitivity_results.slice(0, 5).map((s) => (
-                      <li key={s.parameter}>
-                        {s.parameter}: {(s.failure_rate * 100).toFixed(1)}% failure rate, mean |Δv| change {s.mean_abs_delta_v_change.toFixed(2)} m/s
-                      </li>
+                      <div key={s.parameter} className="mode-row">
+                        <span className="mode-name">{prettyLabel(s.parameter)}</span>
+                        <div className="mode-track" aria-hidden="true">
+                          <div className="mode-fill muted" style={{ width: `${Math.min(100, s.failure_rate * 100)}%` }} />
+                        </div>
+                        <span className="mode-pct">
+                          {(s.failure_rate * 100).toFixed(1)}% fail · {s.mean_abs_delta_v_change.toFixed(0)} m/s
+                        </span>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </>
               )}
+            </div>
+          )}
+          {extraInsights.length > 0 && (
+            <div className="report-block">
+              <h3>What this means</h3>
+              <ul className="insight-list">
+                {extraInsights.map((line) => (
+                  <li key={line}>{line.replace(/^\s+-\s+/, "")}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {pythonReport?.emissions && (
+            <div className="report-block analog-card">
+              <h3>Launch analog</h3>
+              <p className="analog-title">{pythonReport.emissions.analog}</p>
+              <div className="stat-grid compact">
+                <StatTile
+                  label="Insertion orbit"
+                  value={`${pythonReport.emissions.orbitKm[0].toFixed(0)} × ${pythonReport.emissions.orbitKm[1].toFixed(0)} km`}
+                />
+                <StatTile label="Payload share" value={`${(pythonReport.emissions.payloadShare * 100).toFixed(0)}%`} />
+                <StatTile label="Attributed CO2e" value={`${pythonReport.emissions.co2eTonnes.toFixed(1)} t`} />
+              </div>
+              <p className="report-footnote">{pythonReport.emissions.citation}</p>
+            </div>
+          )}
+          {pythonReport?.regulatory && (
+            <div className="report-block">
+              <h3>Debris screening</h3>
+              <p className={`status-pill${pythonReport.regulatory.compliant ? " pass" : " fail"}`}>
+                {pythonReport.regulatory.compliant ? "Compliant" : "Not compliant"}
+              </p>
+              <p className="report-note">
+                {pythonReport.regulatory.compliant
+                  ? "Meets the five-year post-mission de-orbit screening check."
+                  : pythonReport.regulatory.violations.join(" ")}
+              </p>
+              <p className="report-footnote">Federal Register records are context, not legal advice.</p>
+            </div>
+          )}
+          {pythonReport?.briefing && (
+            <div className="report-block">
+              <h3>Pitch closer</h3>
+              <p className="report-lead">{pythonReport.briefing}</p>
+            </div>
+          )}
+        </section>
+        );
+      })()}
+
+      {robustness && (
+        <section className="analysis report">
+          <div className="report-head">
+            <div>
+              <p className="report-kicker">Ascent</p>
+              <h2>Robustness</h2>
+            </div>
+          </div>
+          <div className="stat-grid">
+            <StatTile
+              label="Reaches orbit"
+              value={`${(robustness.orbitProbability * 100).toFixed(0)}%`}
+              tone={robustness.orbitProbability >= 0.5 ? "pass" : "fail"}
+            />
+            <StatTile
+              label="95% CI"
+              value={`${(robustness.orbitProbability95[0] * 100).toFixed(0)}–${(robustness.orbitProbability95[1] * 100).toFixed(0)}%`}
+            />
+            <StatTile label="Max-Q p95" value={`${(robustness.maxQPaP95 / 1000).toFixed(1)} kPa`} />
+            <StatTile label="Peak-g p95" value={`${robustness.maxGP95.toFixed(2)} g`} />
+          </div>
+          <div className="mode-list">
+            {Object.entries(robustness.outcomeCounts).map(([outcome, count]) => (
+              <div key={outcome} className="mode-row plain">
+                <span className="mode-name">{prettyLabel(outcome)}</span>
+                <span className="mode-pct">{count} / {robustness.completedRuns}</span>
+              </div>
+            ))}
+          </div>
+          {Object.keys(robustness.primaryDiagnosisCounts).length > 0 && (
+            <div className="report-block">
+              <h3>Primary diagnoses</h3>
+              <ul className="insight-list">
+                {Object.entries(robustness.primaryDiagnosisCounts).map(([id, count]) => (
+                  <li key={id}>{prettyLabel(id)} · {count}</li>
+                ))}
+              </ul>
             </div>
           )}
         </section>
       )}
 
-      {robustness && (
-        <section className="analysis">
-          <h2>Ascent robustness ({robustness.completedRuns} runs)</h2>
-          <NarratedText narration={`Reaches orbit ${(robustness.orbitProbability * 100).toFixed(0)}% of the time (95% confidence interval ${(robustness.orbitProbability95[0] * 100).toFixed(0)}–${(robustness.orbitProbability95[1] * 100).toFixed(0)}%).`}>
-            Reaches orbit {(robustness.orbitProbability * 100).toFixed(0)}% of the time
-            (95% CI {(robustness.orbitProbability95[0] * 100).toFixed(0)}–{(robustness.orbitProbability95[1] * 100).toFixed(0)}%)
-          </NarratedText>
-          <NarratedText narration={`Maximum dynamic pressure 95th percentile ${(robustness.maxQPaP95 / 1000).toFixed(1)} kilopascals; peak g 95th percentile ${robustness.maxGP95.toFixed(2)} g.`}>Max-Q p95 {(robustness.maxQPaP95 / 1000).toFixed(1)} kPa; peak-g p95 {robustness.maxGP95.toFixed(2)} g</NarratedText>
-          <ul>
-            {Object.entries(robustness.outcomeCounts).map(([outcome, count]) => (
-              <li key={outcome}>{outcomeTitle(outcome)}: {count}</li>
-            ))}
-          </ul>
-          {Object.keys(robustness.primaryDiagnosisCounts).length > 0 && (
-            <>
-              <h3>Primary diagnoses</h3>
-              <ul>{Object.entries(robustness.primaryDiagnosisCounts).map(([id, count]) => <li key={id}>{id.replaceAll("_", " ")}: {count}</li>)}</ul>
-            </>
-          )}
-        </section>
-      )}
-
       {sensitivity && (
-        <section className="analysis">
-          <h2>Ascent parameter sensitivity (100 runs each)</h2>
-          <NarratedText className="dim small" narration={`Nominal orbit rate ${(sensitivity.nominal.orbitProbability * 100).toFixed(0)}%. Change when each parameter is perturbed alone:`}>
+        <section className="analysis report">
+          <div className="report-head">
+            <div>
+              <p className="report-kicker">Ascent</p>
+              <h2>Parameter sensitivity</h2>
+            </div>
+          </div>
+          <p className="report-note">
             Nominal orbit rate {(sensitivity.nominal.orbitProbability * 100).toFixed(0)}%. Change when each
             parameter is perturbed alone:
-          </NarratedText>
-          <ul>
+          </p>
+          <div className="mode-list">
             {sensitivity.entries.map((e) => (
-              <li key={e.parameter}>
-                {e.parameter}: {(e.probabilityChange * 100).toFixed(0)} pp
-                ({(e.orbitProbability * 100).toFixed(0)}% reaches orbit)
-              </li>
+              <div key={e.parameter} className="mode-row plain">
+                <span className="mode-name">{prettyLabel(e.parameter)}</span>
+                <span className="mode-pct">
+                  {(e.probabilityChange * 100).toFixed(0)} pp · {(e.orbitProbability * 100).toFixed(0)}% reaches orbit
+                </span>
+              </div>
             ))}
-          </ul>
+          </div>
         </section>
       )}
     </div>

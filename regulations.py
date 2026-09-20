@@ -109,15 +109,3 @@ def format_for_grok(
         "qualified regulatory or legal review."
     )
     return "\n".join(lines)
-
-
-if __name__ == "__main__":
-    demo = evaluate_mission_compliance(
-        {"mission_name": "Mission A", "post_mission_decay_years": 12}
-    )
-    try:
-        documents = get_latest_debris_rules()
-    except requests.RequestException as error:
-        print(f"Could not fetch Federal Register rules: {error}")
-        documents = []
-    print(format_for_grok(demo, documents))

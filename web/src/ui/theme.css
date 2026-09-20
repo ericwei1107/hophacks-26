@@ -564,6 +564,249 @@ button.active {
   font-size: 12px;
 }
 
+.analysis.report {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.report-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.report-kicker {
+  margin: 0 0 4px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+
+.analysis.report h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.report-badge {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 4px 10px;
+  border: 1px solid rgba(99, 221, 235, 0.35);
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+
+.report-badge.local {
+  border-color: rgba(255, 155, 84, 0.45);
+  color: var(--orange);
+}
+
+.report-lead {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--offwhite);
+}
+
+.report-note {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #c9d3de;
+}
+
+.report-footnote {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--dim);
+}
+
+.report-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid #1d2d42;
+}
+
+.analysis.report h3 {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stat-grid.compact {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.stat-tile {
+  background: #0c1828;
+  border: 1px solid #1d2d42;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-value {
+  font-family: var(--mono);
+  font-size: 18px;
+  color: var(--offwhite);
+}
+
+.stat-label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.stat-tile.pass .stat-value { color: var(--green); }
+.stat-tile.fail .stat-value { color: #ff7d6b; }
+
+.pass-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pass-hero-value {
+  margin: 0;
+  font-size: 42px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.pass-hero-value.pass { color: var(--green); }
+.pass-hero-value.warn { color: var(--orange); }
+.pass-hero-value.fail { color: #ff7d6b; }
+
+.pass-hero-label {
+  margin: 0;
+  font-size: 13px;
+  color: var(--dim);
+}
+
+.mode-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mode-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "name pct"
+    "track track";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 6px;
+}
+
+.mode-row.plain {
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "name pct";
+}
+
+.mode-name {
+  grid-area: name;
+  font-size: 13px;
+  color: var(--offwhite);
+}
+
+.mode-track {
+  grid-area: track;
+  height: 6px;
+  border-radius: 99px;
+  background: #1d2d42;
+  overflow: hidden;
+}
+
+.mode-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--orange);
+}
+
+.mode-fill.muted {
+  background: var(--cyan);
+}
+
+.mode-pct {
+  grid-area: pct;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+  white-space: nowrap;
+  text-align: right;
+}
+
+.insight-list {
+  margin: 0;
+  padding-left: 18px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #c9d3de;
+}
+
+.insight-list li + li {
+  margin-top: 6px;
+}
+
+.analog-title {
+  margin: 0;
+  font-size: 18px;
+  color: var(--cyan);
+}
+
+.status-pill {
+  width: fit-content;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.status-pill.pass {
+  background: rgba(125, 232, 168, 0.12);
+  color: var(--green);
+}
+
+.status-pill.fail {
+  background: rgba(255, 125, 107, 0.12);
+  color: #ff7d6b;
+}
+
+@media (max-width: 900px) {
+  .stat-grid,
+  .stat-grid.compact {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .settings {
   display: flex;
   gap: 14px;

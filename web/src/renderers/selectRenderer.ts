@@ -48,6 +48,11 @@ export function hasWebGpu(): boolean {
   return typeof navigator !== "undefined" && navigator.gpu != null;
 }
 
+/** Unity is opt-in. Auto stays on three.js so a blank WebGPU player cannot hide the launch. */
+export function shouldAttemptUnity(preference: RendererPreference): boolean {
+  return preference === "unity";
+}
+
 /**
  * Mount the best available renderer. Always resolves with something mounted:
  * a launch that shows nothing is worse than a launch that shows the old view.
@@ -67,7 +72,7 @@ export async function selectRenderer(options: SelectRendererOptions): Promise<Re
     return { renderer, id: "three", notice };
   };
 
-  if (preference === "three") {
+  if (!shouldAttemptUnity(preference)) {
     return mountThree(null);
   }
 

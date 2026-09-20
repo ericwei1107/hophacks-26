@@ -116,15 +116,3 @@ def build_insights(
         )
 
     return insights
-
-
-def print_mission_insights(
-    mission: SpacecraftMission,
-    weather: SpaceWeather,
-    constraints: MissionConstraints,
-    summary: MonteCarloSummary,
-    footprint = None,
-) -> None:
-    print("\nDeterministic mission insights:")
-    for line in build_insights(mission, weather, constraints, summary, footprint):
-        print(f"  {line}")
