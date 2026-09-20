@@ -240,6 +240,75 @@ body {
 .experiment-card { border-color: var(--cyan); }
 .suggested-control { outline: 1px solid var(--cyan); border-radius: 5px; padding: 4px; }
 
+.cause-environment {
+  margin: 8px 0 0;
+  color: var(--orange);
+  font-size: 13px;
+}
+
+.weather-card {
+  border: 1px solid #2a415c;
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: #0b1929;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.weather-card.weather-elevated { border-color: var(--orange); }
+.weather-card.weather-storm { border-color: #ff7d6b; }
+
+.weather-source {
+  display: block;
+  margin: 4px 0 8px;
+  color: var(--dim);
+}
+
+.weather-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.weather-causes-label {
+  margin: 0 0 6px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.weather-causes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.weather-cause-title {
+  display: block;
+  font-weight: 600;
+}
+
+.weather-cause.elevated .weather-cause-title { color: var(--orange); }
+.weather-cause.storm .weather-cause-title { color: #ff7d6b; }
+
+.weather-cause-copy,
+.weather-cause-evidence {
+  display: block;
+  color: var(--dim);
+}
+
+.weather-cause-evidence {
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
 .readout {
   background: var(--ink);
   border: 1px solid #1d2d42;

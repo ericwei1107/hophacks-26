@@ -1,4 +1,4 @@
-from environment import SpaceWeather, select_latest_valid
+from environment import SpaceWeather, clear_weather_cache, fetch_noaa_snapshot, select_latest_valid
 
 
 def test_validate_accepts_complete_weather(reference_weather):
@@ -35,3 +35,31 @@ def test_select_latest_valid_uses_timestamp_not_array_position():
 def test_select_latest_valid_returns_none_when_unusable():
     assert select_latest_valid([], "Kp") is None
     assert select_latest_valid([{"time_tag": "", "Kp": 1.0}], "Kp") is None
+
+
+def test_fetch_noaa_snapshot_reuses_the_cached_freeze(monkeypatch):
+    clear_weather_cache()
+    calls = {"n": 0}
+
+    def fake_live():
+        calls["n"] += 1
+        return {
+            "weather": {
+                "kp": 4.0,
+                "f107": 160.0,
+                "solar_wind_speed": 410.0,
+                "solar_wind_density": 6.0,
+                "solar_wind_temperature": 110_000.0,
+            },
+            "source": "noaa",
+            "sourceTimestamps": {},
+            "retrievedAt": "2026-09-20T00:00:00+00:00",
+            "freshnessMs": 1.0,
+        }
+
+    monkeypatch.setattr("environment._fetch_live_noaa_snapshot", fake_live)
+    first = fetch_noaa_snapshot()
+    second = fetch_noaa_snapshot()
+    assert calls["n"] == 1
+    assert first["weather"]["kp"] == second["weather"]["kp"] == 4.0
+    clear_weather_cache()

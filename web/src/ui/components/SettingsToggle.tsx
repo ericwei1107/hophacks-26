@@ -3,10 +3,14 @@
  * Persisted locally.
  */
 
+import { useShallow } from "zustand/react/shallow";
+
 import { useAppStore } from "../store";
 
 export function SettingsToggle() {
-  const { settings, setSettings } = useAppStore();
+  const { settings, setSettings } = useAppStore(
+    useShallow((s) => ({ settings: s.settings, setSettings: s.setSettings })),
+  );
   return (
     <div className="settings">
       <label className="setting">

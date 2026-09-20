@@ -1588,7 +1588,7 @@ export function runFlight(input: FlightInput): FlightResult {
     perigeeKm: elements?.perigeeAltitudeKm ?? null,
     source: "observed",
   };
-  const assessment = evaluateFlightOutcome(state.rocket, outcome, evidence);
+  const assessment = evaluateFlightOutcome(state.rocket, outcome, evidence, state.environment.weather);
 
   return {
     outcome,

@@ -10,6 +10,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 
 import { IGNITION_HOLD_S, PlaybackController } from "../../playback/PlaybackController";
 import type { LaunchRenderer } from "../../renderers/LaunchRenderer";
@@ -19,6 +20,7 @@ import { PHASE_NAMES, type FlightSample } from "../telemetry";
 import { NarratedText } from "../../narration/NarratedText";
 
 const SPEEDS = [1, 5, 20];
+const HUD_MIN_INTERVAL_MS = 50;
 const CAMERAS: { id: CameraMode; label: string }[] = [
   { id: "overhead", label: "Overhead" },
   { id: "chase", label: "Chase" },
@@ -62,7 +64,21 @@ export function FlightScreen() {
     setCameraMode,
     setCameraZoom,
     setScreen,
-  } = useAppStore();
+  } = useAppStore(
+    useShallow((s) => ({
+      flight: s.flight,
+      playing: s.playing,
+      playbackSpeed: s.playbackSpeed,
+      cameraMode: s.cameraMode,
+      cameraZoom: s.cameraZoom,
+      settings: s.settings,
+      setPlaying: s.setPlaying,
+      setPlaybackSpeed: s.setPlaybackSpeed,
+      setCameraMode: s.setCameraMode,
+      setCameraZoom: s.setCameraZoom,
+      setScreen: s.setScreen,
+    })),
+  );
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<PlaybackController | null>(null);
@@ -81,7 +97,13 @@ export function FlightScreen() {
     }
     const controller = new PlaybackController(flight);
     controllerRef.current = controller;
-    const unsubscribe = controller.subscribe((nextSample) => {
+    let lastHudMs = 0;
+    const unsubscribe = controller.subscribe((nextSample, frame) => {
+      const now = performance.now();
+      if (!frame.discontinuity && now - lastHudMs < HUD_MIN_INTERVAL_MS) {
+        return;
+      }
+      lastHudMs = now;
       setSample(nextSample);
       setTimeS(controller.timeS);
     });

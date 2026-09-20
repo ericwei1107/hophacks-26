@@ -4,6 +4,7 @@
 
 import { OrbitControls } from "@react-three/drei";
 import { useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 
 import { SafeCanvas } from "../components/SafeCanvas";
 import { CONFIG_RANGES } from "../../domain/config";
@@ -12,6 +13,7 @@ import type { EngineId } from "../../domain/engines";
 import { useAppStore } from "../store";
 import { RocketMesh } from "../components/RocketMesh";
 import { SettingsToggle } from "../components/SettingsToggle";
+import { SpaceWeatherPanel } from "../components/SpaceWeatherPanel";
 import { usePythonBackendStatus } from "../../api/pythonBackend";
 import { NarratedText } from "../../narration/NarratedText";
 
@@ -26,6 +28,7 @@ function Slider({
   format,
   hint,
   suggested = false,
+  onCommit,
 }: {
   label: string;
   value: number;
@@ -37,6 +40,7 @@ function Slider({
   format?: (value: number) => string;
   hint?: string;
   suggested?: boolean;
+  onCommit?: () => void;
 }) {
   const display = format ? format(value) : `${value} ${unit}`;
   return (
@@ -49,6 +53,8 @@ function Slider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
+        onPointerUp={onCommit}
+        onBlur={onCommit}
         aria-label={label}
       />
       <input
@@ -64,6 +70,7 @@ function Slider({
             onChange(Math.min(max, Math.max(min, v)));
           }
         }}
+        onBlur={onCommit}
         aria-label={`${label} value`}
       />
       <span className="control-value">{display}</span>
@@ -109,8 +116,37 @@ function Readout({ label, value, warn }: { label: string; value: string; warn?: 
 }
 
 export function AssemblyScreen() {
-  const { config, derived, updateConfig, resetToReference, launch, flightLoading, flightError, analysisStale, experimentBaseline, suggestedExperiment, persistenceNotice, weather } =
-    useAppStore();
+  const {
+    config,
+    derived,
+    updateConfig,
+    persistBuild,
+    resetToReference,
+    launch,
+    flightLoading,
+    flightError,
+    analysisStale,
+    experimentBaseline,
+    suggestedExperiment,
+    persistenceNotice,
+    weather,
+  } = useAppStore(
+    useShallow((s) => ({
+      config: s.config,
+      derived: s.derived,
+      updateConfig: s.updateConfig,
+      persistBuild: s.persistBuild,
+      resetToReference: s.resetToReference,
+      launch: s.launch,
+      flightLoading: s.flightLoading,
+      flightError: s.flightError,
+      analysisStale: s.analysisStale,
+      experimentBaseline: s.experimentBaseline,
+      suggestedExperiment: s.suggestedExperiment,
+      persistenceNotice: s.persistenceNotice,
+      weather: s.weather,
+    })),
+  );
   const pythonStatus = usePythonBackendStatus();
 
   const errors = derived.checks.filter((c: BuildCheck) => c.severity === "error");
@@ -164,15 +200,15 @@ export function AssemblyScreen() {
         )}
 
         <section className="controls">
-          <Slider label="Mission payload (dry)" value={config.payloadDryMassKg} min={CONFIG_RANGES.payloadDryMassKg.min} max={CONFIG_RANGES.payloadDryMassKg.max} step={CONFIG_RANGES.payloadDryMassKg.step} unit="kg" onChange={(v) => updateConfig({ payloadDryMassKg: v })} format={(v) => `${(v / 1000).toFixed(1)} t`} hint="More delivered capability, but every kilogram must be accelerated to orbit." suggested={suggestedExperiment?.control === "payloadDryMassKg"} />
-          <Slider label="Payload propellant" value={config.payloadPropellantKg} min={CONFIG_RANGES.payloadPropellantKg.min} max={CONFIG_RANGES.payloadPropellantKg.max} step={CONFIG_RANGES.payloadPropellantKg.step} unit="kg" onChange={(v) => updateConfig({ payloadPropellantKg: v })} format={(v) => `${(v / 1000).toFixed(1)} t`} hint="Funds circularization and operations after launch, at the cost of ascent mass." suggested={suggestedExperiment?.control === "payloadPropellantKg"} />
-          <Slider label="Body diameter" value={config.diameterM} min={CONFIG_RANGES.diameterM.min} max={CONFIG_RANGES.diameterM.max} step={CONFIG_RANGES.diameterM.step} unit="m" onChange={(v) => updateConfig({ diameterM: v })} format={(v) => `${v.toFixed(1)} m`} hint="Fits engines and shortens tanks, but adds frontal drag and fairing mass." suggested={suggestedExperiment?.control === "diameterM"} />
-          <Slider label="Stage 1 propellant" value={config.stage1PropellantKg} min={CONFIG_RANGES.stage1PropellantKg.min} max={CONFIG_RANGES.stage1PropellantKg.max} step={CONFIG_RANGES.stage1PropellantKg.step} unit="kg" onChange={(v) => updateConfig({ stage1PropellantKg: v })} format={(v) => `${(v / 1000).toFixed(0)} t`} />
-          <Slider label="Stage 1 engines" value={config.stage1EngineCount} min={CONFIG_RANGES.stage1EngineCount.min} max={CONFIG_RANGES.stage1EngineCount.max} step={1} unit="" onChange={(v) => updateConfig({ stage1EngineCount: Math.round(v) })} format={(v) => `${v}×`} hint="Adds thrust, dry mass and fuel flow; excess thrust raises max-Q and g-load." suggested={suggestedExperiment?.control === "stage1EngineCount"} />
-          <EngineSelect label="Stage 1 engine" value={config.stage1Engine} options={[{ id: "booster", name: "B-1 Booster" }, { id: "sustainer", name: "S-2 Sustainer" }]} onChange={(id) => updateConfig({ stage1Engine: id })} />
-          <Slider label="Stage 2 propellant" value={config.stage2PropellantKg} min={CONFIG_RANGES.stage2PropellantKg.min} max={CONFIG_RANGES.stage2PropellantKg.max} step={CONFIG_RANGES.stage2PropellantKg.step} unit="kg" onChange={(v) => updateConfig({ stage2PropellantKg: v })} format={(v) => `${(v / 1000).toFixed(0)} t`} suggested={suggestedExperiment?.control === "stage2PropellantKg"} />
-          <EngineSelect label="Stage 2 engine" value={config.stage2Engine} options={[{ id: "cryogenic", name: "H-1 Cryogenic — efficient, heavy" }, { id: "vacuum", name: "V-9 Vacuum — lighter, less efficient" }, { id: "sustainer", name: "S-2 Sustainer — compact, low vacuum performance" }]} onChange={(id) => updateConfig({ stage2Engine: id })} />
-          <Slider label="Fin span" value={config.finSpanM} min={CONFIG_RANGES.finSpanM.min} max={CONFIG_RANGES.finSpanM.max} step={CONFIG_RANGES.finSpanM.step} unit="m" onChange={(v) => updateConfig({ finSpanM: v })} format={(v) => `${v.toFixed(1)} m`} hint="Improves static stability, while adding structural mass and aerodynamic drag." suggested={suggestedExperiment?.control === "finSpanM"} />
+          <Slider label="Mission payload (dry)" value={config.payloadDryMassKg} min={CONFIG_RANGES.payloadDryMassKg.min} max={CONFIG_RANGES.payloadDryMassKg.max} step={CONFIG_RANGES.payloadDryMassKg.step} unit="kg" onChange={(v) => updateConfig({ payloadDryMassKg: v })} onCommit={persistBuild} format={(v) => `${(v / 1000).toFixed(1)} t`} hint="More delivered capability, but every kilogram must be accelerated to orbit." suggested={suggestedExperiment?.control === "payloadDryMassKg"} />
+          <Slider label="Payload propellant" value={config.payloadPropellantKg} min={CONFIG_RANGES.payloadPropellantKg.min} max={CONFIG_RANGES.payloadPropellantKg.max} step={CONFIG_RANGES.payloadPropellantKg.step} unit="kg" onChange={(v) => updateConfig({ payloadPropellantKg: v })} onCommit={persistBuild} format={(v) => `${(v / 1000).toFixed(1)} t`} hint="Funds circularization and operations after launch, at the cost of ascent mass." suggested={suggestedExperiment?.control === "payloadPropellantKg"} />
+          <Slider label="Body diameter" value={config.diameterM} min={CONFIG_RANGES.diameterM.min} max={CONFIG_RANGES.diameterM.max} step={CONFIG_RANGES.diameterM.step} unit="m" onChange={(v) => updateConfig({ diameterM: v })} onCommit={persistBuild} format={(v) => `${v.toFixed(1)} m`} hint="Fits engines and shortens tanks, but adds frontal drag and fairing mass." suggested={suggestedExperiment?.control === "diameterM"} />
+          <Slider label="Stage 1 propellant" value={config.stage1PropellantKg} min={CONFIG_RANGES.stage1PropellantKg.min} max={CONFIG_RANGES.stage1PropellantKg.max} step={CONFIG_RANGES.stage1PropellantKg.step} unit="kg" onChange={(v) => updateConfig({ stage1PropellantKg: v })} onCommit={persistBuild} format={(v) => `${(v / 1000).toFixed(0)} t`} />
+          <Slider label="Stage 1 engines" value={config.stage1EngineCount} min={CONFIG_RANGES.stage1EngineCount.min} max={CONFIG_RANGES.stage1EngineCount.max} step={1} unit="" onChange={(v) => updateConfig({ stage1EngineCount: Math.round(v) })} onCommit={persistBuild} format={(v) => `${v}×`} hint="Adds thrust, dry mass and fuel flow; excess thrust raises max-Q and g-load." suggested={suggestedExperiment?.control === "stage1EngineCount"} />
+          <EngineSelect label="Stage 1 engine" value={config.stage1Engine} options={[{ id: "booster", name: "B-1 Booster" }, { id: "sustainer", name: "S-2 Sustainer" }]} onChange={(id) => { updateConfig({ stage1Engine: id }); persistBuild(); }} />
+          <Slider label="Stage 2 propellant" value={config.stage2PropellantKg} min={CONFIG_RANGES.stage2PropellantKg.min} max={CONFIG_RANGES.stage2PropellantKg.max} step={CONFIG_RANGES.stage2PropellantKg.step} unit="kg" onChange={(v) => updateConfig({ stage2PropellantKg: v })} onCommit={persistBuild} format={(v) => `${(v / 1000).toFixed(0)} t`} suggested={suggestedExperiment?.control === "stage2PropellantKg"} />
+          <EngineSelect label="Stage 2 engine" value={config.stage2Engine} options={[{ id: "cryogenic", name: "H-1 Cryogenic — efficient, heavy" }, { id: "vacuum", name: "V-9 Vacuum — lighter, less efficient" }, { id: "sustainer", name: "S-2 Sustainer — compact, low vacuum performance" }]} onChange={(id) => { updateConfig({ stage2Engine: id }); persistBuild(); }} />
+          <Slider label="Fin span" value={config.finSpanM} min={CONFIG_RANGES.finSpanM.min} max={CONFIG_RANGES.finSpanM.max} step={CONFIG_RANGES.finSpanM.step} unit="m" onChange={(v) => updateConfig({ finSpanM: v })} onCommit={persistBuild} format={(v) => `${v.toFixed(1)} m`} hint="Improves static stability, while adding structural mass and aerodynamic drag." suggested={suggestedExperiment?.control === "finSpanM"} />
         </section>
 
         <section className="readouts">
@@ -207,15 +243,14 @@ export function AssemblyScreen() {
           </button>
           <button onClick={resetToReference}>Reset to reference build</button>
         </div>
-        {analysisStale && <NarratedText className="dim small">Build edited — prior analysis invalidated until rerun.</NarratedText>}
+        {analysisStale && <p className="dim small">Build edited — prior analysis invalidated until rerun.</p>}
+        <SpaceWeatherPanel snapshot={weather} />
         <p className="dim small">
-          Weather: Kp {weather.weather.kp ?? "—"} · F10.7 {weather.weather.f107 ?? "—"} (
-          {weather.source === "python" ? "Python NOAA" : weather.source === "noaa" ? "browser NOAA" : "reference snapshot"})
           {pythonStatus === "up"
-            ? " · Payload analysis: Python"
+            ? "Payload analysis: Python"
             : pythonStatus === "down"
-              ? " · Payload analysis: local TypeScript"
-              : ""}
+              ? "Payload analysis: local TypeScript"
+              : "Checking Python backend…"}
         </p>
         {persistenceNotice && <NarratedText className="check warning" narration={persistenceNotice}>⚠ {persistenceNotice}</NarratedText>}
         <SettingsToggle />

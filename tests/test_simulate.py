@@ -148,3 +148,21 @@ def test_monte_carlo_counts_add_up(passing_mission, reference_weather):
     summary = s.run_monte_carlo(passing_mission, reference_weather, n=100, sensitivity_runs=10, seed=7)
     assert summary.passes + summary.failures == summary.total_runs
     assert summary.probability_pass + summary.probability_fail == pytest.approx(1.0)
+
+
+def test_storm_weather_is_a_thermosphere_driver(reference_weather):
+    from environment import SpaceWeather
+
+    storm = SpaceWeather(
+        kp=7.0,
+        f107=220.0,
+        solar_wind_speed=800.0,
+        solar_wind_density=25.0,
+        solar_wind_temperature=300_000.0,
+    )
+    quiet = s.assess_space_weather_effects(reference_weather)
+    stressed = s.assess_space_weather_effects(storm)
+    assert stressed["densityRatioVsReference"] > quiet["densityRatioVsReference"]
+    assert stressed["overallSeverity"] == "storm"
+    assert stressed["computedBy"] == "python"
+    assert any(cause["id"] == "geomagnetic" and cause["severity"] == "storm" for cause in stressed["causes"])

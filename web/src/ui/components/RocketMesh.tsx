@@ -3,7 +3,7 @@
  * the physics uses. Y-up: base at y=0, nose at y=totalLength.
  */
 
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import * as THREE from "three";
 
 import type { DerivedRocket } from "../../domain/derive";
@@ -15,7 +15,7 @@ const ENGINE_COLOR = "#3a3f4a";
 const FIN_COLOR = "#ff9b54";
 const INTERSTAGE_COLOR = "#8a8f9a";
 
-export function RocketMesh({
+export const RocketMesh = memo(function RocketMesh({
   rocket,
   showMarkers = false,
   thrusting = false,
@@ -157,4 +157,4 @@ export function RocketMesh({
       )}
     </group>
   );
-}
+});
