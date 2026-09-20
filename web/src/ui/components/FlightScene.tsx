@@ -308,7 +308,7 @@ export function FlightScene({
       <directionalLight ref={sunRef} intensity={1.35} color="#fff3dc" />
 
       <group ref={earthRef}>
-        <Earth />
+        <Earth frameRef={frameRef} lowEffects={lowEffects} />
         <LaunchSite
           frameRef={frameRef}
           lowEffects={lowEffects}

@@ -60,6 +60,7 @@ body {
   border-top: 1px solid var(--line);
 }
 
+
 .screen {
   display: flex;
   height: 100vh;
@@ -172,6 +173,51 @@ body {
   letter-spacing: 0.24em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.36);
+}
+
+.narrated-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.narrated-text > p { flex: 1; }
+
+.narration-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 5px 7px;
+  border-radius: 999px;
+  color: var(--cyan);
+  background: rgb(7 17 31 / 72%);
+  border-color: rgb(99 221 235 / 35%);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.narration-button:hover:not(:disabled) { background: #163247; }
+
+.hero-video,
+.outcome-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.hero-video { opacity: 0.32; mix-blend-mode: screen; }
+.outcome { position: relative; overflow: hidden; }
+.outcome > :not(.outcome-video) { position: relative; z-index: 1; }
+.outcome-video { opacity: 0.28; }
+
+@media (max-width: 600px) {
+  .narration-button > span:last-child { display: none; }
+  .narration-button { padding: 7px; }
 }
 
 /* --- Assembly: build panel ---------------------------------------------- */
@@ -422,6 +468,13 @@ body {
   pointer-events: none;
 }
 
+.control-hint {
+  grid-area: hint;
+  color: #718197;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 .control select {
   width: 100%;
   background: rgba(255, 255, 255, 0.03);
@@ -478,6 +531,118 @@ body {
 
 .stat.warn .stat-value {
   color: var(--accent);
+}
+
+.objective-card,
+.experiment-card {
+  border: 1px solid #2a415c;
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: #0b1929;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.objective-card p,
+.experiment-card p {
+  margin: 4px 0 0;
+  color: var(--dim);
+}
+
+.experiment-card { border-color: var(--cyan); }
+
+.cause-environment {
+  margin: 8px 0 0;
+  color: var(--orange);
+  font-size: 13px;
+}
+
+.weather-card {
+  border: 1px solid #2a415c;
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: #0b1929;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.weather-card.weather-elevated { border-color: var(--orange); }
+.weather-card.weather-storm { border-color: #ff7d6b; }
+
+.weather-source {
+  display: block;
+  margin: 4px 0 8px;
+  color: var(--dim);
+}
+
+.weather-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.weather-causes-label {
+  margin: 0 0 6px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.weather-causes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.weather-cause-title {
+  display: block;
+  font-weight: 600;
+}
+
+.weather-cause.elevated .weather-cause-title { color: var(--orange); }
+.weather-cause.storm .weather-cause-title { color: #ff7d6b; }
+
+.weather-cause-copy,
+.weather-cause-evidence {
+  display: block;
+  color: var(--dim);
+}
+
+.weather-cause-evidence {
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.readout {
+  background: var(--ink);
+  border: 1px solid #1d2d42;
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.readout-label {
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 0.5px;
+}
+
+.readout-value {
+  font-family: var(--mono);
+  font-size: 16px;
+  color: var(--cyan);
+}
+
+.readout.warn .readout-value {
+  color: var(--orange);
 }
 
 .checks {

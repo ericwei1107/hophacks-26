@@ -1,8 +1,9 @@
 /**
  * Picks the launch renderer and falls back without ceremony.
  *
- * Unity is used only when everything lines up: WebGPU exists, the player did
- * not ask for three.js, and a Unity build is actually deployed. Anything else
+ * Three.js is the default so the procedural LYGIA planet is consistent on
+ * every browser. Unity is an explicit opt-in through `?renderer=unity`, and
+ * is used only when WebGPU and a deployed build are both available. Anything else
  * — a missing build, a startup throw, a player that never reports ready —
  * lands on the three.js view with a notice, within the load timeout.
  *
@@ -45,7 +46,7 @@ export function readRendererPreference(search = window.location.search): Rendere
 }
 
 export function hasWebGpu(): boolean {
-  return typeof navigator !== "undefined" && "gpu" in navigator;
+  return typeof navigator !== "undefined" && navigator.gpu != null;
 }
 
 /** Unity is opt-in. Auto stays on three.js so a blank WebGPU player cannot hide the launch. */
@@ -74,6 +75,10 @@ export async function selectRenderer(options: SelectRendererOptions): Promise<Re
   };
 
   if (!shouldAttemptUnity(preference)) {
+    return mountThree(null);
+  }
+
+  if (preference === "auto") {
     return mountThree(null);
   }
 

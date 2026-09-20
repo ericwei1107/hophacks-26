@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 
 import { referenceConfig } from "../../../domain/config";
+import { payloadWetMassKg } from "../../../domain/config";
 import { EARTH_RADIUS, MU_EARTH } from "../../physics/constants";
 import { orbitalElements } from "../../physics/orbital";
 import { clone, norm, vec3 } from "../../physics/vec3";
@@ -119,7 +120,7 @@ describe("staging", () => {
     // Compare as vectors: equatorial eastward flight has a near-zero Z
     // component, so per-component ratios are unstable.
     const massUpper =
-      state.rocket.config.payloadWetMassKg +
+      payloadWetMassKg(state.rocket.config) +
       state.rocket.stage2.dryMassKg +
       state.stage2PropellantKg +
       (state.fairingJettisoned ? 0 : 800);
@@ -142,7 +143,8 @@ describe("boundaries", () => {
     const result = runFlight({
       config: {
         ...referenceConfig(),
-        payloadWetMassKg: 20_000,
+        payloadDryMassKg: 16_000,
+        payloadPropellantKg: 4_000,
         stage1PropellantKg: 240_000,
         stage1EngineCount: 4,
         stage2PropellantKg: 15_000,

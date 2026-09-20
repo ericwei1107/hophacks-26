@@ -132,12 +132,18 @@ export interface EngineCatalog {
   engines: Record<EngineId, EngineSpec>;
 }
 
+let cachedCatalog: EngineCatalog | null = null;
+
 export function createEngineCatalog(): EngineCatalog {
+  if (cachedCatalog) {
+    return cachedCatalog;
+  }
   const entries = ENGINE_SEEDS.map((seed) => [seed.id, deriveEngine(seed)] as const);
-  return {
+  cachedCatalog = {
     version: CATALOG_VERSION,
     engines: Object.fromEntries(entries) as Record<EngineId, EngineSpec>,
   };
+  return cachedCatalog;
 }
 
 /** Thrust at ambient pressure: F(p) = F_vac − p·A_exit. */

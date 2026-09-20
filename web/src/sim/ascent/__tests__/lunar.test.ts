@@ -78,7 +78,7 @@ describe("trans-lunar phases", () => {
   it("does not attempt TLI for a low_perigee (non-sustained) orbit", () => {
     // A build that closes a bound orbit below the sustained-perigee floor
     // should terminate at low_perigee without ever entering the lunar phases.
-    const result = fly({ stage2PropellantKg: 5_000, payloadWetMassKg: 15_000 });
+    const result = fly({ stage2PropellantKg: 5_000, payloadDryMassKg: 12_000, payloadPropellantKg: 3_000 });
     expect(["low_perigee", "insufficient_orbital_energy", "vacuum_engine_low_ignition"]).toContain(result.outcome);
     if (result.outcome === "low_perigee") {
       expect(result.finalState.parkingElements).toBeNull();
@@ -93,7 +93,7 @@ describe("trans-lunar phases", () => {
     // doesn't carry enough energy to actually reach the Moon's SOI. This is
     // the natural, continuous boundary between tli_shortfall and lunar_miss;
     // a slightly heavier payload still (5,900 kg) crosses into tli_shortfall.
-    const result = fly({ payloadWetMassKg: 5_800 });
+    const result = fly({ payloadDryMassKg: 4_640, payloadPropellantKg: 1_160 });
     expect(result.orbitAchieved).toBe(true);
     expect(result.outcome).toBe("lunar_miss");
     expect(result.lunarTransfer).not.toBeNull();

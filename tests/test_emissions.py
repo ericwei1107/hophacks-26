@@ -45,7 +45,7 @@ def test_footprint_scales_with_spacecraft_mass():
 
 def test_analog_search_returns_leo_match():
     mission = SpacecraftMission(750, 200, 5, 550, 53.0, 10, 2.2, 325)
-    launches, _ = load_launch_catalog(CACHE)
-    analogs = find_analog_launches(mission, launches, vehicles, limit = 3)
+    launches, vehicles = load_launch_catalog(CACHE)
+    analogs = find_analog_launches(mission, launches, vehicles, limit=3)
     assert analogs
     assert analogs[0].perigee_km > 80

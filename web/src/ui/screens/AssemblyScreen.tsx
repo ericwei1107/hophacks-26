@@ -12,6 +12,7 @@ import { useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, type ComponentRef, type CSSProperties, type ReactNode } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { useShallow } from "zustand/react/shallow";
 
 import { SafeCanvas } from "../components/SafeCanvas";
 import { CONFIG_RANGES } from "../../domain/config";
@@ -20,7 +21,9 @@ import type { EngineId } from "../../domain/engines";
 import { useAppStore } from "../store";
 import { RocketMesh } from "../components/RocketMesh";
 import { SettingsToggle } from "../components/SettingsToggle";
+import { SpaceWeatherPanel } from "../components/SpaceWeatherPanel";
 import { usePythonBackendStatus } from "../../api/pythonBackend";
+import { NarratedText } from "../../narration/NarratedText";
 
 type OrbitControlsRef = ComponentRef<typeof OrbitControls>;
 
@@ -39,6 +42,7 @@ function Slider({
   format,
   hint,
   suggested = false,
+  onCommit,
 }: {
   label: string;
   value: number;
@@ -50,6 +54,7 @@ function Slider({
   format?: (value: number) => string;
   hint?: string;
   suggested?: boolean;
+  onCommit?: () => void;
 }) {
   const display = format ? format(value) : `${value} ${unit}`;
   const pct = max > min ? ((value - min) / (max - min)) * 100 : 0;
@@ -66,6 +71,8 @@ function Slider({
         value={value}
         style={trackStyle}
         onChange={(e) => onChange(Number(e.target.value))}
+        onPointerUp={onCommit}
+        onBlur={onCommit}
         aria-label={label}
       />
       <input
@@ -81,6 +88,7 @@ function Slider({
             onChange(Math.min(max, Math.max(min, v)));
           }
         }}
+        onBlur={onCommit}
         aria-label={`${label} value`}
       />
       {hint && <span className="control-hint">{hint}</span>}
@@ -348,6 +356,7 @@ export function AssemblyScreen() {
     config,
     derived,
     updateConfig,
+    persistBuild,
     resetToReference,
     launch,
     flightLoading,
@@ -358,7 +367,24 @@ export function AssemblyScreen() {
     persistenceNotice,
     weather,
     settings,
-  } = useAppStore();
+  } = useAppStore(
+    useShallow((s) => ({
+      config: s.config,
+      derived: s.derived,
+      updateConfig: s.updateConfig,
+      persistBuild: s.persistBuild,
+      resetToReference: s.resetToReference,
+      launch: s.launch,
+      flightLoading: s.flightLoading,
+      flightError: s.flightError,
+      analysisStale: s.analysisStale,
+      experimentBaseline: s.experimentBaseline,
+      suggestedExperiment: s.suggestedExperiment,
+      persistenceNotice: s.persistenceNotice,
+      weather: s.weather,
+      settings: s.settings,
+    })),
+  );
   const pythonStatus = usePythonBackendStatus();
 
   const errors = derived.checks.filter((c: BuildCheck) => c.severity === "error");
@@ -414,34 +440,51 @@ export function AssemblyScreen() {
           <h1>
             APOGEE <span className="dim">/ Launch Lab</span>
           </h1>
-          <p className="objective">
-            <strong>Launch objective.</strong> Place the payload in a 180–220 × 180–250 km orbit. Perigee must stay
-            above 150 km; structural max-Q is 45 kPa and payload load is 5 g.
-          </p>
+          <NarratedText className="objective">
+            <strong>Launch objective.</strong> Deliver useful mission mass into a 180–220 × 180–250 km parking orbit,
+            then complete the lunar transfer. Perigee must stay above 150 km; structural max-Q is 45 kPa and payload
+            load is 5 g.
+          </NarratedText>
         </header>
 
         {experimentBaseline && suggestedExperiment && (
           <section className="experiment-card">
             <strong>Experiment baseline pinned</strong>
-            <p>
+            <NarratedText
+              narration={`Try one change: ${suggestedExperiment.label}. Compare the next flight with ${experimentBaseline.outcome.replaceAll("_", " ")}.`}
+            >
               Try one change: {suggestedExperiment.label}. Compare the next flight with{" "}
               {experimentBaseline.outcome.replaceAll("_", " ")}.
-            </p>
+            </NarratedText>
           </section>
         )}
 
         <ControlGroup index="01" title="Payload">
           <Slider
-            label="Payload wet mass"
-            value={config.payloadWetMassKg}
-            min={CONFIG_RANGES.payloadWetMassKg.min}
-            max={CONFIG_RANGES.payloadWetMassKg.max}
-            step={CONFIG_RANGES.payloadWetMassKg.step}
+            label="Mission payload (dry)"
+            value={config.payloadDryMassKg}
+            min={CONFIG_RANGES.payloadDryMassKg.min}
+            max={CONFIG_RANGES.payloadDryMassKg.max}
+            step={CONFIG_RANGES.payloadDryMassKg.step}
             unit="kg"
-            onChange={(v) => updateConfig({ payloadWetMassKg: v })}
+            onChange={(v) => updateConfig({ payloadDryMassKg: v })}
+            onCommit={persistBuild}
             format={(v) => `${(v / 1000).toFixed(1)} t`}
-            hint="Every kilogram rides all the way to orbit."
-            suggested={suggestedExperiment?.control === "payloadWetMassKg"}
+            hint="More delivered capability, but every kilogram must be accelerated to orbit."
+            suggested={suggestedExperiment?.control === "payloadDryMassKg"}
+          />
+          <Slider
+            label="Payload propellant"
+            value={config.payloadPropellantKg}
+            min={CONFIG_RANGES.payloadPropellantKg.min}
+            max={CONFIG_RANGES.payloadPropellantKg.max}
+            step={CONFIG_RANGES.payloadPropellantKg.step}
+            unit="kg"
+            onChange={(v) => updateConfig({ payloadPropellantKg: v })}
+            onCommit={persistBuild}
+            format={(v) => `${(v / 1000).toFixed(1)} t`}
+            hint="Funds circularization and operations after launch, at the cost of ascent mass."
+            suggested={suggestedExperiment?.control === "payloadPropellantKg"}
           />
         </ControlGroup>
 
@@ -454,6 +497,7 @@ export function AssemblyScreen() {
             step={CONFIG_RANGES.stage1PropellantKg.step}
             unit="kg"
             onChange={(v) => updateConfig({ stage1PropellantKg: v })}
+            onCommit={persistBuild}
             format={(v) => `${(v / 1000).toFixed(0)} t`}
             hint="Sets tank length, and with it slenderness."
           />
@@ -465,6 +509,7 @@ export function AssemblyScreen() {
             step={1}
             unit=""
             onChange={(v) => updateConfig({ stage1EngineCount: Math.round(v) })}
+            onCommit={persistBuild}
             format={(v) => `${v} ×`}
             hint="Thrust, dry mass and fuel flow; excess thrust raises max-Q and g-load."
             suggested={suggestedExperiment?.control === "stage1EngineCount"}
@@ -473,7 +518,10 @@ export function AssemblyScreen() {
             label="Stage 1 engine"
             value={config.stage1Engine}
             options={STAGE1_ENGINES}
-            onChange={(id) => updateConfig({ stage1Engine: id })}
+            onChange={(id) => {
+              updateConfig({ stage1Engine: id });
+              persistBuild();
+            }}
           />
         </ControlGroup>
 
@@ -486,6 +534,7 @@ export function AssemblyScreen() {
             step={CONFIG_RANGES.stage2PropellantKg.step}
             unit="kg"
             onChange={(v) => updateConfig({ stage2PropellantKg: v })}
+            onCommit={persistBuild}
             format={(v) => `${(v / 1000).toFixed(0)} t`}
             suggested={suggestedExperiment?.control === "stage2PropellantKg"}
           />
@@ -493,7 +542,10 @@ export function AssemblyScreen() {
             label="Stage 2 engine"
             value={config.stage2Engine}
             options={STAGE2_ENGINES}
-            onChange={(id) => updateConfig({ stage2Engine: id })}
+            onChange={(id) => {
+              updateConfig({ stage2Engine: id });
+              persistBuild();
+            }}
             hint="Vacuum engines want to ignite high; sea-level engines are compact but weak up there."
           />
         </ControlGroup>
@@ -507,6 +559,7 @@ export function AssemblyScreen() {
             step={CONFIG_RANGES.diameterM.step}
             unit="m"
             onChange={(v) => updateConfig({ diameterM: v })}
+            onCommit={persistBuild}
             format={(v) => `${v.toFixed(1)} m`}
             hint="Wide fits engines and shortens tanks, but adds drag and fairing mass."
             suggested={suggestedExperiment?.control === "diameterM"}
@@ -519,6 +572,7 @@ export function AssemblyScreen() {
             step={CONFIG_RANGES.finSpanM.step}
             unit="m"
             onChange={(v) => updateConfig({ finSpanM: v })}
+            onCommit={persistBuild}
             format={(v) => `${v.toFixed(1)} m`}
             hint="Moves the center of pressure aft for stability, at a cost in mass and drag."
             suggested={suggestedExperiment?.control === "finSpanM"}
@@ -529,9 +583,9 @@ export function AssemblyScreen() {
           <Stat label="Liftoff TWR" value={derived.liftoffTwr.toFixed(2)} warn={derived.liftoffTwr <= 1} />
           <Stat label="Ideal Δv" value={`${(derived.totalIdealDeltaVMs / 1000).toFixed(1)} km/s`} />
           <Stat label="Wet mass" value={`${(derived.wetMassKg / 1000).toFixed(0)} t`} />
+          <Stat label="Useful payload" value={`${(config.payloadDryMassKg / 1000).toFixed(1)} t`} />
           <Stat label="Stability" value={`${derived.staticMargin.toFixed(2)} cal`} warn={derived.staticMargin < 1} />
           <Stat label="Slenderness" value={derived.slenderness.toFixed(1)} warn={derived.slenderness > 15} />
-          <Stat label="Drag area" value={`${derived.dragAreaM2.toFixed(2)} m²`} />
         </section>
 
         <section className="checks" aria-label="Build checks">
@@ -549,7 +603,11 @@ export function AssemblyScreen() {
               <span className="check-status">{row.status}</span>
             </div>
           ))}
-          {flightError && <p className="check error">✕ {flightError}</p>}
+          {flightError && (
+            <NarratedText className="check error" narration={flightError}>
+              ✕ {flightError}
+            </NarratedText>
+          )}
         </section>
 
         <div className="actions">
@@ -563,16 +621,19 @@ export function AssemblyScreen() {
 
         <footer className="panel-foot">
           {analysisStale && <p className="dim small">Build edited — prior analysis invalidated until rerun.</p>}
+          <SpaceWeatherPanel snapshot={weather} />
           <p className="dim small">
-            Weather: Kp {weather.weather.kp ?? "—"} · F10.7 {weather.weather.f107 ?? "—"} (
-            {weather.source === "python" ? "Python NOAA" : weather.source === "noaa" ? "browser NOAA" : "reference snapshot"})
             {pythonStatus === "up"
-              ? " · Payload analysis: Python"
+              ? "Payload analysis: Python"
               : pythonStatus === "down"
-                ? " · Payload analysis: local TypeScript"
-                : ""}
+                ? "Payload analysis: local TypeScript"
+                : "Checking Python backend…"}
           </p>
-          {persistenceNotice && <p className="check warning">⚠ {persistenceNotice}</p>}
+          {persistenceNotice && (
+            <NarratedText className="check warning" narration={persistenceNotice}>
+              ⚠ {persistenceNotice}
+            </NarratedText>
+          )}
           <SettingsToggle />
         </footer>
       </aside>

@@ -6,6 +6,14 @@ export const ASSESSMENT_VERSION = "2";
 export type PerformanceMetricId = "liftoff_twr" | "ideal_delta_v" | "drag_area" | "static_margin" | "peak_g";
 export type MetricBand = "within_range" | "marginal" | "outside_limit" | "context_only" | "not_measured";
 export type EvidenceSource = "observed" | "game_rule" | "inferred";
+
+export interface EnvironmentalCause {
+  id: string;
+  title: string;
+  severity: "quiet" | "elevated" | "storm";
+  explanation: string;
+  evidence: string;
+}
 export type DiagnosisId =
   | "underpowered"
   | "fuel_hog"
@@ -58,4 +66,6 @@ export interface FlightAssessment {
   evidence: FlightEvidence;
   primaryDiagnosis: Diagnosis | null;
   contributingDiagnoses: Diagnosis[];
+  /** Space weather and other non-vehicle launch drivers. */
+  environmentalCauses: EnvironmentalCause[];
 }

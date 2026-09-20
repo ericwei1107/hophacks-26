@@ -5,20 +5,24 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && tsc -p tsconfig.server.json",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "generate:videos": "node scripts/generate-imagine-videos.mjs",
     "test:e2e": "playwright test",
     "lint": "eslint .",
     "typecheck": "tsc -b --force"
   },
   "dependencies": {
+    "@openai/sites-vite-plugin": "^0.2.0",
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",
     "@react-three/postprocessing": "^3.1.1",
+    "lygia": "^1.4.1",
     "react": "~19.2.0",
     "react-dom": "~19.2.0",
+    "react-router-dom": "^7.18.4",
     "three": "^0.186.0",
     "three.quarks": "^0.17.1",
     "zustand": "^5.0.15"
@@ -42,6 +46,7 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.70.0",
     "vite": "^8.3.0",
+    "vite-plugin-glsl": "^1.6.1",
     "vitest": "^5.0.1"
   }
 }

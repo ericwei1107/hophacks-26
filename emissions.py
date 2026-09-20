@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 import csv
 import io
@@ -113,9 +114,14 @@ def fetch_igel_archive(timeout: int = 180) -> Path:
     partial.replace(path)
     return path
 
-def _open_member(archive: Path, member: str) -> str:
+@lru_cache(maxsize=8)
+def _open_member(archive: str, member: str) -> str:
     with zipfile.ZipFile(archive) as bundle:
-        return bundle.read(member).decode("utf-8", errors = "replace")
+        return bundle.read(member).decode("utf-8", errors="replace")
+
+
+def _member_text(archive: Path, member: str) -> str:
+    return _open_member(str(archive.resolve()), member)
 
 def _float(value: str | None) -> float | None:
     if value is None:
@@ -152,14 +158,20 @@ def _payload_capacity_kg(vehicle: str, vehicle_rows: dict[str, dict]) -> float:
     glow = _vehicle_glow_kg(vehicle_rows.get(vehicle, {}))
     return max(glow * 0.03, 1.0)
 
-def load_launch_catalog(archive: Path | None = None) -> tuple[list[dict], dict[str, dict]]:
-    archive = archive or fetch_igel_archive()
-    launches = list(csv.DictReader(io.StringIO(_open_member(archive, LAUNCH_LIST_MEMBER))))
+@lru_cache(maxsize=4)
+def _load_launch_catalog(archive: str) -> tuple[tuple[dict, ...], dict[str, dict]]:
+    launches = tuple(csv.DictReader(io.StringIO(_open_member(archive, LAUNCH_LIST_MEMBER))))
     vehicles = {
         row["LV_Type"]: row
         for row in csv.DictReader(io.StringIO(_open_member(archive, VEHICLE_DATA_MEMBER)))
     }
     return launches, vehicles
+
+
+def load_launch_catalog(archive: Path | None = None) -> tuple[list[dict], dict[str, dict]]:
+    archive = archive or fetch_igel_archive()
+    launches, vehicles = _load_launch_catalog(str(Path(archive).resolve()))
+    return list(launches), vehicles
 
 def _orbit_score(mission: SpacecraftMission, row: dict) -> float | None:
     mean_alt = _mean_altitude_km(row)
@@ -235,8 +247,8 @@ def _layer_name(altitude_km: float) -> str:
 
 def sum_launch_emissions(tag: str, archive: Path | None = None) -> EmissionTotals:
     archive = archive or fetch_igel_archive()
-    member = EMISSION_PROFILE_TEMPLATE.format(tag = tag)
-    text = _open_member(archive, member)
+    member = EMISSION_PROFILE_TEMPLATE.format(tag=tag)
+    text = _member_text(Path(archive), member)
     rows = list(csv.DictReader(io.StringIO(text)))
     if not rows:
         raise RuntimeError(f"No emission rows for launch {tag}.")

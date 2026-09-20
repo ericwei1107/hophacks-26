@@ -64,8 +64,8 @@ describe("reference build", () => {
 
 describe("nearby viable builds (same autopilot)", () => {
   it.each([
-    { payloadWetMassKg: 2_000 },
-    { payloadWetMassKg: 10_000, stage1PropellantKg: 260_000, stage1EngineCount: 5 },
+    { payloadDryMassKg: 1_600, payloadPropellantKg: 400 },
+    { payloadDryMassKg: 8_000, payloadPropellantKg: 2_000, stage1PropellantKg: 260_000, stage1EngineCount: 5 },
     { stage2PropellantKg: 80_000, stage1PropellantKg: 240_000, stage1EngineCount: 5 },
     { diameterM: 4.2, finSpanM: 2.6 },
   ])("reaches orbit with %o", (overrides) => {
@@ -87,7 +87,8 @@ describe("failure scenarios", () => {
     // Heavy payload, big first stage, undersized upper stage: stages fine,
     // but the upper stage cannot circularize and the vehicle reenters.
     const result = fly({
-      payloadWetMassKg: 20_000,
+      payloadDryMassKg: 16_000,
+      payloadPropellantKg: 4_000,
       stage1PropellantKg: 240_000,
       stage1EngineCount: 4,
       stage2PropellantKg: 15_000,
@@ -104,7 +105,8 @@ describe("failure scenarios", () => {
       stage1PropellantKg: 20_000,
       stage2PropellantKg: 5_000,
       stage2Engine: "sustainer",
-      payloadWetMassKg: 500,
+      payloadDryMassKg: 400,
+      payloadPropellantKg: 100,
     });
     expect(result.outcome).toBe("slenderness_limit");
   });
@@ -116,7 +118,7 @@ describe("failure scenarios", () => {
 
   it("structural max-Q failure", () => {
     // Overpowered first stage accelerates too hard low in the atmosphere.
-    const result = fly({ stage1EngineCount: 7, diameterM: 4.0, payloadWetMassKg: 500, finSpanM: 2.6 });
+    const result = fly({ stage1EngineCount: 7, diameterM: 4.0, payloadDryMassKg: 400, payloadPropellantKg: 100, finSpanM: 2.6 });
     expect(result.outcome).toBe("dynamic_pressure_limit");
     expect(result.maxQPa).toBeGreaterThan(45_000);
   });
@@ -135,7 +137,8 @@ describe("failure scenarios", () => {
       stage1EngineCount: 5,
       stage2PropellantKg: 5_000,
       stage2Engine: "sustainer",
-      payloadWetMassKg: 500,
+      payloadDryMassKg: 400,
+      payloadPropellantKg: 100,
     });
     expect(result.outcome).toBe("acceleration_limit");
     expect(result.maxG).toBeGreaterThan(5.0);

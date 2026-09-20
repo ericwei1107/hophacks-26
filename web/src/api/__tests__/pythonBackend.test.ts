@@ -9,7 +9,8 @@ afterEach(() => {
 
 const handoff = {
   modelVersion: "test",
-  payloadWetMassKg: 5000,
+  payloadDryMassKg: 4000,
+  payloadPropellantKg: 1000,
   achievedPerigeeKm: 190,
   achievedApogeeKm: 210,
   achievedInclinationDeg: 5,
@@ -50,7 +51,8 @@ describe("analyzeLaunchedPayload", () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/analyze");
     const body = JSON.parse(String(init.body));
-    expect(body.handoff.payloadWetMassKg).toBe(5000);
+    expect(body.handoff.payloadDryMassKg).toBe(4000);
+    expect(body.handoff.payloadPropellantKg).toBe(1000);
     expect(body.runs).toBe(20);
   });
 });

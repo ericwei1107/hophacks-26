@@ -53,7 +53,7 @@ describe("deriveRocket: reference build", () => {
   it("derives geometry from the same calculation", () => {
     expect(rocket.totalLengthM).toBeCloseTo(43.777, 3);
     expect(rocket.slenderness).toBeCloseTo(11.832, 2);
-    expect(rocket.dragAreaM2).toBeCloseTo(3.2256, 3);
+    expect(rocket.dragAreaM2).toBeCloseTo(3.5808, 3);
     expect(rocket.stage1.tankLengthM).toBeCloseTo(25.454, 2);
     expect(rocket.stage2.tankLengthM).toBeCloseTo(6.853, 2);
   });
@@ -89,6 +89,19 @@ describe("deriveRocket: slider consistency", () => {
     // +40 t propellant over the reference's 260 t and +7.2% of it in tank
     // structure.
     expect(bigger.wetMassKg).toBe(407_400);
+  });
+
+  it("makes useful payload and payload propellant independent ascent costs", () => {
+    const moreMissionMass = derive({ payloadDryMassKg: 5_000 });
+    const morePayloadFuel = derive({ payloadPropellantKg: 2_000 });
+    expect(moreMissionMass.wetMassKg).toBe(derive().wetMassKg + 1_000);
+    expect(morePayloadFuel.wetMassKg).toBe(derive().wetMassKg + 1_000);
+    expect(moreMissionMass.totalIdealDeltaVMs).toBeLessThan(derive().totalIdealDeltaVMs);
+    expect(morePayloadFuel.totalIdealDeltaVMs).toBeLessThan(derive().totalIdealDeltaVMs);
+  });
+
+  it("charges larger fins aerodynamic drag as well as structural mass", () => {
+    expect(derive({ finSpanM: 2.5 }).dragAreaM2).toBeGreaterThan(derive({ finSpanM: 1.5 }).dragAreaM2);
   });
 });
 

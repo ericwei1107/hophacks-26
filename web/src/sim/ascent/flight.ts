@@ -16,7 +16,7 @@
  * receives an artificial velocity impulse.
  */
 
-import type { RocketConfig } from "../../domain/config";
+import { payloadWetMassKg, type RocketConfig } from "../../domain/config";
 import { deriveRocket, type DerivedRocket } from "../../domain/derive";
 import { createEngineCatalog, thrustAtPressure, type EngineSpec } from "../../domain/engines";
 import { CATALOG_VERSION, MODEL_VERSION } from "../../domain/version";
@@ -55,6 +55,36 @@ import { findSoiEncounter, phasedMoonEpoch } from "../lunar/coast";
 import { evaluateTransfer, transferRequirement, type TransferResult } from "../lunar/transfer";
 
 export const FIXED_TIMESTEP_S = 0.05;
+
+/** Reused scratch vectors for the inner RK4 / atmosphere-relative path. */
+const SCRATCH = {
+  coRot: vec3(),
+  vRel: vec3(),
+  up: vec3(),
+  east: vec3(),
+  north: vec3(),
+  leUp: vec3(),
+  lnUp: vec3(),
+  lnEast: vec3(),
+  y0pos: vec3(),
+  y0vel: vec3(),
+  y2pos: vec3(),
+  y2vel: vec3(),
+  y3pos: vec3(),
+  y3vel: vec3(),
+  y4pos: vec3(),
+  y4vel: vec3(),
+  k1dPos: vec3(),
+  k1dVel: vec3(),
+  k2dPos: vec3(),
+  k2dVel: vec3(),
+  k3dPos: vec3(),
+  k3dVel: vec3(),
+  k4dPos: vec3(),
+  k4dVel: vec3(),
+  dragDir: vec3(),
+  accel: vec3(),
+};
 
 function isTerminalPhase(phase: FlightPhase): boolean {
   return phase === "COMPLETE" || phase === "FAILED";
@@ -176,6 +206,8 @@ export interface FlightState {
   failureDetail: string | null;
   maxQPa: number;
   maxG: number;
+  /** True once the max-Q event has been recorded for this flight. */
+  maxQRecorded: boolean;
   /** Highest altitude reached, km — gates ground-impact detection. */
   maxAltitudeKm: number;
   stepCount: number;
@@ -236,7 +268,8 @@ export function createFlight(
   if (perturbations !== NO_PERTURBATIONS) {
     effectiveConfig = {
       ...config,
-      payloadWetMassKg: config.payloadWetMassKg, // payload mass is fixed by the player
+      payloadDryMassKg: config.payloadDryMassKg, // payload mass is fixed by the player
+      payloadPropellantKg: config.payloadPropellantKg,
       stage1PropellantKg: config.stage1PropellantKg * perturbations.propellantScale,
       stage2PropellantKg: config.stage2PropellantKg * perturbations.propellantScale,
     };
@@ -279,6 +312,7 @@ export function createFlight(
     failureDetail: null,
     maxQPa: 0,
     maxG: 0,
+    maxQRecorded: false,
     maxAltitudeKm: 0,
     stepCount: 0,
     liftoffT: null,
@@ -335,7 +369,7 @@ function finMassKg(state: FlightState): number {
 /** Mass of everything currently attached, excluding active-stage propellant. */
 function baseMassKg(state: FlightState): number {
   const r = state.rocket;
-  let mass = r.config.payloadWetMassKg + r.stage2.dryMassKg + state.stage2PropellantKg;
+  let mass = payloadWetMassKg(r.config) + r.stage2.dryMassKg + state.stage2PropellantKg;
   if (!state.fairingJettisoned) {
     mass += fairingMassKg(state);
   }
@@ -430,7 +464,7 @@ function localUp(out: Vec3, position: Vec3): Vec3 {
 
 function localEast(out: Vec3, position: Vec3): Vec3 {
   // east = normalize(ẑ × r̂)
-  const up = localUp(vec3(), position);
+  const up = localUp(SCRATCH.leUp, position);
   out[0] = -up[1];
   out[1] = up[0];
   out[2] = 0;
@@ -441,8 +475,8 @@ function localEast(out: Vec3, position: Vec3): Vec3 {
 }
 
 function localNorth(out: Vec3, position: Vec3): Vec3 {
-  const up = localUp(vec3(), position);
-  const east = localEast(vec3(), position);
+  const up = localUp(SCRATCH.lnUp, position);
+  const east = localEast(SCRATCH.lnEast, position);
   // north = up × east
   const x = up[1] * east[2] - up[2] * east[1];
   const y = up[2] * east[0] - up[0] * east[2];
@@ -452,13 +486,12 @@ function localNorth(out: Vec3, position: Vec3): Vec3 {
 
 /** Atmosphere-relative velocity: v − ω×r − localWind. */
 export function relativeVelocity(out: Vec3, state: FlightState, position: Vec3, velocity: Vec3): Vec3 {
-  const coRotation = vec3();
-  atmosphereVelocity(coRotation, position);
-  sub(out, velocity, coRotation);
+  atmosphereVelocity(SCRATCH.coRot, position);
+  sub(out, velocity, SCRATCH.coRot);
   const env = state.environment;
   if (env.localWindEastMs !== 0 || env.localWindNorthMs !== 0) {
-    const east = localEast(vec3(), position);
-    const north = localNorth(vec3(), position);
+    const east = localEast(SCRATCH.east, position);
+    const north = localNorth(SCRATCH.north, position);
     out[0] -= env.localWindEastMs * east[0] + env.localWindNorthMs * north[0];
     out[1] -= env.localWindEastMs * east[1] + env.localWindNorthMs * north[1];
     out[2] -= env.localWindEastMs * east[2] + env.localWindNorthMs * north[2];
@@ -561,7 +594,7 @@ function derivative(state: FlightState, dyn: DynState, attitude: Vec3, out: DynD
   }
 
   // Drag: −½ρCdA|vRel|vRel
-  const vRel = relativeVelocity(vec3(), state, dyn.pos, dyn.vel);
+  const vRel = relativeVelocity(SCRATCH.vRel, state, dyn.pos, dyn.vel);
   const vRelMag = norm(vRel);
   if (vRelMag > 1e-9 && sample.density > 0) {
     const dragAccel = (0.5 * sample.density * state.rocket.dragAreaM2 * vRelMag) / mass;
@@ -585,17 +618,17 @@ function rk4Step(state: FlightState, dt: number): void {
   const attitude = state.attitude;
   const prop0 = activePropellantKg(state);
 
-  const y0: DynState = { pos: clone(state.position), vel: clone(state.velocity), propKg: prop0 };
-  const k1: DynDerivative = { dPos: vec3(), dVel: vec3(), dProp: 0 };
-  const k2: DynDerivative = { dPos: vec3(), dVel: vec3(), dProp: 0 };
-  const k3: DynDerivative = { dPos: vec3(), dVel: vec3(), dProp: 0 };
-  const k4: DynDerivative = { dPos: vec3(), dVel: vec3(), dProp: 0 };
+  const y0: DynState = { pos: copy(SCRATCH.y0pos, state.position), vel: copy(SCRATCH.y0vel, state.velocity), propKg: prop0 };
+  const k1: DynDerivative = { dPos: SCRATCH.k1dPos, dVel: SCRATCH.k1dVel, dProp: 0 };
+  const k2: DynDerivative = { dPos: SCRATCH.k2dPos, dVel: SCRATCH.k2dVel, dProp: 0 };
+  const k3: DynDerivative = { dPos: SCRATCH.k3dPos, dVel: SCRATCH.k3dVel, dProp: 0 };
+  const k4: DynDerivative = { dPos: SCRATCH.k4dPos, dVel: SCRATCH.k4dVel, dProp: 0 };
 
   derivative(state, y0, attitude, k1);
 
   const y2: DynState = {
-    pos: vec3(),
-    vel: vec3(),
+    pos: SCRATCH.y2pos,
+    vel: SCRATCH.y2vel,
     propKg: Math.max(0, y0.propKg + 0.5 * dt * k1.dProp),
   };
   for (let i = 0; i < 3; i++) {
@@ -605,8 +638,8 @@ function rk4Step(state: FlightState, dt: number): void {
   derivative(state, y2, attitude, k2);
 
   const y3: DynState = {
-    pos: vec3(),
-    vel: vec3(),
+    pos: SCRATCH.y3pos,
+    vel: SCRATCH.y3vel,
     propKg: Math.max(0, y0.propKg + 0.5 * dt * k2.dProp),
   };
   for (let i = 0; i < 3; i++) {
@@ -616,8 +649,8 @@ function rk4Step(state: FlightState, dt: number): void {
   derivative(state, y3, attitude, k3);
 
   const y4: DynState = {
-    pos: vec3(),
-    vel: vec3(),
+    pos: SCRATCH.y4pos,
+    vel: SCRATCH.y4vel,
     propKg: Math.max(0, y0.propKg + dt * k3.dProp),
   };
   for (let i = 0; i < 3; i++) {
@@ -704,15 +737,14 @@ function properAccelerationG(state: FlightState): number {
   if (active) {
     thrust = state.throttle * active.count * thrustAtPressure(active.engine, sample.pressure);
   }
-  const vRel = relativeVelocity(vec3(), state, state.position, state.velocity);
+  const vRel = relativeVelocity(SCRATCH.vRel, state, state.position, state.velocity);
   const drag = 0.5 * sample.density * state.rocket.dragAreaM2 * norm(vRel) ** 2;
   // Thrust and drag act along (nearly) opposite axes; the felt magnitude is
   // their vector sum, dominated by thrust along the attitude.
-  const a = vec3();
-  scale(a, state.attitude, thrust / mass);
+  const a = scale(SCRATCH.accel, state.attitude, thrust / mass);
   const dragScale = drag / mass;
   if (norm(vRel) > 1e-9) {
-    const dragDir = normalize(vec3(), vRel);
+    const dragDir = normalize(SCRATCH.dragDir, vRel);
     a[0] -= dragScale * dragDir[0];
     a[1] -= dragScale * dragDir[1];
     a[2] -= dragScale * dragDir[2];
@@ -726,7 +758,7 @@ function checkInFlightFailures(state: FlightState): void {
   }
   const r = norm(state.position);
   const altitudeKm = (r - EARTH_RADIUS) / 1000;
-  const vRel = relativeVelocity(vec3(), state, state.position, state.velocity);
+  const vRel = relativeVelocity(SCRATCH.vRel, state, state.position, state.velocity);
   const airspeed = norm(vRel);
   const density = state.environment.atmosphere.density(Math.max(0, altitudeKm));
   const q = 0.5 * density * airspeed * airspeed;
@@ -1215,9 +1247,10 @@ export function stepFlight(state: FlightState, dt: number = FIXED_TIMESTEP_S): v
 
   // Max-Q event marker.
   const altitudeKm = (norm(state.position) - EARTH_RADIUS) / 1000;
-  const vRel = relativeVelocity(vec3(), state, state.position, state.velocity);
+  const vRel = relativeVelocity(SCRATCH.vRel, state, state.position, state.velocity);
   const q = 0.5 * state.environment.atmosphere.density(Math.max(0, altitudeKm)) * norm(vRel) ** 2;
-  if (state.maxQPa > 0 && q < state.maxQPa * 0.999 && !state.events.some((e) => e.id === "max_q") && altitudeKm > 5) {
+  if (state.maxQPa > 0 && q < state.maxQPa * 0.999 && !state.maxQRecorded && altitudeKm > 5) {
+    state.maxQRecorded = true;
     addEvent(state, "max_q", `Max-Q ${(state.maxQPa / 1000).toFixed(1)} kPa`);
   }
 }
@@ -1231,10 +1264,9 @@ function integrateDetachedStage(state: FlightState, stage: DetachedStage, dt: nu
   }
   const sample = state.environment.atmosphere.sample(Math.max(0, altitudeKm));
   const gravityScale = -MU_EARTH / (r * r * r);
-  const vRel = vec3();
-  const coRotation = vec3();
-  atmosphereVelocity(coRotation, stage.position);
-  sub(vRel, stage.velocity, coRotation);
+  const vRel = SCRATCH.vRel;
+  atmosphereVelocity(SCRATCH.coRot, stage.position);
+  sub(vRel, stage.velocity, SCRATCH.coRot);
   const vRelMag = norm(vRel);
   const dragAccel = (0.5 * sample.density * stage.dragAreaM2 * vRelMag) / stage.massKg;
 
@@ -1289,6 +1321,45 @@ export interface Telemetry {
   spentX: Float64Array;
   spentY: Float64Array;
   spentZ: Float64Array;
+}
+
+function compactTelemetry(telemetry: Telemetry): Telemetry {
+  const n = telemetry.sampleCount;
+  if (n === telemetry.tS.length) {
+    return telemetry;
+  }
+  const f64 = (a: Float64Array) => a.subarray(0, n).slice();
+  const u8 = (a: Uint8Array) => a.subarray(0, n).slice();
+  return {
+    sampleCount: n,
+    tS: f64(telemetry.tS),
+    altitudeKm: f64(telemetry.altitudeKm),
+    speedMs: f64(telemetry.speedMs),
+    airspeedMs: f64(telemetry.airspeedMs),
+    dynamicPressurePa: f64(telemetry.dynamicPressurePa),
+    properAccelG: f64(telemetry.properAccelG),
+    propellantKg: f64(telemetry.propellantKg),
+    massKg: f64(telemetry.massKg),
+    throttle: f64(telemetry.throttle),
+    aoaDeg: f64(telemetry.aoaDeg),
+    apogeeKm: f64(telemetry.apogeeKm),
+    perigeeKm: f64(telemetry.perigeeKm),
+    phase: u8(telemetry.phase),
+    posX: f64(telemetry.posX),
+    posY: f64(telemetry.posY),
+    posZ: f64(telemetry.posZ),
+    velX: f64(telemetry.velX),
+    velY: f64(telemetry.velY),
+    velZ: f64(telemetry.velZ),
+    attX: f64(telemetry.attX),
+    attY: f64(telemetry.attY),
+    attZ: f64(telemetry.attZ),
+    comFromNoseM: f64(telemetry.comFromNoseM),
+    attachedLengthM: f64(telemetry.attachedLengthM),
+    spentX: f64(telemetry.spentX),
+    spentY: f64(telemetry.spentY),
+    spentZ: f64(telemetry.spentZ),
+  };
 }
 
 const PHASE_INDEX: Record<FlightPhase, number> = {
@@ -1411,7 +1482,7 @@ export function runFlight(input: FlightInput): FlightResult {
       return;
     }
     const r = norm(state.position);
-    const vRel = relativeVelocity(vec3(), state, state.position, state.velocity);
+    const vRel = relativeVelocity(SCRATCH.vRel, state, state.position, state.velocity);
     const airspeed = norm(vRel);
     const altitudeKm = (r - EARTH_RADIUS) / 1000;
     const density = state.environment.atmosphere.density(Math.max(0, altitudeKm));
@@ -1517,7 +1588,7 @@ export function runFlight(input: FlightInput): FlightResult {
     perigeeKm: elements?.perigeeAltitudeKm ?? null,
     source: "observed",
   };
-  const assessment = evaluateFlightOutcome(state.rocket, outcome, evidence);
+  const assessment = evaluateFlightOutcome(state.rocket, outcome, evidence, state.environment.weather);
 
   return {
     outcome,
@@ -1526,7 +1597,7 @@ export function runFlight(input: FlightInput): FlightResult {
     failureCode: state.failureCode,
     failureDetail: state.failureDetail,
     events: state.events,
-    telemetry,
+    telemetry: compactTelemetry(telemetry),
     finalElements: elements,
     maxQPa: state.maxQPa,
     maxG: state.maxG,
