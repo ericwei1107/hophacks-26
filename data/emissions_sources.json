@@ -1,0 +1,52 @@
+[
+  {
+    "source_id": "barker-marais-mcdowell-2024-global-3d",
+    "citation": "Barker, C.R., Marais, E.A. & McDowell, J.C. (2024), Scientific Data 11, 1079. DOI: 10.1038/s41597-024-03910-z.",
+    "content": "Global hourly 3D launch and re-entry inventory for 2020-2022, including afterburning and ablation profiles. Reports 63 Gg propellant consumed in 2022 and 3,622 re-entering objects across 2020-2022. NetCDF files are model-ready.",
+    "status": "VERIFIED",
+    "source_url": "https://doi.org/10.1038/s41597-024-03910-z",
+    "data_url": "https://rdr.ucl.ac.uk/articles/dataset/Global_3D_rocket_launch_and_re-entry_air_pollutant_and_carbon_dioxide_emissions_for_2020-2022/26325382/1",
+    "data_format": "NetCDF4",
+    "retention": "REQUIRED"
+  },
+  {
+    "source_id": "brown-et-al-2024-worldwide-rocket-emissions",
+    "citation": "Brown, T.F.M. et al. (2024), Earth and Space Science 11, e2024EA003668. DOI: 10.1029/2024EA003668.",
+    "content": "Per-vehicle 3D stratospheric inventory across solid, kerosene, cryogenic, and hypergolic propellants. For 2019 it reports 0.28 Gg black carbon, 0.22 Gg nitrogen oxides, 0.50 Gg reactive chlorine, and 0.91 Gg alumina. Includes contemporary vehicles that did not fly in 2019 for scenario construction.",
+    "status": "VERIFIED",
+    "source_url": "https://doi.org/10.1029/2024EA003668",
+    "data_url": "https://doi.org/10.5281/zenodo.10872533",
+    "data_format": "Tabulated inventory and NetCDF4",
+    "retention": "REQUIRED"
+  },
+  {
+    "source_id": "callsen-et-al-2026-reference-engine-emissions",
+    "citation": "Callsen, S., Herberhold, M., Wilken, J. & Sippel, M. (2026), CEAS Space Journal. DOI: 10.1007/s12567-026-00760-w.",
+    "content": "Nozzle-exit-plane emission indices for a 2,200 kN thrust-class baseline across major propellant families, including staged-combustion and gas-generator cycles. Source of R1.",
+    "status": "VERIFIED",
+    "source_url": "https://doi.org/10.1007/s12567-026-00760-w",
+    "data_url": "https://elib.dlr.de/226591/",
+    "data_format": "Open-access article and reference dataset",
+    "retention": "REQUIRED"
+  },
+  {
+    "source_id": "maloney-et-al-2022-rocket-black-carbon",
+    "citation": "Maloney, C.M., Portmann, R.W., Ross, M.N. & Rosenlof, K.H. (2022), Journal of Geophysical Research: Atmospheres 127(12). DOI: 10.1029/2021JD036373.",
+    "content": "WACCM6 impact modelling of black-carbon emissions from global rocket launches and ozone response. It is an impact-model study, not an emissions inventory.",
+    "status": "VERIFIED",
+    "source_url": "https://doi.org/10.1029/2021JD036373",
+    "data_url": "https://csl.noaa.gov/groups/csl8/modeldata/data/Maloney_etal_2021/",
+    "data_format": "CESM2/WACCM6 model output",
+    "retention": "REQUIRED"
+  },
+  {
+    "source_id": "nasa-tm-20240013276-spaceflight-atmosphere",
+    "citation": "Sharma, R.D. (2024), NASA/TM-20240013276, Impact of Spaceflight on Earth's Atmosphere.",
+    "content": "Assessment of current modelling capability and research gaps for spaceflight impacts on climate, ozone, and the upper atmosphere. Consult before making accuracy claims.",
+    "status": "VERIFIED",
+    "source_url": "https://ntrs.nasa.gov/citations/20240013276",
+    "data_url": "https://ntrs.nasa.gov/api/citations/20240013276/downloads/NASA-TM-20240013276-V6.pdf?attachment=true",
+    "data_format": "NASA technical memorandum PDF",
+    "retention": "REQUIRED"
+  }
+]
