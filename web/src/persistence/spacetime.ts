@@ -15,19 +15,39 @@
  */
 import type { MonteCarloSummary, SpacecraftMission } from "../sim/orbital/types";
 import type { WeatherSnapshot } from "../sim/orbital/weather";
-import {
-  DbConnection,
-  type CreateMissionArgs,
-  type Mission,
-} from "../module_bindings";
+import { DbConnection } from "../module_bindings";
+
+// The generated bindings (module_bindings/index.ts) don't export named row
+// or reducer-arg types — table/reducer shapes are inline object literals —
+// so these are derived structurally from DbConnection itself instead.
+type Reducers = InstanceType<typeof DbConnection>["reducers"];
+type Tables = InstanceType<typeof DbConnection>["db"];
+type CreateMissionArgs = Parameters<Reducers["createMission"]>[0];
+type RowOf<OnInsert> = OnInsert extends (cb: (ctx: infer _Ctx, row: infer Row) => void) => void ? Row : never;
+type Mission = RowOf<Tables["mission"]["onInsert"]>;
 
 const DEFAULT_URI = import.meta.env.VITE_SPACETIMEDB_URI ?? "ws://localhost:3000";
 const DEFAULT_DB_NAME = import.meta.env.VITE_SPACETIMEDB_NAME ?? "apogee-launch-lab";
 
+/**
+ * Every table this client reads. `onInsert`/`onUpdate`/`onDelete` callbacks
+ * only fire for rows covered by an active subscription — without this, a
+ * reducer call still succeeds server-side, but the client never observes
+ * the resulting row and `awaitMissionInsert` below would hang forever.
+ */
+const SUBSCRIBED_TABLES = [
+  "SELECT * FROM mission",
+  "SELECT * FROM weather_snapshot",
+  "SELECT * FROM trajectory_result",
+  "SELECT * FROM emissions_estimate",
+  "SELECT * FROM regulatory_compliance",
+  "SELECT * FROM debris_regulation",
+];
+
 let connection: DbConnection | null = null;
 let connecting: Promise<DbConnection> | null = null;
 
-/** Lazily connects once per session; safe to call repeatedly. */
+/** Lazily connects once per session; safe to call repeatedly. Resolves only once the initial subscription has been applied. */
 export function connectSpacetime(): Promise<DbConnection> {
   if (connection) {
     return Promise.resolve(connection);
@@ -41,7 +61,11 @@ export function connectSpacetime(): Promise<DbConnection> {
       .withDatabaseName(DEFAULT_DB_NAME)
       .onConnect((conn) => {
         connection = conn;
-        resolve(conn);
+        conn
+          .subscriptionBuilder()
+          .onApplied(() => resolve(conn))
+          .onError((ctx) => reject(ctx.event ?? new Error("SpacetimeDB subscription failed")))
+          .subscribe(SUBSCRIBED_TABLES);
       })
       .onConnectError((_ctx, error) => {
         connecting = null;
@@ -151,7 +175,7 @@ export async function syncMissionToSpacetime(snapshot: MissionAnalysisSnapshot):
 export async function syncDebrisRules(): Promise<number | null> {
   try {
     const conn = await connectSpacetime();
-    return await conn.procedures.syncDebrisRules();
+    return await conn.procedures.syncDebrisRules({});
   } catch (error) {
     console.warn("Debris-rule sync skipped:", error instanceof Error ? error.message : error);
     return null;
