@@ -1,8 +1,15 @@
 /// <reference types="vitest/config" />
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
+import glsl from "vite-plugin-glsl";
+import { sites } from "@openai/sites-vite-plugin";
+import { defineConfig, loadEnv } from "vite";
 import { fileURLToPath, URL } from "node:url";
+import presetData from "./src/data/rocket-presets.json";
+import { validateRocketPresets } from "./src/data/rocketPresets";
+
+// Run while Vite loads this configuration: unknown preset settings fail builds.
+validateRocketPresets(presetData);
 
 function xaiTtsDevProxy(xaiApiKey: string | undefined) {
   return {
@@ -38,8 +45,6 @@ function xaiTtsDevProxy(xaiApiKey: string | undefined) {
           }
         })());
       });
-    },
-  };
 }
 
 export default defineConfig(({ mode }) => {

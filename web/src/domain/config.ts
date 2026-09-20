@@ -28,6 +28,21 @@ export interface RocketConfig {
   finSpanM: number;
 }
 
+/** Runtime form of the presettable schema; modelVersion is application-owned. */
+export const ROCKET_CONFIG_PRESET_KEYS = [
+  "payloadDryMassKg",
+  "payloadPropellantKg",
+  "diameterM",
+  "stage1PropellantKg",
+  "stage1EngineCount",
+  "stage1Engine",
+  "stage2PropellantKg",
+  "stage2Engine",
+  "finSpanM",
+] as const satisfies readonly Exclude<keyof RocketConfig, "modelVersion">[];
+
+export type RocketPresetSettingKey = (typeof ROCKET_CONFIG_PRESET_KEYS)[number];
+
 export const CONFIG_RANGES = {
   payloadDryMassKg: { min: 400, max: 16_000, step: 100, unit: "kg" },
   payloadPropellantKg: { min: 100, max: 4_000, step: 100, unit: "kg" },

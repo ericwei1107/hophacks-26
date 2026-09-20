@@ -158,6 +158,30 @@ body {
   gap: 10px;
 }
 
+.preset-picker {
+  border: 1px solid #2a415c;
+  border-radius: 6px;
+  padding: 10px;
+  background: #0b1929;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.preset-heading { display: flex; flex-direction: column; gap: 3px; }
+.preset-heading span, .preset-empty, .preset-preview p { color: var(--dim); margin: 0; line-height: 1.4; }
+.preset-filter { background: var(--ink); color: var(--offwhite); border: 1px solid #2a3a4d; border-radius: 4px; padding: 6px; font: inherit; }
+.preset-list { display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto; }
+.preset-group { display: flex; flex-direction: column; gap: 3px; }
+.preset-group > span { color: var(--dim); font-size: 10px; letter-spacing: .7px; text-transform: uppercase; }
+.preset-group button { text-align: left; padding: 6px 8px; }
+.preset-group small { color: var(--dim); margin-left: 4px; }
+.preset-preview { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; border-top: 1px solid #2a415c; padding-top: 8px; }
+.preset-preview button, .preset-badge button { padding: 5px 8px; font-size: 11px; }
+.preset-badge { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: var(--cyan); font-family: var(--mono); }
+.preset-badge a { color: var(--offwhite); font-family: inherit; font-size: 11px; }
+
 .control {
   display: grid;
   grid-template-columns: 1fr auto;

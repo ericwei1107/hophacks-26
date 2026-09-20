@@ -7,6 +7,7 @@
 import { create } from "zustand";
 
 import { referenceConfig, type RocketConfig } from "../domain/config";
+import { findRocketPreset, type RocketPreset } from "../data/rocketPresets";
 import { deriveRocket, type DerivedRocket } from "../domain/derive";
 import { createEngineCatalog } from "../domain/engines";
 import { MODEL_VERSION } from "../domain/version";
@@ -37,9 +38,20 @@ export function deriveCurrent(config: RocketConfig): DerivedRocket {
   return deriveRocket(config, catalog);
 }
 
+function presetIsDirty(config: RocketConfig, preset: RocketPreset | undefined): boolean {
+  return !!preset && Object.entries(preset.settings).some(([key, value]) => config[key as keyof RocketConfig] !== value);
+}
+
+export function hasUserBuildEdits(config: RocketConfig, activePresetId: string | null, presetDirty: boolean): boolean {
+  if (activePresetId) return presetDirty;
+  return JSON.stringify(config) !== JSON.stringify(referenceConfig());
+}
+
 interface AppStore {
   screen: Screen;
   config: RocketConfig;
+  activePresetId: string | null;
+  presetDirty: boolean;
   derived: DerivedRocket;
   settings: Settings;
   weather: WeatherSnapshot;
@@ -64,6 +76,8 @@ interface AppStore {
   updateConfig: (patch: Partial<RocketConfig>) => void;
   persistBuild: () => void;
   resetToReference: () => void;
+  applyPreset: (preset: RocketPreset) => void;
+  resetToPreset: () => void;
   setSettings: (patch: Partial<Settings>) => void;
   setWeather: (weather: WeatherSnapshot) => void;
   launch: () => Promise<void>;
@@ -111,12 +125,18 @@ function configPatchChanged(prev: RocketConfig, patch: Partial<RocketConfig>): b
 }
 
 export const useAppStore = create<AppStore>((set, get) => {
-  const initialConfig = loadBuild() ?? referenceConfig();
+  const storedConfig = loadBuild() ?? referenceConfig();
+  const queryPreset = typeof window === "undefined" ? undefined : findRocketPreset(new URLSearchParams(window.location.search).get("preset"));
+  const initialConfig = queryPreset
+    ? { ...storedConfig, ...queryPreset.settings, modelVersion: MODEL_VERSION }
+    : storedConfig;
   const initialSummaries = loadRunSummaries();
 
   return {
     screen: "assembly",
     config: initialConfig,
+    activePresetId: queryPreset?.id ?? null,
+    presetDirty: false,
     derived: deriveCurrent(initialConfig),
     settings: loadSettings(),
     weather: referenceSnapshot(),
@@ -144,8 +164,10 @@ export const useAppStore = create<AppStore>((set, get) => {
       }
       const config = { ...prev, ...patch, modelVersion: MODEL_VERSION };
       schedulePersistBuild(config);
+      const preset = findRocketPreset(get().activePresetId);
       set({
         config,
+        presetDirty: presetIsDirty(config, preset),
         derived: deriveCurrent(config),
         analysisStale: isAnalysisStale(config, get().runSummaries[0] ?? null),
       });
@@ -160,6 +182,33 @@ export const useAppStore = create<AppStore>((set, get) => {
       flushPersistBuild(config);
       set({
         config,
+        activePresetId: null,
+        presetDirty: false,
+        derived: deriveCurrent(config),
+        analysisStale: isAnalysisStale(config, get().runSummaries[0] ?? null),
+      });
+    },
+
+    applyPreset: (preset) => {
+      const config = { ...get().config, ...preset.settings, modelVersion: MODEL_VERSION };
+      flushPersistBuild(config);
+      set({
+        config,
+        activePresetId: preset.id,
+        presetDirty: false,
+        derived: deriveCurrent(config),
+        analysisStale: isAnalysisStale(config, get().runSummaries[0] ?? null),
+      });
+    },
+
+    resetToPreset: () => {
+      const preset = findRocketPreset(get().activePresetId);
+      if (!preset) return;
+      const config = { ...get().config, ...preset.settings, modelVersion: MODEL_VERSION };
+      flushPersistBuild(config);
+      set({
+        config,
+        presetDirty: false,
         derived: deriveCurrent(config),
         analysisStale: isAnalysisStale(config, get().runSummaries[0] ?? null),
       });

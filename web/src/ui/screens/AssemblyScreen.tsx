@@ -3,14 +3,15 @@
  */
 
 import { OrbitControls } from "@react-three/drei";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 
 import { SafeCanvas } from "../components/SafeCanvas";
 import { CONFIG_RANGES } from "../../domain/config";
+import { ROCKET_PRESETS, type PresetTier, type RocketPreset } from "../../data/rocketPresets";
 import type { BuildCheck } from "../../domain/derive";
 import type { EngineId } from "../../domain/engines";
-import { useAppStore } from "../store";
+import { hasUserBuildEdits, useAppStore } from "../store";
 import { RocketMesh } from "../components/RocketMesh";
 import { SettingsToggle } from "../components/SettingsToggle";
 import { SpaceWeatherPanel } from "../components/SpaceWeatherPanel";
@@ -115,6 +116,86 @@ function Readout({ label, value, warn }: { label: string; value: string; warn?: 
   );
 }
 
+const TIER_LABELS: Record<PresetTier, string> = {
+  collegiate: "Collegiate",
+  sounding: "Sounding",
+  orbital: "Orbital",
+  historical: "Historical",
+};
+
+function PresetPicker({
+  config,
+  activePresetId,
+  presetDirty,
+  applyPreset,
+  resetToPreset,
+}: {
+  config: ReturnType<typeof useAppStore.getState>["config"];
+  activePresetId: string | null;
+  presetDirty: boolean;
+  applyPreset: (preset: RocketPreset) => void;
+  resetToPreset: () => void;
+}) {
+  const [filter, setFilter] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const activePreset = ROCKET_PRESETS.find((preset) => preset.id === activePresetId);
+  const selectedPreset = ROCKET_PRESETS.find((preset) => preset.id === selectedId);
+  const filtered = useMemo(() => {
+    const query = filter.trim().toLowerCase();
+    return query
+      ? ROCKET_PRESETS.filter((preset) => `${preset.name} ${preset.summary} ${preset.tier}`.toLowerCase().includes(query))
+      : ROCKET_PRESETS;
+  }, [filter]);
+  const changes = selectedPreset
+    ? Object.entries(selectedPreset.settings).filter(([key, value]) => config[key as keyof typeof config] !== value)
+    : [];
+
+  const load = () => {
+    if (!selectedPreset) return;
+    if (changes.length > 0 && hasUserBuildEdits(config, activePresetId, presetDirty) && !window.confirm("Load this rocket and overwrite the listed settings?")) return;
+    applyPreset(selectedPreset);
+  };
+
+  return (
+    <section className="preset-picker" aria-label="Load a rocket">
+      <div className="preset-heading">
+        <strong>Load a rocket</strong>
+        <span>Presets approximate published figures rather than model the real vehicle.</span>
+      </div>
+      {activePreset && (
+        <div className="preset-badge">
+          <span>{activePreset.name}{presetDirty ? " (modified)" : ""}</span>
+          {activePreset.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.label}</a>)}
+          {presetDirty && <button type="button" onClick={resetToPreset}>Reset to preset</button>}
+        </div>
+      )}
+      <input className="preset-filter" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Filter rockets" aria-label="Filter rockets" />
+      {ROCKET_PRESETS.length === 0 ? (
+        <p className="preset-empty">No preset is compatible with this fixed two-stage, fictional-engine model.</p>
+      ) : (
+        <>
+          <div className="preset-list" role="listbox" aria-label="Rocket presets">
+            {(Object.keys(TIER_LABELS) as PresetTier[]).map((tier) => {
+              const presets = filtered.filter((preset) => preset.tier === tier);
+              return presets.length > 0 && <div key={tier} className="preset-group">
+                <span>{TIER_LABELS[tier]}</span>
+                {presets.map((preset) => <button type="button" role="option" aria-selected={selectedId === preset.id} className={selectedId === preset.id ? "active" : ""} key={preset.id} onClick={() => setSelectedId(preset.id)}>
+                  {preset.name} <small>{preset.status}</small>
+                </button>)}
+              </div>;
+            })}
+          </div>
+          {selectedPreset && <div className="preset-preview">
+            <p>{selectedPreset.summary}</p>
+            <p><strong>Will change:</strong> {changes.length ? changes.map(([key]) => key).join(", ") : "no settings"}.</p>
+            <button type="button" onClick={load}>Apply {selectedPreset.name}</button>
+          </div>}
+        </>
+      )}
+    </section>
+  );
+}
+
 export function AssemblyScreen() {
   const {
     config,
@@ -122,6 +203,10 @@ export function AssemblyScreen() {
     updateConfig,
     persistBuild,
     resetToReference,
+    applyPreset,
+    resetToPreset,
+    activePresetId,
+    presetDirty,
     launch,
     flightLoading,
     flightError,
@@ -137,6 +222,10 @@ export function AssemblyScreen() {
       updateConfig: s.updateConfig,
       persistBuild: s.persistBuild,
       resetToReference: s.resetToReference,
+      applyPreset: s.applyPreset,
+      resetToPreset: s.resetToPreset,
+      activePresetId: s.activePresetId,
+      presetDirty: s.presetDirty,
       launch: s.launch,
       flightLoading: s.flightLoading,
       flightError: s.flightError,
@@ -199,6 +288,7 @@ export function AssemblyScreen() {
           </section>
         )}
 
+        <PresetPicker config={config} activePresetId={activePresetId} presetDirty={presetDirty} applyPreset={applyPreset} resetToPreset={resetToPreset} />
         <section className="controls">
           <Slider label="Mission payload (dry)" value={config.payloadDryMassKg} min={CONFIG_RANGES.payloadDryMassKg.min} max={CONFIG_RANGES.payloadDryMassKg.max} step={CONFIG_RANGES.payloadDryMassKg.step} unit="kg" onChange={(v) => updateConfig({ payloadDryMassKg: v })} onCommit={persistBuild} format={(v) => `${(v / 1000).toFixed(1)} t`} hint="More delivered capability, but every kilogram must be accelerated to orbit." suggested={suggestedExperiment?.control === "payloadDryMassKg"} />
           <Slider label="Payload propellant" value={config.payloadPropellantKg} min={CONFIG_RANGES.payloadPropellantKg.min} max={CONFIG_RANGES.payloadPropellantKg.max} step={CONFIG_RANGES.payloadPropellantKg.step} unit="kg" onChange={(v) => updateConfig({ payloadPropellantKg: v })} onCommit={persistBuild} format={(v) => `${(v / 1000).toFixed(1)} t`} hint="Funds circularization and operations after launch, at the cost of ascent mass." suggested={suggestedExperiment?.control === "payloadPropellantKg"} />
