@@ -17,6 +17,13 @@ function fly(overrides: Partial<RocketConfig> = {}): FlightResult {
   });
 }
 
+function telemetryAt(result: FlightResult, timeS: number, values: Float64Array): number {
+  for (let index = 0; index < result.telemetry.sampleCount; index += 1) {
+    if (result.telemetry.tS[index] >= timeS) return values[index];
+  }
+  throw new Error(`Telemetry does not reach T+${timeS}s`);
+}
+
 describe("reference build", () => {
   it("reaches the target corridor, then the Moon", () => {
     const result = fly();
@@ -75,6 +82,25 @@ describe("nearby viable builds (same autopilot)", () => {
 });
 
 describe("failure scenarios", () => {
+  it("the stage-1 engine-count control changes both ascent course and outcome", () => {
+    const nominal = fly();
+    const overpowered = fly({
+      stage1EngineCount: 7,
+      diameterM: 4.0,
+      payloadDryMassKg: 400,
+      payloadPropellantKg: 100,
+      finSpanM: 2.6,
+    });
+
+    // Same fixed autopilot and seed: this is caused by the editable model
+    // control, rather than a change to guidance or random perturbations.
+    expect(overpowered.outcome).toBe("dynamic_pressure_limit");
+    expect(overpowered.outcome).not.toBe(nominal.outcome);
+    expect(overpowered.maxQPa).toBeGreaterThan(nominal.maxQPa);
+    expect(telemetryAt(overpowered, 25, overpowered.telemetry.altitudeKm))
+      .not.toBeCloseTo(telemetryAt(nominal, 25, nominal.telemetry.altitudeKm), 3);
+  });
+
   it("insufficient liftoff thrust stays on the pad", () => {
     const result = fly({ stage1Engine: "sustainer", stage1EngineCount: 1, stage1PropellantKg: 400_000 });
     expect(result.outcome).toBe("insufficient_liftoff_thrust");
