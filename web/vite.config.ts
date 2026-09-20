@@ -45,6 +45,8 @@ function xaiTtsDevProxy(xaiApiKey: string | undefined) {
           }
         })());
       });
+    },
+  };
 }
 
 export default defineConfig(({ mode }) => {
