@@ -5,6 +5,11 @@ from explanations import print_mission_insights
 from insights import print_llm_briefing
 from regulations import evaluate_mission_compliance, get_latest_debris_rules
 from simulate import run_monte_carlo, print_summary
+from db import persist_mission_analysis
+
+# Keep in sync with export_fixtures.py::MODEL_VERSION.
+MODEL_VERSION = "1.0.0"
+MONTE_CARLO_SEED = 42
 
 
 def main():
@@ -34,7 +39,7 @@ def main():
     print_footprint(footprint)
 
     print("\nRunning Monte Carlo analysis...")
-    summary = run_monte_carlo(mission, weather, n=10_000, sensitivity_runs=1_000, seed=42)
+    summary = run_monte_carlo(mission, weather, n=10_000, sensitivity_runs=1_000, seed=MONTE_CARLO_SEED)
     print_summary(summary)
     print_mission_insights(mission, weather, constraints, summary, footprint)
 
@@ -62,6 +67,13 @@ def main():
         mission, weather, constraints, summary, footprint,
         regulatory_result, regulatory_rules,
     )
+
+    print("\nSyncing to shared mission store (SpacetimeDB)...")
+    mission_id = persist_mission_analysis(
+        mission, weather, summary, seed=MONTE_CARLO_SEED, model_version=MODEL_VERSION,
+    )
+    if mission_id is not None:
+        print(f"Stored as mission #{mission_id}.")
 
 
 if __name__ == "__main__":

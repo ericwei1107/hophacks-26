@@ -8,11 +8,19 @@ change the ascent-game's offline-first design (`persistence/storage.ts` +
 `localStorage` stays the source of truth the UI reads from); SpacetimeDB is
 an additive, best-effort sync layer.
 
+**Both the web client and the Python CLI (`main.py`) now write to and read
+from the same store — one source of truth, not two databases.** Python
+connects via SpacetimeDB's built-in PostgreSQL wire protocol for reads
+(`db.py`, using `psycopg`) and via HTTP reducer calls for writes, by
+deliberate choice — see "Python client (db.py)" below for why it isn't
+direct SQL writes both ways.
+
 **Status: built, published to a local instance, and exercised end to end**
-(CLI installed, module published, every reducer/procedure called and its
-output verified with `spacetime sql`, plus a live run through
-`syncMissionToSpacetime` from the actual TypeScript client). Not yet wired
-to a persistent or hosted instance — see "Running it" below.
+from both sides (CLI installed, module published, every reducer/procedure
+called and its output verified with `spacetime sql`, a live run through
+`syncMissionToSpacetime` from the TypeScript client, and a live run through
+`persist_mission_analysis` from Python via the Postgres wire protocol). Not
+yet wired to a persistent or hosted instance — see "Running it" below.
 
 ## Why SpacetimeDB (not Postgres/Supabase/Neon)
 
@@ -42,6 +50,11 @@ web/src/persistence/
   spacetime.ts                Connects, subscribes, calls reducers, never throws into the UI
 web/src/ui/screens/
   DebriefScreen.tsx            Fires syncMissionToSpacetime() after a Monte Carlo run
+
+db.py                        Python client: HTTP reducer calls for writes,
+                              Postgres wire protocol (psycopg) for reads
+main.py                       Calls persist_mission_analysis() after the
+                              CLI's own Monte Carlo run and printout
 ```
 
 ## Data model
@@ -129,11 +142,73 @@ now reflected in `persistence/spacetime.ts`:
   Disabled the flag project-wide in `web/tsconfig.app.json` instead, with
   a comment explaining why — the narrower fix wasn't available.
 
+## Python client (`db.py`)
+
+Reads and writes go through two different paths, and that split isn't
+arbitrary — both were tried the "simple" way first and failed for
+protocol-level reasons specific to this SpacetimeDB version, confirmed
+empirically against a local `spacetime start --pg-port 5432` instance:
+
+- **Writes are HTTP reducer calls**
+  (`POST /v1/database/<name>/call/<reducer>`, a JSON array of positional
+  args in the reducer's declared parameter order — the same thing
+  `spacetime call` does), not direct `INSERT`. Every table Python writes
+  to (`mission`, `weather_snapshot`, `trajectory_result`) has a
+  server-assigned identity or timestamp column, and SpacetimeDB's SQL
+  engine (still marked UNSTABLE) rejects identity/timestamp literals in
+  `INSERT` outright — confirmed by testing plain `INSERT INTO mission
+  VALUES (...)` with an explicit `0x00…00` identity and an ISO timestamp
+  string, both of which fail to parse. Reducers sidestep this because
+  `ctx.sender`/`ctx.timestamp` are assigned server-side. (The one table
+  with no such column, `launch_catalog_entry`, does accept a plain
+  `INSERT` — but nothing in `db.py` writes to it; it's seeded once by the
+  module's own `init` reducer.)
+- **`t.option(...)` reducer arguments need `{"some": value}` / `"none"`
+  on the wire, not a bare nullable value.** `record_weather_snapshot`'s
+  optional weather fields (`kp`, `f107`, …) are Rust-style `Option<T>`
+  sum types under the hood; sending a bare number or `null` fails with
+  `unknown variant, expected \`some\`, \`none\``. `db.py`'s `_option()`
+  helper wraps them correctly.
+- **Reads use `psycopg` against the Postgres wire protocol
+  (`spacetime start --pg-port`)**, which works for plain filtered
+  `SELECT`s but **requires a real auth token** — a syntactically-valid
+  but wrong password is rejected with `Invalid token`, unlike anonymous
+  HTTP reducer calls, which succeed with no `Authorization` header at
+  all. `db.py` looks for `SPACETIMEDB_TOKEN`, falling back to the local
+  `spacetime` CLI's own `~/.config/spacetime/cli.toml` token; without
+  either, `pg_connect()` raises with a clear message and
+  `persist_mission_analysis` degrades to "skipped", never breaking the
+  CLI's own printed analysis.
+- **`psycopg`'s normal parameter binding (`%s` placeholders) doesn't
+  work either** — the wire protocol only implements the simple query
+  protocol, not `Bind`/`Execute`, so binding fails with `ProtocolViolation:
+  This feature is not implemented` (and kills the connection).
+  `pg_connect()` passes `cursor_factory=psycopg.ClientCursor`, which
+  interpolates `%s` placeholders client-side into one plain-text query
+  instead of using the server-side extended protocol.
+
+Verified with a synthetic mission run directly through
+`persist_mission_analysis` (bypassing the CLI's own interactive prompts
+and the NOAA/IGEL network calls, to isolate the SpacetimeDB integration
+itself): all five rows — `mission`, `weather_snapshot`,
+`trajectory_result`, `emissions_estimate`, `regulatory_compliance` — were
+written and linked by the same `mission_id`, with `estimate_emissions`'s
+analog match and payload-share clamp and `evaluate_compliance`'s
+5-year-limit verdict both arithmetically correct against the input.
+
+The persisted emissions/compliance numbers come from the shared store's
+`estimate_emissions`/`evaluate_compliance` reducers (condensed placeholder
+catalog), which may differ slightly from what `main.py` prints from its
+own `estimate_mission_footprint` — same known gap as "What's still a
+placeholder" below, not something this Python integration introduces.
+
 ## Running it
 
-1. `spacetime start` (a local instance was used for verification here;
-   not left running for the repo — no state persists between sessions
-   without `--data-dir` instead of `--in-memory`).
+1. `spacetime start --pg-port 5432` (a local instance was used for
+   verification here; not left running for the repo — no state persists
+   between sessions without `--data-dir` instead of `--in-memory`). The
+   `--pg-port` flag is only needed if the Python side will read via
+   `db.py`/`psycopg`; the web client doesn't use it.
 2. `spacetime publish apogee-launch-lab -p server`
 3. `spacetime generate --lang typescript --out-dir web/src/module_bindings -p server`
    (only needed again after changing `server/src/schema.ts` or the
@@ -142,7 +217,12 @@ now reflected in `persistence/spacetime.ts`:
 4. `npm --prefix web run dev`, with `VITE_SPACETIMEDB_URI` /
    `VITE_SPACETIMEDB_NAME` env vars if not using the defaults
    (`ws://localhost:3000` / `apogee-launch-lab`).
-5. For a persistent/deployed instance instead of local: `spacetime login`,
+5. `spacetime login` once (writes `~/.config/spacetime/cli.toml`, which
+   `db.py` reads for its Postgres auth token), then `pip install -r
+   requirements.txt && python main.py`. Override with `SPACETIMEDB_TOKEN`,
+   `SPACETIMEDB_HTTP_URL`, `SPACETIMEDB_NAME`, `SPACETIMEDB_PG_HOST`, or
+   `SPACETIMEDB_PG_PORT` env vars if not using the local defaults.
+6. For a persistent/deployed instance instead of local: `spacetime login`,
    then `spacetime publish apogee-launch-lab -p server -s maincloud` (or
    self-host `spacetime start` with `--data-dir` on a real server).
 
