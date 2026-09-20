@@ -1,6 +1,6 @@
 #include <common>
 #include <logdepthbuf_pars_fragment>
-#include "/lygia/generative/snoise.glsl"
+#include /lygia/generative/snoise.glsl
 
 uniform vec3 uSunDirection;
 

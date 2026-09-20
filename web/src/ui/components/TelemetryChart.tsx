@@ -71,11 +71,11 @@ export function TelemetryChart({
     const yOf = (v: number) => height - ((v - min) / (max - min)) * height;
 
     // Background.
-    ctx.fillStyle = "#0d1a2b";
+    ctx.fillStyle = "#0d1117";
     ctx.fillRect(0, 0, width, height);
 
     // Event markers.
-    ctx.strokeStyle = "rgba(99, 221, 235, 0.25)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.09)";
     ctx.lineWidth = 1;
     for (const e of events) {
       ctx.beginPath();
@@ -108,7 +108,7 @@ export function TelemetryChart({
 
     // Hover cursor.
     if (hoverTimeS !== null) {
-      ctx.strokeStyle = "rgba(232, 228, 218, 0.5)";
+      ctx.strokeStyle = "rgba(255, 155, 84, 0.55)";
       ctx.beginPath();
       ctx.moveTo(xOf(hoverTimeS), 0);
       ctx.lineTo(xOf(hoverTimeS), height);
@@ -116,7 +116,7 @@ export function TelemetryChart({
     }
 
     // Labels.
-    ctx.fillStyle = "#8a97a8";
+    ctx.fillStyle = "#8b96a5";
     ctx.font = "10px monospace";
     ctx.fillText(`${channel.label} (${channel.unit})`, 6, 12);
     ctx.fillText(max.toFixed(1), 6, 24);

@@ -12,3 +12,6 @@ test-results/
 .env
 .gstack/
 .cache/
+
+# Editor and OS noise.
+.cursor/

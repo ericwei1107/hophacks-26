@@ -425,7 +425,7 @@ export function DebriefScreen() {
         <button onClick={runSensitivity} disabled={analysisProgress !== null}>
           Parameter sensitivity
         </button>
-        <button onClick={() => downloadText(`apogee-run-${flight.seed}.json`, buildRunReport(flight))}>
+        <button onClick={() => downloadText(`zenith-run-${flight.seed}.json`, buildRunReport(flight))}>
           Download report (JSON)
         </button>
         <button

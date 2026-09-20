@@ -9,7 +9,7 @@
  * and nothing else.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 
 import { IGNITION_HOLD_S, PlaybackController } from "../../playback/PlaybackController";
@@ -58,7 +58,43 @@ const TIMELINE_LABELS: Record<string, string> = {
   failed: "FAIL",
 };
 
+/**
+ * Minimum gap between two timeline labels, as a percentage of the track.
+ * Staging events land within seconds of each other on a flight that lasts
+ * minutes, so without this their labels print on top of one another.
+ */
+const MIN_LABEL_GAP_PCT = 6;
+
 const TOAST_MS = 3200;
+
+/**
+ * Which events get a printed label: the first of any cluster, and never the
+ * same word twice (orbit cutoff and orbit achieved share an instant). Every
+ * event still gets its tick mark and its hover title.
+ */
+function labelledEventIndices(events: { t: number; id: string }[], duration: number): Set<number> {
+  if (duration <= 0) {
+    return new Set();
+  }
+  const order = events
+    .map((event, index) => ({ index, t: event.t, label: TIMELINE_LABELS[event.id] }))
+    .filter((entry) => entry.label !== undefined)
+    .sort((a, b) => a.t - b.t);
+
+  const kept = new Set<number>();
+  const seen = new Set<string>();
+  let lastPct = -Infinity;
+  for (const entry of order) {
+    const pct = (entry.t / duration) * 100;
+    if (seen.has(entry.label!) || pct - lastPct < MIN_LABEL_GAP_PCT) {
+      continue;
+    }
+    kept.add(entry.index);
+    seen.add(entry.label!);
+    lastPct = pct;
+  }
+  return kept;
+}
 
 function formatTime(s: number): string {
   const neg = s < 0;
@@ -284,6 +320,11 @@ export function FlightScreen() {
     [applyZoom],
   );
 
+  const labelled = useMemo(
+    () => labelledEventIndices(flight?.events ?? [], flight?.totalTimeS ?? 0),
+    [flight],
+  );
+
   if (!flight) {
     return (
       <div className="screen flight">
@@ -358,7 +399,7 @@ export function FlightScreen() {
                 style={{ left: `${(e.t / duration) * 100}%` }}
                 title={`${e.id} @ ${formatTime(e.t)}`}
               >
-                {TIMELINE_LABELS[e.id] && <span className="timeline-label">{TIMELINE_LABELS[e.id]}</span>}
+                {labelled.has(i) && <span className="timeline-label">{TIMELINE_LABELS[e.id]}</span>}
               </div>
             ))}
             <div className="timeline-progress" style={{ width: `${progressFraction * 100}%` }} />
