@@ -3,7 +3,7 @@ using UnityEngine;
 namespace Apogee.RocketRenderer
 {
     /// <summary>
-    /// The Earth, its atmosphere shell and the stars.
+    /// The Earth, its atmosphere shell, the stars and the launch site.
     ///
     /// Mesh convention, stated once and relied on everywhere: local +Y is the
     /// north pole, and longitude 0 on the equator lies on local +X. The sim
@@ -12,9 +12,11 @@ namespace Apogee.RocketRenderer
     /// the corrective rotation below is where to fix it if the mesh is ever
     /// swapped for an imported globe with a different convention.
     ///
-    /// Everything here is drawn by the far camera. The near camera never sees
-    /// it, which is what keeps a 6371 km sphere from destroying depth
-    /// precision around a 60 m rocket.
+    /// The globe is painted from code (ellipse continents with organic edges,
+    /// textured with noise) and lit by the scene's sun, so it has a day side
+    /// and a terminator. Everything here is drawn by the far camera except
+    /// the launch site, which sits next to the vehicle and is drawn by the
+    /// near camera.
     /// </summary>
     public class EarthView : MonoBehaviour
     {
@@ -26,26 +28,33 @@ namespace Apogee.RocketRenderer
         /// </summary>
         private static readonly Quaternion MeshCorrection = Quaternion.identity;
 
-        /// <summary>Stars appear from here and the sky is black by the top value.</summary>
-        private const float StarFadeStartM = 35_000f;
-        private const float SkyBlackM = 110_000f;
+        /// <summary>
+        /// Where longitude 0 falls on the sphere primitive's U axis. The launch
+        /// site is painted as a coast at longitude 0; if the pad does not sit on
+        /// that coast at T+0 with the sea to the east, adjust this (or mirror U).
+        /// </summary>
+        private const float AlbedoLongitudeOffsetU = 0.5f;
 
-        /// <summary>Distance haze at sea level, and the height it thins over.</summary>
-        private const float GroundFogDensity = 0.00022f;
-        private const float HazeScaleHeightM = 8_500f;
+        /// <summary>Stars appear from here and the sky is black by the top value.</summary>
+        private const float StarFadeStartM = 18_000f;
+        private const float SkyBlackM = 70_000f;
 
         private Transform globe;
         private Transform atmosphere;
-        private Transform ground;
         private Material atmosphereMaterial;
-        private Material groundMaterial;
         private ParticleSystem stars;
+
+        /// <summary>The pad and its surroundings, or null before BuildLaunchSite.</summary>
+        public LaunchSiteView Site { get; private set; }
 
         public void Build(Transform starParent)
         {
-            globe = BuildSphere("Globe", EarthRadiusM, new Color(0.09f, 0.35f, 0.55f), false);
+            globe = BuildSphere("Globe", EarthRadiusM, Color.white, false);
             globe.SetParent(transform, false);
             globe.localRotation = MeshCorrection;
+            Material globeMaterial = globe.GetComponent<MeshRenderer>().sharedMaterial;
+            globeMaterial.mainTexture = BuildAlbedo();
+            globeMaterial.mainTextureOffset = new Vector2(AlbedoLongitudeOffsetU - 0.5f, 0f);
 
             atmosphere = BuildSphere(
                 "Atmosphere",
@@ -59,45 +68,16 @@ namespace Apogee.RocketRenderer
         }
 
         /// <summary>
-        /// A flat disc under the pad, tangent to the Earth. A 6371 km sphere is
-        /// far too coarse to stand a 60 m rocket on, so close to the ground this
-        /// is what the vehicle sits on; it fades out as the curve starts to show.
+        /// The launch site lives under `parent` (the world root, not the Earth),
+        /// because it is placed rocket-relative each frame — see LaunchSiteView.
         /// </summary>
-        public void BuildGroundDisc(Transform parent)
+        public LaunchSiteView BuildLaunchSite(Transform parent)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            go.name = "GroundDisc";
-            Destroy(go.GetComponent<Collider>());
+            var go = new GameObject("LaunchSite");
             go.transform.SetParent(parent, false);
-            go.transform.localScale = new Vector3(4000f, 0.5f, 4000f);
-            var renderer = go.GetComponent<MeshRenderer>();
-            groundMaterial = NewMaterial(new Color(0.08f, 0.45f, 0.66f), false);
-            renderer.sharedMaterial = groundMaterial;
-            ground = go.transform;
-        }
-
-        /// <summary>
-        /// Whether distance haze is configured. The fog itself is switched on
-        /// and off per camera by <see cref="CameraDirector"/>, because Unity's
-        /// fog is a global setting and the far camera must never see it: it
-        /// draws the Earth from 6371 km away, and any density that reads as air
-        /// over a few kilometres is completely opaque over a few thousand.
-        /// </summary>
-        public static bool HazeEnabled { get; private set; }
-
-        /// <summary>
-        /// Configure distance haze for the near camera. Density falls off with
-        /// the same scale height the atmosphere itself uses, so the pad sits in
-        /// visible air and orbit is perfectly clear, with everything in between
-        /// thinning out on its own.
-        /// </summary>
-        public static void EnableHaze()
-        {
-            RenderSettings.fog = false; // the director turns it on per camera
-            RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogColor = SkyColor(0f);
-            RenderSettings.fogDensity = GroundFogDensity;
-            HazeEnabled = true;
+            Site = go.AddComponent<LaunchSiteView>();
+            Site.Build();
+            return Site;
         }
 
         /// <summary>Place the globe and fade the sky, from one frame.</summary>
@@ -108,35 +88,16 @@ namespace Apogee.RocketRenderer
 
             float altitude = Mathf.Max(0f, frame.altitude);
 
-            if (HazeEnabled)
+            if (Site != null)
             {
-                // Air thins exponentially, and so does what it does to the view.
-                RenderSettings.fogDensity = GroundFogDensity * Mathf.Exp(-altitude / HazeScaleHeightM);
-                // Haze is lit sky, so it has to track the sky's own colour or it
-                // reads as grey smoke hanging in front of a black background.
-                RenderSettings.fogColor = SkyColor(altitude);
-            }
-
-            if (ground != null)
-            {
-                // The disc sits on the surface: the frame's origin is the center
-                // of mass, so the ground is that much further down than altitude.
-                ground.localPosition = new Vector3(0f, -(altitude + frame.comFromBase), 0f);
-                float fade = 1f - Mathf.Clamp01((altitude - 2_000f) / 30_000f);
-                ground.gameObject.SetActive(fade > 0.01f);
-                if (groundMaterial != null)
-                {
-                    Color color = groundMaterial.color;
-                    color.a = fade;
-                    groundMaterial.color = color;
-                }
+                Site.Apply(frame);
             }
 
             if (stars != null)
             {
                 float starAlpha = Mathf.Clamp01((altitude - StarFadeStartM) / (SkyBlackM - StarFadeStartM));
                 var main = stars.main;
-                main.startColor = new Color(1f, 1f, 1f, starAlpha);
+                main.startColor = new Color(1f, 1f, 1f, starAlpha * starAlpha);
                 stars.gameObject.SetActive(starAlpha > 0.01f);
             }
 
@@ -153,8 +114,10 @@ namespace Apogee.RocketRenderer
         /// <summary>Sky colour for the far camera's background, by altitude.</summary>
         public static Color SkyColor(float altitudeM)
         {
-            float mix = 1f - Mathf.Clamp01(altitudeM / SkyBlackM);
-            return new Color(0.22f * mix, 0.38f * mix, 0.58f * mix, 1f);
+            float mix = 1f - Mathf.Clamp01((altitudeM - 8_000f) / (SkyBlackM - 8_000f));
+            // Darkens from the zenith first, the way it really does.
+            float zenithDark = 1f - 0.6f * Mathf.Clamp01((altitudeM - 3_000f) / 29_000f);
+            return new Color(0.22f * mix * zenithDark, 0.38f * mix * zenithDark, 0.62f * mix, 1f);
         }
 
         private static Transform BuildSphere(string name, float radius, Color color, bool inward)
@@ -169,12 +132,8 @@ namespace Apogee.RocketRenderer
 
         private static Material NewMaterial(Color color, bool transparent)
         {
-            Material material = Shaders.Create(
-                color, "Universal Render Pipeline/Lit", "Standard");
-            if (material == null)
-            {
-                return null;
-            }
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            var material = new Material(shader) { color = color };
             if (transparent)
             {
                 material.SetFloat("_Surface", 1f); // URP: transparent
@@ -182,6 +141,146 @@ namespace Apogee.RocketRenderer
                 material.renderQueue = 3000;
             }
             return material;
+        }
+
+        // -- the globe's albedo ------------------------------------------------
+
+        private static void FillEllipseDeg(Color32[] px, int w, int h, float lon, float lat, float wDeg, float hDeg, Color32 color)
+        {
+            float cx = ((lon + 180f) / 360f) * w;
+            float cy = ((lat + 90f) / 180f) * h;
+            float rx = (wDeg / 360f) * w;
+            float ry = (hDeg / 180f) * h;
+            for (int pass = 0; pass < 2; pass++)
+            {
+                // Second pass wraps across the dateline.
+                float x0 = pass == 0 ? cx : (cx < w * 0.5f ? cx + w : cx - w);
+                int xs = Mathf.Max(0, Mathf.FloorToInt(x0 - rx));
+                int xe = Mathf.Min(w - 1, Mathf.CeilToInt(x0 + rx));
+                int ys = Mathf.Max(0, Mathf.FloorToInt(cy - ry));
+                int ye = Mathf.Min(h - 1, Mathf.CeilToInt(cy + ry));
+                for (int y = ys; y <= ye; y++)
+                {
+                    float dy = (y - cy) / ry;
+                    for (int x = xs; x <= xe; x++)
+                    {
+                        float dx = (x - x0) / rx;
+                        if (dx * dx + dy * dy <= 1f)
+                        {
+                            px[y * w + x] = color;
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>An ellipse with an organic edge: the body plus jittered lobes around its rim.</summary>
+        private static void Landmass(Color32[] px, int w, int h, System.Random rng, float lon, float lat, float wDeg, float hDeg, Color32 color)
+        {
+            FillEllipseDeg(px, w, h, lon, lat, wDeg, hDeg, color);
+            for (int i = 0; i < 18; i++)
+            {
+                float a = (i / 18f) * Mathf.PI * 2f + (float)rng.NextDouble() * 0.3f;
+                float lobeLon = lon + Mathf.Cos(a) * wDeg * (0.85f + (float)rng.NextDouble() * 0.25f);
+                float lobeLat = lat + Mathf.Sin(a) * hDeg * (0.85f + (float)rng.NextDouble() * 0.25f);
+                FillEllipseDeg(px, w, h, lobeLon, lobeLat, wDeg * (0.12f + (float)rng.NextDouble() * 0.2f), hDeg * (0.12f + (float)rng.NextDouble() * 0.2f), color);
+            }
+        }
+
+        private static Texture2D BuildAlbedo()
+        {
+            const int w = 1024;
+            const int h = 512;
+            var px = new Color32[w * h];
+            var rng = new System.Random(1969);
+
+            // Ocean, lighter toward the poles.
+            for (int y = 0; y < h; y++)
+            {
+                float lat = Mathf.Abs(y / (float)h - 0.5f) * 2f;
+                Color32 ocean = Color32.Lerp(new Color32(13, 74, 124, 255), new Color32(93, 143, 179, 255), Mathf.Pow(lat, 3f));
+                for (int x = 0; x < w; x++)
+                {
+                    px[y * w + x] = ocean;
+                }
+            }
+
+            var shelf = new Color32(31, 122, 168, 255);
+            var land = new Color32(79, 122, 58, 255);
+            var desert = new Color32(194, 163, 107, 255);
+            var highland = new Color32(111, 106, 82, 255);
+            var forest = new Color32(47, 90, 42, 255);
+            var ice = new Color32(233, 239, 243, 255);
+
+            Landmass(px, w, h, rng, -100f, 45f, 56f, 30f, shelf);
+            Landmass(px, w, h, rng, -58f, -12f, 25f, 32f, shelf);
+            Landmass(px, w, h, rng, 22f, 8f, 29f, 36f, shelf);
+            Landmass(px, w, h, rng, 75f, 50f, 78f, 30f, shelf);
+            Landmass(px, w, h, rng, 135f, -25f, 25f, 16f, shelf);
+
+            Landmass(px, w, h, rng, -100f, 45f, 50f, 26f, land); // N America
+            Landmass(px, w, h, rng, -58f, -12f, 20f, 28f, land); // S America
+            Landmass(px, w, h, rng, 22f, 8f, 24f, 32f, land);    // Africa
+            Landmass(px, w, h, rng, 75f, 50f, 72f, 26f, land);   // Eurasia
+            Landmass(px, w, h, rng, 135f, -25f, 20f, 12f, land); // Australia
+            Landmass(px, w, h, rng, -42f, 72f, 12f, 8f, land);   // Greenland
+
+            Landmass(px, w, h, rng, 25f, 22f, 16f, 9f, desert);  // Sahara
+            Landmass(px, w, h, rng, -108f, 38f, 12f, 6f, desert);
+            Landmass(px, w, h, rng, 45f, 24f, 10f, 6f, desert);
+            Landmass(px, w, h, rng, 132f, -26f, 12f, 7f, desert);
+            Landmass(px, w, h, rng, 88f, 32f, 16f, 5f, highland);
+            Landmass(px, w, h, rng, -70f, -20f, 4f, 14f, highland);
+            Landmass(px, w, h, rng, -62f, -5f, 14f, 8f, forest);
+            Landmass(px, w, h, rng, 20f, 0f, 12f, 7f, forest);
+            Landmass(px, w, h, rng, 100f, 60f, 60f, 10f, forest);
+
+            // The launch coast: the pad (lon 0, lat 0) on land, sea to the east.
+            FillEllipseDeg(px, w, h, -6f, 3f, 9f, 8f, land);
+            FillEllipseDeg(px, w, h, 8.4f, -3f, 9f, 8f, new Color32(15, 77, 128, 255));
+            FillEllipseDeg(px, w, h, 6f, -2.5f, 6f, 5f, shelf);
+
+            // Ice caps with ragged edges.
+            for (int y = 0; y < h; y++)
+            {
+                if (y < h * 0.07f || y > h * 0.93f)
+                {
+                    for (int x = 0; x < w; x++)
+                    {
+                        px[y * w + x] = ice;
+                    }
+                }
+            }
+            for (int i = 0; i < 60; i++)
+            {
+                float lon = (float)rng.NextDouble() * 360f - 180f;
+                FillEllipseDeg(px, w, h, lon, 78f + (float)rng.NextDouble() * 6f, 6f + (float)rng.NextDouble() * 10f, 2f + (float)rng.NextDouble() * 3f, ice);
+                FillEllipseDeg(px, w, h, lon, -(78f + (float)rng.NextDouble() * 6f), 6f + (float)rng.NextDouble() * 10f, 2f + (float)rng.NextDouble() * 3f, ice);
+            }
+
+            // Noise so nothing is a flat sheet of colour.
+            Texture2D noise = ProceduralMeshes.NoiseTexture(256, 5);
+            Color32[] n = noise.GetPixels32();
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float fine = n[(y % 256) * 256 + (x % 256)].r / 255f;
+                    float coarse = n[((y / 4) % 256) * 256 + ((x / 4) % 256)].r / 255f;
+                    float k = (0.8f + 0.4f * fine) * (0.88f + 0.24f * coarse);
+                    Color32 c = px[y * w + x];
+                    px[y * w + x] = new Color32(
+                        (byte)Mathf.Clamp(Mathf.RoundToInt(c.r * k), 0, 255),
+                        (byte)Mathf.Clamp(Mathf.RoundToInt(c.g * k), 0, 255),
+                        (byte)Mathf.Clamp(Mathf.RoundToInt(c.b * k), 0, 255),
+                        255);
+                }
+            }
+
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Repeat };
+            tex.SetPixels32(px);
+            tex.Apply(true);
+            return tex;
         }
 
         /// <summary>
@@ -220,15 +319,10 @@ namespace Apogee.RocketRenderer
 
         internal static Material UnlitAdditive(Color color)
         {
-            Material material = Shaders.Create(
-                color,
-                "Universal Render Pipeline/Particles/Unlit",
-                "Particles/Standard Unlit",
-                "Sprites/Default");
-            if (material == null)
-            {
-                return null;
-            }
+            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit")
+                ?? Shader.Find("Particles/Standard Unlit")
+                ?? Shader.Find("Sprites/Default");
+            var material = new Material(shader) { color = color };
             if (material.HasProperty("_Blend"))
             {
                 material.SetFloat("_Blend", 1f); // additive

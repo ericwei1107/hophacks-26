@@ -29,13 +29,14 @@ Exactly this shape, no extra sections:
 3) Launch CO2e / analog vehicle, one sentence.
 4) Two concrete design moves inside the given bounds.
 5) One limitation of the model.
-6) Mention the regulatory screening result if it is not compliant.
+6) Mention SATCAT crowding (cam_scale / obstacle) in one clause, and the regulatory result if it is not compliant.
 
 Hard cap: 110 words. No bullets nested more than one level. No preamble.
 """
 
 SYSTEM_PROMPT = """Pitch closer for a LEO mission Monte Carlo. Be numeric and spoken-word short.
-Drag matters at 400 km, not 600 km. Disposal and collision avoidance still cost delta-v at 600 km.
+Drag matters at 400 km, not 600 km. Disposal still costs delta-v at 600 km.
+Collision-avoidance Δv uses SATCAT shell crowding (cam_scale vs 400 km), not a 750 km Gaussian and not operational Pc.
 Insertion inclination error is expensive. Fuel/Isp change margin, not drag.
 Emissions are IGEL 2024 analog-launch shares. Stay inside design bounds. Do not invent data.
 Regulatory records are context, not legal advice. Do not claim a Federal Register summary itself proves compliance.
@@ -113,6 +114,7 @@ def build_analysis_brief(
     footprint: MissionFootprint | None = None,
     regulatory_result: dict | None = None,
     regulatory_rules: list[dict] | None = None,
+    debris: dict | None = None,
 ) -> dict:
     baseline = summary.baseline
     total = max(summary.total_runs, 1)
@@ -141,6 +143,18 @@ def build_analysis_brief(
     if regulatory_result is not None:
         brief["regulatory"] = regulatory_result
         brief["regulatory_prompt"] = format_for_grok(regulatory_result, regulatory_rules or [])
+    if debris is not None:
+        counts = debris.get("counts") or {}
+        brief["crowding"] = {
+            "cam_scale": debris.get("cam_scale"),
+            "obstacle": debris.get("obstacle"),
+            "total": counts.get("total"),
+            "payload": counts.get("payload"),
+            "rocket_body": counts.get("rocket_body"),
+            "debris": counts.get("debris"),
+            "source": debris.get("source"),
+            "note": "SATCAT shell count, not Pc",
+        }
     return brief
 
 

@@ -107,11 +107,10 @@ def test_decay_never_produces_negative_altitude(reference_weather):
 # ---------------------------------------------------------------------------
 
 def test_propellant_consumed_exceeds_minimum_when_extra_fuel_loaded(passing_mission, reference_weather):
-    # Before: remaining = fuel - minimum_required = 165.7318091773912 kg.
-    # After: remaining = fuel - actual_consumed = 158.4902439466122 kg.
+    # Extra loaded fuel makes actual consumption exceed the minimum starting load.
     result = s.simulate(passing_mission, reference_weather)
-    assert result.propellant_required == pytest.approx(34.26819082260879)  # preserved formula
-    assert result.propellant_consumed == pytest.approx(41.50975605338781)
+    assert result.propellant_required == pytest.approx(40.14754290262784)
+    assert result.propellant_consumed == pytest.approx(48.26967583470244)
     assert result.propellant_consumed > result.propellant_required
     assert result.propellant_remaining == pytest.approx(
         passing_mission.fuel - result.propellant_consumed
@@ -129,10 +128,9 @@ def test_consumption_matches_minimum_when_tanks_hold_exactly_the_minimum(referen
 
 
 def test_reserve_check_uses_corrected_remaining(reference_weather):
-    # fuel=56 kg at 420 km: minimum accounting leaves 5.787 kg (passes the
-    # 5.6 kg reserve), corrected accounting leaves 5.424 kg (fails). Only the
-    # corrected check flags this mission.
-    mission = make_mission(fuel=56.0, target_altitude=420.0)
+    # fuel=64.8 kg at 420 km: minimum accounting still clears the 10% reserve,
+    # actual consumption does not.
+    mission = make_mission(fuel=64.8, target_altitude=420.0)
     result = s.simulate(mission, reference_weather)
     uncorrected_remaining = mission.fuel - result.propellant_required
     reserve = mission.fuel * s.PROPULSION_RESERVE_FRACTION

@@ -3,13 +3,14 @@
   python -m uvicorn api:app --reload --port 8000
 
 The browser still flies the rocket. These endpoints own live NOAA weather and
-post-insertion analysis (operations, Monte Carlo, emissions, debris screening).
+post-insertion analysis (operations, Monte Carlo, emissions, SATCAT crowding).
 """
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from debris import crowding_census
 from environment import SpaceWeather
 from payload_analysis import (
     PayloadHandoff,
@@ -79,6 +80,15 @@ def weather() -> dict:
         return weather_snapshot_from_noaa()
     except Exception as error:
         raise HTTPException(status_code=502, detail=f"NOAA unavailable: {error}") from error
+
+
+@app.get("/api/satcat")
+def satcat(altitude_km: float = 400.0, refresh: bool = False, seed: int | None = None) -> dict:
+    """Shell census only — never the full catalog."""
+    try:
+        return crowding_census(altitude_km, force_refresh=refresh, seed=seed)
+    except Exception as error:
+        raise HTTPException(status_code=502, detail=f"SATCAT unavailable: {error}") from error
 
 
 @app.post("/api/analyze")

@@ -7,6 +7,8 @@ as explicit, reviewable changes.
 
 import math
 
+from dataclasses import replace
+
 import pytest
 
 import simulate as s
@@ -56,19 +58,31 @@ def test_delta_v_available_handles_invalid():
 # Full-mission outcomes (preserved behavior)
 # ---------------------------------------------------------------------------
 
+def test_cam_delta_v_does_not_peak_at_750(passing_mission):
+    """Avoidance fuel is crowding-scaled, not a 750 km Gaussian."""
+    low = replace(passing_mission, target_altitude=500.0)
+    high = replace(passing_mission, target_altitude=800.0)
+    assert s.estimate_collision_avoidance_delta_v(low) == pytest.approx(
+        s.estimate_collision_avoidance_delta_v(high)
+    )
+    crowded = s.estimate_collision_avoidance_delta_v(passing_mission, cam_scale=2.0)
+    quiet = s.estimate_collision_avoidance_delta_v(passing_mission, cam_scale=0.4)
+    assert crowded > quiet
+
+
 def test_passing_mission(passing_mission, reference_weather):
     result = s.simulate(passing_mission, reference_weather)
     assert result.passed
     assert result.failure_reasons == []
     assert result.available_delta_v == pytest.approx(753.4091533811649)
-    assert result.required_delta_v == pytest.approx(142.39546589561252)
+    assert result.required_delta_v == pytest.approx(166.19925523374513)
     assert result.drag_delta_v == pytest.approx(22.684663593874273)
-    assert result.collision_avoidance_delta_v == pytest.approx(19.522431446119445)
+    assert result.collision_avoidance_delta_v == pytest.approx(43.32622078425206)
     assert result.insertion_delta_v == pytest.approx(0.0)
     assert result.disposal_delta_v == pytest.approx(100.18837085561881)
-    assert result.propellant_required == pytest.approx(34.26819082260879)
-    assert result.propellant_consumed == pytest.approx(41.50975605338781)
-    assert result.propellant_remaining == pytest.approx(158.4902439466122)
+    assert result.propellant_required == pytest.approx(40.14754290262784)
+    assert result.propellant_consumed == pytest.approx(48.26967583470244)
+    assert result.propellant_remaining == pytest.approx(151.73032416529756)
     assert result.final_altitude == pytest.approx(500.0)
     assert result.orbital_decay == pytest.approx(0.0)
 
@@ -77,9 +91,9 @@ def test_marginal_mission(marginal_mission, reference_weather):
     result = s.simulate(marginal_mission, reference_weather)
     assert result.passed
     assert result.available_delta_v == pytest.approx(368.22934075497085)
-    assert result.required_delta_v == pytest.approx(226.696511333117)
-    assert result.propellant_consumed == pytest.approx(75.64463910579543)
-    assert result.propellant_remaining == pytest.approx(44.355360894204566)
+    assert result.required_delta_v == pytest.approx(272.2304794378202)
+    assert result.propellant_consumed == pytest.approx(90.14812888038499)
+    assert result.propellant_remaining == pytest.approx(29.851871119615012)
 
 
 def test_failing_mission(failing_mission, reference_weather):
@@ -92,7 +106,7 @@ def test_failing_mission(failing_mission, reference_weather):
         "orbital_decay",
     ]
     assert result.available_delta_v == pytest.approx(125.71301332787723)
-    assert result.required_delta_v == pytest.approx(562.8078131413511)
+    assert result.required_delta_v == pytest.approx(666.2439111695292)
 
 
 def test_failing_mission_stays_above_surface(failing_mission, reference_weather):

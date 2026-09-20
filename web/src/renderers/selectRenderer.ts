@@ -31,6 +31,7 @@ export interface SelectRendererOptions {
   container: HTMLElement;
   flight: SerializableFlightResult;
   lowEffects: boolean;
+  reducedMotion?: boolean;
   cameraMode: RendererCameraMode;
   zoom: number;
   preference?: RendererPreference;
@@ -65,6 +66,7 @@ export async function selectRenderer(options: SelectRendererOptions): Promise<Re
     const renderer = new ThreeLaunchRenderer({
       flight: options.flight,
       lowEffects: options.lowEffects,
+      reducedMotion: options.reducedMotion ?? false,
       cameraMode: options.cameraMode,
       zoom: options.zoom,
     });

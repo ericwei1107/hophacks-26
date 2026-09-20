@@ -20,9 +20,9 @@
         "propellant_remaining": 165.7318091773912
       },
       "after": {
-        "propellant_required": 34.26819082260879,
-        "propellant_consumed": 41.50975605338781,
-        "propellant_remaining": 158.4902439466122
+        "propellant_required": 40.14754290262784,
+        "propellant_consumed": 48.26967583470244,
+        "propellant_remaining": 151.73032416529756
       }
     },
     "decay_stops_at_reentry_boundary": {

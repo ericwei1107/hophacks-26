@@ -173,7 +173,12 @@ def create_stressed_weather(weather: SpaceWeather, rng: random.Random) -> SpaceW
         solar_wind_temperature = _clip_weather_value("solar_wind_temperature", perturb(weather.solar_wind_temperature, *WEATHER_STRESS_RANGES["solar_wind_temperature"], rng))
     )
 
-def create_stressed_ops(rng: random.Random) -> OperationalDraw:
+CAM_SCALE_MIN = 0.4
+CAM_SCALE_MAX = 2.5
+CAM_JITTER_SIGMA = 0.08
+
+
+def create_stressed_ops(rng: random.Random, cam_scale_mean: float = 1.0) -> OperationalDraw:
     if rng.random() < BAD_LAUNCH_PROBABILITY:
         inclination_error = rng.gauss(0.0, 1.15)
     else:
@@ -182,16 +187,21 @@ def create_stressed_ops(rng: random.Random) -> OperationalDraw:
     return OperationalDraw(
         insertion_altitude_error_km = clip(rng.gauss(0.0, INSERTION_ALTITUDE_SIGMA_KM), -40.0, 40.0),
         insertion_inclination_error_deg = clip(inclination_error, -2.4, 2.4),
-        cam_scale = clip(rng.gauss(1.0, 0.28), 0.45, 2.3)
+        cam_scale = clip(rng.gauss(cam_scale_mean, CAM_JITTER_SIGMA), CAM_SCALE_MIN, CAM_SCALE_MAX)
     )
 
-def perturb_ops_parameter(ops: OperationalDraw, parameter: str, rng: random.Random) -> OperationalDraw:
+def perturb_ops_parameter(
+    ops: OperationalDraw,
+    parameter: str,
+    rng: random.Random,
+    cam_scale_mean: float = 1.0,
+) -> OperationalDraw:
     if parameter == "insertion_altitude_error_km":
         return replace(ops, insertion_altitude_error_km = clip(rng.gauss(0.0, INSERTION_ALTITUDE_SIGMA_KM), -40.0, 40.0))
     if parameter == "insertion_inclination_error_deg":
         return replace(ops, insertion_inclination_error_deg = clip(rng.gauss(0.0, INSERTION_INCLINATION_SIGMA_DEG), -2.4, 2.4))
     if parameter == "debris_environment":
-        return replace(ops, cam_scale = clip(rng.gauss(1.0, 0.35), 0.45, 2.3))
+        return replace(ops, cam_scale = clip(rng.gauss(cam_scale_mean, 0.12), CAM_SCALE_MIN, CAM_SCALE_MAX))
     return ops
 
 def orbital_velocity(altitude_km: float) -> float:
@@ -431,12 +441,56 @@ def estimate_disposal_delta_v(altitude_km: float) -> float:
     return max(0.0, circular_velocity - transfer_velocity)
 
 def estimate_collision_avoidance_delta_v(mission: SpacecraftMission, cam_scale: float = 1.0) -> float:
-    # Debris flux peaks near 750-850 km and is higher on polar/SSO paths.
-    debris_environment = math.exp(-((mission.target_altitude - 750.0) / 280.0) ** 2)
+    """Crowding-scaled CAM Δv. Not operational collision probability.
+
+    `cam_scale` is SATCAT shell population vs a quieter 400 km reference
+    (1.0 = that reference). Inclination and area still change encounter
+    geometry. There is no 750 km Gaussian peak.
+    """
     inclination_factor = 0.65 + 0.35 * abs(math.sin(math.radians(mission.target_inclination)))
     area_factor = mission.cross_section_area / 8.0
-    annual = 7.5 * debris_environment * inclination_factor * area_factor
-    return max(0.0, annual * mission.lifespan * cam_scale)
+    annual = 7.5 * inclination_factor * area_factor
+    return max(0.0, annual * mission.lifespan * max(cam_scale, CAM_SCALE_MIN))
+
+
+def estimate_years_to_altitude(
+    mission: SpacecraftMission,
+    weather: SpaceWeather,
+    floor_km: float = DISPOSAL_PERIGEE_KM,
+    max_years: float = 40.0,
+) -> float:
+    """Unpowered years until altitude falls through floor_km, capped."""
+    mass = average_spacecraft_mass(mission)
+    altitude_km = mission.target_altitude
+    if altitude_km <= floor_km:
+        return 0.0
+    elapsed = 0.0
+    step_years = 0.25
+    while elapsed < max_years and altitude_km > floor_km:
+        stepped = replace(mission, target_altitude=altitude_km)
+        duration_s = step_years * DAYS_PER_YEAR * SECONDS_PER_DAY
+        loss = estimate_unpowered_decay(stepped, weather, duration_s, mass)
+        if loss <= 1e-9:
+            return max_years
+        if altitude_km - loss <= floor_km:
+            fraction = (altitude_km - floor_km) / loss
+            return min(max_years, elapsed + fraction * step_years)
+        altitude_km -= loss
+        elapsed += step_years
+    return max_years
+
+
+def estimate_post_mission_decay_years(
+    mission: SpacecraftMission,
+    weather: SpaceWeather,
+    result: SimulationResult,
+) -> float:
+    """Years after EOM until ~150 km if the disposal burn is unaffordable."""
+    reasons = set(result.failure_reasons)
+    can_dispose = "failed_disposal" not in reasons and "insufficient_delta_v" not in reasons
+    if can_dispose:
+        return 0.0
+    return estimate_years_to_altitude(mission, weather)
 
 def estimate_insertion_delta_v(mission: SpacecraftMission, ops: OperationalDraw) -> float:
     radius = EARTH_RADIUS + mission.target_altitude * 1000
@@ -531,11 +585,17 @@ def simulate(mission: SpacecraftMission, weather: SpaceWeather, ops: Operational
         average_drag = average_drag
     )
 
-def run_overall_monte_carlo(mission: SpacecraftMission, weather: SpaceWeather, n: int = 10_000, seed: int | None = None):
+def run_overall_monte_carlo(
+    mission: SpacecraftMission,
+    weather: SpaceWeather,
+    n: int = 10_000,
+    seed: int | None = None,
+    cam_scale_mean: float = 1.0,
+):
     if n <= 0:
         raise ValueError("Monte Carlo run count must be positive.")
     rng = random.Random(seed)
-    baseline = simulate(mission, weather)
+    baseline = simulate(mission, weather, OperationalDraw(cam_scale=cam_scale_mean))
     passes = 0
     failures = 0
     failure_modes = {}
@@ -543,7 +603,7 @@ def run_overall_monte_carlo(mission: SpacecraftMission, weather: SpaceWeather, n
     for _ in range(n):
         stressed_mission = create_stressed_mission(mission, rng)
         stressed_weather = create_stressed_weather(weather, rng)
-        stressed_ops = create_stressed_ops(rng)
+        stressed_ops = create_stressed_ops(rng, cam_scale_mean)
         result = simulate(stressed_mission, stressed_weather, stressed_ops)
 
         if result.passed:
@@ -569,11 +629,17 @@ def _sensitivity_stats(parameter: str, n: int, passes: int, failures: int, total
         mean_abs_delta_v_change = total_abs_delta_v_change / n
     )
 
-def run_parameter_sensitivity(mission: SpacecraftMission, weather: SpaceWeather, n: int = 1_000, seed: int | None = None):
+def run_parameter_sensitivity(
+    mission: SpacecraftMission,
+    weather: SpaceWeather,
+    n: int = 1_000,
+    seed: int | None = None,
+    cam_scale_mean: float = 1.0,
+):
     if n <= 0:
         raise ValueError("Sensitivity run count must be positive.")
     rng = random.Random(seed)
-    baseline = simulate(mission, weather)
+    baseline = simulate(mission, weather, OperationalDraw(cam_scale=cam_scale_mean))
     baseline_margin = baseline.available_delta_v - baseline.required_delta_v
     results = []
 
@@ -657,7 +723,7 @@ def run_parameter_sensitivity(mission: SpacecraftMission, weather: SpaceWeather,
         total_abs_delta_v_change = 0.0
 
         for _ in range(n):
-            stressed_ops = perturb_ops_parameter(OperationalDraw(), parameter, rng)
+            stressed_ops = perturb_ops_parameter(OperationalDraw(cam_scale=cam_scale_mean), parameter, rng, cam_scale_mean)
             result = simulate(mission, weather, stressed_ops)
 
             if result.passed:
@@ -684,14 +750,25 @@ def run_parameter_sensitivity(mission: SpacecraftMission, weather: SpaceWeather,
 
     return sorted(results, key = lambda result: (result.failure_rate, result.mean_abs_delta_v_change), reverse = True)
 
-def run_monte_carlo(mission: SpacecraftMission, weather: SpaceWeather, n: int = 10_000, sensitivity_runs: int = 1_000, seed: int | None = None) -> MonteCarloSummary:
+def run_monte_carlo(
+    mission: SpacecraftMission,
+    weather: SpaceWeather,
+    n: int = 10_000,
+    sensitivity_runs: int = 1_000,
+    seed: int | None = None,
+    cam_scale_mean: float = 1.0,
+) -> MonteCarloSummary:
     if n <= 0:
         raise ValueError("Monte Carlo run count must be positive.")
     if sensitivity_runs <= 0:
         raise ValueError("Sensitivity run count must be positive.")
-    passes, failures, failure_modes, baseline = run_overall_monte_carlo(mission, weather, n, seed)
+    passes, failures, failure_modes, baseline = run_overall_monte_carlo(
+        mission, weather, n, seed, cam_scale_mean
+    )
 
-    sensitivity_results = run_parameter_sensitivity(mission, weather, sensitivity_runs, seed)
+    sensitivity_results = run_parameter_sensitivity(
+        mission, weather, sensitivity_runs, seed, cam_scale_mean
+    )
 
     return MonteCarloSummary(
         total_runs = n,

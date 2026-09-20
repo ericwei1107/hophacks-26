@@ -540,7 +540,7 @@
         "area": 5.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 1.151017374053852
+        "value": 15.234375
       },
       {
         "altitude_km": 300.0,
@@ -548,7 +548,7 @@
         "area": 10.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 2.302034748107704
+        "value": 30.46875
       },
       {
         "altitude_km": 300.0,
@@ -556,7 +556,7 @@
         "area": 20.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 4.604069496215408
+        "value": 60.9375
       },
       {
         "altitude_km": 300.0,
@@ -564,7 +564,7 @@
         "area": 5.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 1.6367337969154374
+        "value": 21.66311039212603
       },
       {
         "altitude_km": 300.0,
@@ -572,7 +572,7 @@
         "area": 10.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 3.273467593830875
+        "value": 43.32622078425206
       },
       {
         "altitude_km": 300.0,
@@ -580,7 +580,7 @@
         "area": 20.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 6.54693518766175
+        "value": 86.65244156850412
       },
       {
         "altitude_km": 300.0,
@@ -588,7 +588,7 @@
         "area": 5.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 1.7656339248813762
+        "value": 23.36917750392379
       },
       {
         "altitude_km": 300.0,
@@ -596,7 +596,7 @@
         "area": 10.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 3.5312678497627523
+        "value": 46.73835500784758
       },
       {
         "altitude_km": 300.0,
@@ -604,7 +604,7 @@
         "area": 20.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 7.062535699525505
+        "value": 93.47671001569516
       },
       {
         "altitude_km": 500.0,
@@ -612,7 +612,7 @@
         "area": 5.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 6.864481512084187
+        "value": 15.234375
       },
       {
         "altitude_km": 500.0,
@@ -620,7 +620,7 @@
         "area": 10.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 13.728963024168374
+        "value": 30.46875
       },
       {
         "altitude_km": 500.0,
@@ -628,7 +628,7 @@
         "area": 20.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 27.45792604833675
+        "value": 60.9375
       },
       {
         "altitude_km": 500.0,
@@ -636,7 +636,7 @@
         "area": 5.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 9.761215723059722
+        "value": 21.66311039212603
       },
       {
         "altitude_km": 500.0,
@@ -644,7 +644,7 @@
         "area": 10.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 19.522431446119445
+        "value": 43.32622078425206
       },
       {
         "altitude_km": 500.0,
@@ -652,7 +652,7 @@
         "area": 20.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 39.04486289223889
+        "value": 86.65244156850412
       },
       {
         "altitude_km": 500.0,
@@ -660,7 +660,7 @@
         "area": 5.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 10.529955244524212
+        "value": 23.36917750392379
       },
       {
         "altitude_km": 500.0,
@@ -668,7 +668,7 @@
         "area": 10.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 21.059910489048423
+        "value": 46.73835500784758
       },
       {
         "altitude_km": 500.0,
@@ -676,7 +676,7 @@
         "area": 20.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 42.11982097809685
+        "value": 93.47671001569516
       },
       {
         "altitude_km": 800.0,
@@ -684,7 +684,7 @@
         "area": 5.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 14.756248682037452
+        "value": 15.234375
       },
       {
         "altitude_km": 800.0,
@@ -692,7 +692,7 @@
         "area": 10.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 29.512497364074903
+        "value": 30.46875
       },
       {
         "altitude_km": 800.0,
@@ -700,7 +700,7 @@
         "area": 20.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 59.02499472814981
+        "value": 60.9375
       },
       {
         "altitude_km": 800.0,
@@ -708,7 +708,7 @@
         "area": 5.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 20.983220130306727
+        "value": 21.66311039212603
       },
       {
         "altitude_km": 800.0,
@@ -716,7 +716,7 @@
         "area": 10.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 41.96644026061345
+        "value": 43.32622078425206
       },
       {
         "altitude_km": 800.0,
@@ -724,7 +724,7 @@
         "area": 20.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 83.9328805212269
+        "value": 86.65244156850412
       },
       {
         "altitude_km": 800.0,
@@ -732,7 +732,7 @@
         "area": 5.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 22.63574283438439
+        "value": 23.36917750392379
       },
       {
         "altitude_km": 800.0,
@@ -740,7 +740,7 @@
         "area": 10.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 45.27148566876878
+        "value": 46.73835500784758
       },
       {
         "altitude_km": 800.0,
@@ -748,7 +748,7 @@
         "area": 20.0,
         "lifespan": 5.0,
         "cam_scale": 1.0,
-        "value": 90.54297133753757
+        "value": 93.47671001569516
       }
     ],
     "stationkeeping": [

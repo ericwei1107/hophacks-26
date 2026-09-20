@@ -1,7 +1,9 @@
 /// <reference types="vitest/config" />
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
+import glsl from "vite-plugin-glsl";
+import { sites } from "@openai/sites-vite-plugin";
+import { defineConfig, loadEnv } from "vite";
 import { fileURLToPath, URL } from "node:url";
 
 function xaiTtsDevProxy(xaiApiKey: string | undefined) {
@@ -56,6 +58,18 @@ export default defineConfig(({ mode }) => {
     },
     worker: {
       format: "es",
+    },
+    server: {
+      proxy: {
+        "/api": {
+          target: "http://127.0.0.1:8000",
+          bypass(req) {
+            if (req.url?.startsWith("/api/tts")) {
+              return req.url;
+            }
+          },
+        },
+      },
     },
     test: {
       environment: "node",

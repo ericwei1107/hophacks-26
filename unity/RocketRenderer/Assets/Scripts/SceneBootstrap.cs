@@ -13,9 +13,9 @@ namespace Apogee.RocketRenderer
     /// binary scene assets that can only be edited inside the editor.
     ///
     /// Hierarchy:
-    ///   World          — the Earth, the ground disc, the pad smoke
+    ///   World          — the Earth, the launch site, the pad smoke
     ///   Vehicle        — the attitude pivot; the rocket hangs under it
-    ///   SpentStage     — the discarded booster, placed relative to the rocket
+    ///   SpentStage     — the discarded booster (the real stage-1 geometry), placed relative to the rocket
     ///   Cameras        — the far camera (Earth) and the near camera (vehicle)
     /// </summary>
     public class SceneBootstrap : MonoBehaviour
@@ -30,6 +30,8 @@ namespace Apogee.RocketRenderer
 
         private Transform attitudePivot;
         private Transform spentStage;
+        /// <summary>The booster geometry under SpentStage, centred on the stage's own position.</summary>
+        private Transform spentBooster;
 
         public void BuildScene()
         {
@@ -70,7 +72,6 @@ namespace Apogee.RocketRenderer
             near.depth = 0;
 
             StackCameras(far, near);
-            EnablePostProcessing(far, near);
             Cameras.FarCamera = far;
             Cameras.NearCamera = near;
 
@@ -88,15 +89,12 @@ namespace Apogee.RocketRenderer
             RenderSettings.ambientEquatorColor = new Color(0.16f, 0.22f, 0.28f);
             RenderSettings.ambientGroundColor = new Color(0.04f, 0.07f, 0.10f);
 
-            // Distance haze near the ground, thinning to nothing with altitude.
-            EarthView.EnableHaze();
-
             // --- world --------------------------------------------------------
             var earthGo = new GameObject("Earth");
             earthGo.transform.SetParent(world, false);
             Earth = earthGo.AddComponent<EarthView>();
             Earth.Build(world);
-            Earth.BuildGroundDisc(world);
+            Earth.BuildLaunchSite(world);
 
             // --- vehicle -------------------------------------------------------
             var rocketGo = new GameObject("Rocket");
@@ -132,7 +130,8 @@ namespace Apogee.RocketRenderer
             Rocket.Build(geometry);
             Effects.RebuildPlumes();
             Effects.ClearAll();
-            ScaleSpentStage(geometry);
+            RebuildSpentStage(geometry);
+            Earth.Site?.Configure(geometry);
         }
 
         public void ApplyFrame(RenderFrameDto frame)
@@ -148,47 +147,6 @@ namespace Apogee.RocketRenderer
         {
             Effects?.ClearAll();
             Cameras?.Reset();
-        }
-
-        /// <summary>
-        /// Turn on post-processing for the stack.
-        ///
-        /// URP resolves post-processing on the camera that *finishes* the stack,
-        /// and enabling it on an earlier camera as well is not merely redundant:
-        /// the base camera then tries to resolve effects into a target the
-        /// overlay is still going to draw into. On the WebGPU backend that ends
-        /// with the pipeline producing no output at all — a completely
-        /// transparent canvas, with no error to explain it. So this goes on the
-        /// overlay only, and <see cref="CameraDirector"/> keeps that camera
-        /// enabled for the whole flight so the stack always ends with it.
-        ///
-        /// Dithering matters more than it sounds: the sky is one long gradient
-        /// from blue to black, and that is exactly what bands on an 8-bit
-        /// display.
-        /// </summary>
-        private static void EnablePostProcessing(Camera baseCamera, Camera lastInStack)
-        {
-            baseCamera.allowHDR = true;
-            lastInStack.allowHDR = true;
-
-            var baseData = baseCamera.GetUniversalAdditionalCameraData();
-            if (baseData != null)
-            {
-                // Explicitly off: only the last camera in the stack may resolve.
-                baseData.renderPostProcessing = false;
-                baseData.antialiasing = AntialiasingMode.None;
-            }
-
-            var lastData = lastInStack.GetUniversalAdditionalCameraData();
-            if (lastData == null)
-            {
-                return; // not URP: nothing to configure
-            }
-            lastData.renderPostProcessing = true;
-            lastData.dithering = true;
-            // FXAA rather than MSAA: one cheap pass, and MSAA does nothing
-            // for the particle edges that make up most of this scene.
-            lastData.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
         }
 
         /// <summary>
@@ -211,31 +169,33 @@ namespace Apogee.RocketRenderer
             baseData.cameraStack.Add(overlay);
         }
 
-        private static Transform BuildSpentStage(Transform parent)
+        private Transform BuildSpentStage(Transform parent)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            go.name = "SpentStage";
-            Destroy(go.GetComponent<Collider>());
+            var go = new GameObject("SpentStage");
             go.transform.SetParent(parent, false);
-            var renderer = go.GetComponent<MeshRenderer>();
-            renderer.sharedMaterial = Shaders.Create(
-                new Color(0.54f, 0.56f, 0.6f),
-                "Universal Render Pipeline/Lit",
-                "Standard");
+            spentBooster = new GameObject("Booster").transform;
+            spentBooster.SetParent(go.transform, false);
             go.SetActive(false);
             return go.transform;
         }
 
-        private void ScaleSpentStage(RocketGeometryDto geometry)
+        /// <summary>
+        /// The spent booster is the same stage-1 hardware the vehicle just
+        /// dropped, built from the same geometry. The frame places the stage's
+        /// own position, so the mesh is centred on its half-height.
+        /// </summary>
+        private void RebuildSpentStage(RocketGeometryDto geometry)
         {
-            if (spentStage == null)
+            if (spentBooster == null)
             {
                 return;
             }
-            spentStage.localScale = new Vector3(
-                geometry.diameter,
-                geometry.stage1.length * 0.5f,
-                geometry.diameter);
+            for (int i = spentBooster.childCount - 1; i >= 0; i--)
+            {
+                Destroy(spentBooster.GetChild(i).gameObject);
+            }
+            RocketBuilder.BuildBooster(spentBooster, geometry);
+            spentBooster.localPosition = new Vector3(0f, -geometry.stage1.length * 0.5f, 0f);
         }
     }
 }
