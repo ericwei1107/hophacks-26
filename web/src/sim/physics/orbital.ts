@@ -26,13 +26,16 @@ export interface OrbitalElements {
 }
 
 const RADIAL_H_THRESHOLD = 1e-3; // m^2/s — effectively zero angular momentum
+const _h = vec3();
+const _vxh = vec3();
+const _eVec = vec3();
 
 export function orbitalElements(position: Vec3, velocity: Vec3): OrbitalElements {
   const r = norm(position);
   const v = norm(velocity);
   const energy = (v * v) / 2 - MU_EARTH / r;
 
-  const h = vec3();
+  const h = _h;
   cross(h, position, velocity);
   const hMag = norm(h);
 
@@ -60,9 +63,9 @@ export function orbitalElements(position: Vec3, velocity: Vec3): OrbitalElements
   }
 
   // Eccentricity vector: e = (v × h)/μ − r̂
-  const vxh = vec3();
+  const vxh = _vxh;
   cross(vxh, velocity, h);
-  const eVec = vec3();
+  const eVec = _eVec;
   for (let i = 0; i < 3; i++) {
     eVec[i] = vxh[i] / MU_EARTH - position[i] / r;
   }
