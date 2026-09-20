@@ -94,6 +94,21 @@ export interface RenderFrame {
   sunDirLocal: Vec3;
   /** Spent stage 1 relative to the rocket, or null before separation. */
   stage1Spent: null | { posLocal: Vec3; attitude: Quat };
+  /**
+   * The Moon, relative to the rocket, renderer axes. Always present (the
+   * Moon is always somewhere), but always at a range-compressed distance —
+   * see `rangeCompressionFactor`. `radiusM` is the Moon's true radius,
+   * uncompressed: only distance is compressed, matching
+   * LUNAR_MISSION_PLAN.md §6.1's "bodies keep true radii" rule.
+   */
+  moon: { posLocal: Vec3; quat: Quat; radiusM: number };
+  /**
+   * How much `moon.posLocal`'s distance was compressed relative to the true
+   * Earth-Moon geometry (1 = uncompressed). A renderer that draws other
+   * far-field geometry (a transfer-arc trail, say) should apply the same
+   * factor for a consistent scale bar; only the Moon does today.
+   */
+  rangeCompressionFactor: number;
   /** Events crossed since the previous frame, e.g. "max_q", "separation". */
   events: string[];
 }
@@ -106,6 +121,8 @@ export interface PlaybackState {
   playbackSpeed: number;
   playing: boolean;
   events: string[];
+  /** The flight's seed — the Moon's ephemeris phase is derived from it (see `moonEpochPhaseRad`) so its rendered position is stable and replay-deterministic. */
+  seed: number;
   /**
    * Visual throttle override for the pre-launch ignition hold, when the
    * recording has not started yet. 0..1, or null to use the recorded value.
@@ -118,6 +135,7 @@ const QUAT_FIELDS = ["attitude", "earthQuat", "inertialQuat"] as const;
 const NUMBER_FIELDS = [
   "t", "playbackSpeed", "stage", "throttle", "altitude", "latDeg", "lonDeg",
   "speedAir", "mach", "q", "g", "aoaDeg", "comFromBase", "attachedLength",
+  "rangeCompressionFactor",
 ] as const;
 
 /**
@@ -150,6 +168,15 @@ export function nonFiniteFields(frame: RenderFrame): string[] {
     spent.attitude.forEach((v, i) => {
       if (!Number.isFinite(v)) bad.push(`stage1Spent.attitude[${i}]`);
     });
+  }
+  frame.moon.posLocal.forEach((v, i) => {
+    if (!Number.isFinite(v)) bad.push(`moon.posLocal[${i}]`);
+  });
+  frame.moon.quat.forEach((v, i) => {
+    if (!Number.isFinite(v)) bad.push(`moon.quat[${i}]`);
+  });
+  if (!Number.isFinite(frame.moon.radiusM)) {
+    bad.push("moon.radiusM");
   }
   return bad;
 }

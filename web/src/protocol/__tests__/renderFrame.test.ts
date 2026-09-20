@@ -35,6 +35,7 @@ function playback(t: number, patch: Partial<PlaybackState> = {}): PlaybackState 
     playbackSpeed: 1,
     playing: true,
     events: [],
+    seed: 0,
     ...patch,
   };
 }
@@ -232,6 +233,41 @@ describe("inertial frame orientation", () => {
     const noseFromAttitude = quatRotate(frame.attitude, [0, 1, 0]);
     for (let i = 0; i < 3; i++) {
       expect(noseFromInertial[i]).toBeCloseTo(noseFromAttitude[i], 6);
+    }
+  });
+});
+
+describe("moon", () => {
+  it("is always present and always range-compressed (the Moon is always far away)", () => {
+    for (const t of [0, 60, 200]) {
+      const frame = frameAt(t);
+      expect(frame.moon).not.toBeNull();
+      expect(frame.moon.radiusM).toBeGreaterThan(0);
+      expect(frame.rangeCompressionFactor).toBeGreaterThan(0);
+      expect(frame.rangeCompressionFactor).toBeLessThan(1);
+    }
+  });
+
+  it("keeps the Moon's true radius uncompressed — only distance is compressed", () => {
+    const frame = frameAt(0);
+    expect(frame.moon.radiusM).toBeCloseTo(1_737_400, -2);
+  });
+
+  it("gives the same seed the same rendered Moon position at a fixed time", () => {
+    const a = frameAt(60, { seed: 42 });
+    const b = frameAt(60, { seed: 42 });
+    expect(a.moon.posLocal).toEqual(b.moon.posLocal);
+  });
+
+  it("gives different seeds different Moon positions", () => {
+    const a = frameAt(0, { seed: 1 });
+    const b = frameAt(0, { seed: 2 });
+    expect(a.moon.posLocal).not.toEqual(b.moon.posLocal);
+  });
+
+  it("never produces a non-finite Moon field", () => {
+    for (const t of [0, 60, 200, 400]) {
+      expect(nonFiniteFields(frameAt(t))).toEqual([]);
     }
   });
 });

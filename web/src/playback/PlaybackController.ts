@@ -44,6 +44,7 @@ export class PlaybackController {
   readonly geometry: RocketGeometry;
   readonly trajectory: Trajectory;
   readonly durationS: number;
+  private readonly seed: number;
 
   private renderer: LaunchRenderer | null = null;
   private readonly events: FlightEvent[];
@@ -64,6 +65,7 @@ export class PlaybackController {
     this.geometry = toRocketGeometry(deriveRocket(flight.config, createEngineCatalog()));
     this.trajectory = createTrajectory(flight.telemetry);
     this.durationS = flight.totalTimeS;
+    this.seed = flight.seed;
     this.events = [...flight.events].sort((a, b) => a.t - b.t);
   }
 
@@ -188,6 +190,7 @@ export class PlaybackController {
       playbackSpeed: this.speed,
       playing: this.isPlaying,
       events,
+      seed: this.seed,
       throttleOverride: t < 0 ? ignitionThrottle(t) : null,
     });
 

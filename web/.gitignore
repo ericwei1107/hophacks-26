@@ -1,3 +1,11 @@
 
+# Local and generated output.
+node_modules/
+dist/
+playwright-report/
+test-results/
+.DS_Store
+*.local
+
 # Unity build output: generated, never committed.
 public/unity/

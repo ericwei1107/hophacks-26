@@ -11,6 +11,8 @@
 
 import { speedOfSoundMs } from "../sim/physics/atmosphere";
 import { EARTH_RADIUS, OMEGA_EARTH } from "../sim/physics/constants";
+import { moonEpochPhaseRad, moonPositionEci, MOON_RADIUS_M } from "../sim/lunar/moon";
+import { vec3 } from "../sim/physics/vec3";
 import type { FlightSample } from "../sim/trajectory";
 import {
   earthMeshQuat,
@@ -46,6 +48,28 @@ const SPENT_TUMBLE_AXIS: Vec3 = [0.36, 0.86, 0.36];
 
 /** Body nose axis in the renderer's local frame. */
 const BODY_UP: Vec3 = [0, 1, 0];
+
+/**
+ * Range compression (LUNAR_MISSION_PLAN.md §6.1): far-field distances beyond
+ * `NEAR_FIELD_KM` are compressed by `FAR_FIELD_FACTOR` so the Moon reads as
+ * a visible, dramatic disc instead of a correct-but-invisible 0.5° speck.
+ * Below the threshold — all of ascent and the parking orbit — nothing
+ * changes. Bodies keep their true radii; only distance is compressed.
+ */
+const NEAR_FIELD_KM = 2_000;
+const FAR_FIELD_FACTOR = 1 / 8;
+
+/** Compress a vector's magnitude beyond the near-field threshold, preserving direction. Returns the applied scale factor (1 = uncompressed). */
+function compressFarField(v: Vec3): { compressed: Vec3; factor: number } {
+  const distM = Math.hypot(v[0], v[1], v[2]);
+  const distKm = distM / 1000;
+  if (distKm <= NEAR_FIELD_KM || distM < 1) {
+    return { compressed: v, factor: 1 };
+  }
+  const compressedKm = NEAR_FIELD_KM + (distKm - NEAR_FIELD_KM) * FAR_FIELD_FACTOR;
+  const factor = compressedKm / distKm;
+  return { compressed: [v[0] * factor, v[1] * factor, v[2] * factor], factor };
+}
 
 /** Velocity of the co-rotating atmosphere at a position: ω × r. */
 function airVelocity(position: ArrayLike<number>): Vec3 {
@@ -109,6 +133,17 @@ export function toRenderFrame(
     };
   }
 
+  const moonEpoch = moonEpochPhaseRad(playback.seed);
+  const moonPosEci = moonPositionEci(vec3(), Math.max(0, sample.tS), moonEpoch);
+  const moonRelative: Vec3 = [
+    moonPosEci[0] - sample.positionEciM[0],
+    moonPosEci[1] - sample.positionEciM[1],
+    moonPosEci[2] - sample.positionEciM[2],
+  ];
+  const moonLocalUncompressed = toLocal(basis, moonRelative);
+  moonLocalUncompressed[1] -= comFromBase;
+  const { compressed: moonPosLocal, factor: rangeCompressionFactor } = compressFarField(moonLocalUncompressed);
+
   return {
     t: playback.t,
     discontinuity: playback.discontinuity,
@@ -133,6 +168,8 @@ export function toRenderFrame(
     inertialQuat: inertialFrameQuat(basis),
     sunDirLocal: toLocal(basis, SUN_DIRECTION_ECI),
     stage1Spent,
+    moon: { posLocal: moonPosLocal, quat: [0, 0, 0, 1], radiusM: MOON_RADIUS_M },
+    rangeCompressionFactor,
     events: playback.events,
   };
 }

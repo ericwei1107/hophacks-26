@@ -186,7 +186,7 @@ export function DebriefScreen() {
               <span>Time of flight {(lunar.timeOfFlightS / 86_400).toFixed(1)} days</span>
             )}
             {lunar.periseleneRadiusM !== null && (
-              <span>Periselene altitude {((lunar.periseleneRadiusM - 1_737_400) / 1000).toFixed(0)} km</span>
+              <span>Periselene altitude {((lunar.periseleneRadiusM - MOON_RADIUS_M) / 1000).toFixed(0)} km</span>
             )}
           </div>
           <p className="dim small">

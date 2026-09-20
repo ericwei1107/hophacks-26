@@ -31,6 +31,7 @@ function unityFrameAt(t: number) {
       playbackSpeed: 1,
       playing: true,
       events: [],
+      seed: flight.seed,
     }),
   );
 }

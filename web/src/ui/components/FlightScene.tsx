@@ -30,6 +30,7 @@ import type { SerializableFlightResult } from "../../workers/serialize";
 import { deriveRocket, type DerivedRocket } from "../../domain/derive";
 import { createEngineCatalog } from "../../domain/engines";
 import { Earth } from "./Earth";
+import { Moon } from "./Moon";
 import { Trajectory } from "./Trajectory";
 import { RocketMesh } from "./RocketMesh";
 
@@ -105,6 +106,7 @@ export function FlightScene({
   const telemetry = flight.telemetry;
 
   const earthRef = useRef<THREE.Group>(null);
+  const moonRef = useRef<THREE.Group>(null);
   const inertialRef = useRef<THREE.Group>(null);
   const groundRef = useRef<THREE.Group>(null);
   const rocketRef = useRef<THREE.Group>(null);
@@ -188,6 +190,10 @@ export function FlightScene({
     if (inertialRef.current) {
       inertialRef.current.position.copy(earthPos);
       inertialRef.current.quaternion.copy(rendererQuatToThree(frame.inertialQuat, scratch.quat));
+    }
+    if (moonRef.current) {
+      moonRef.current.position.copy(rendererMetersToThree(frame.moon.posLocal, scratch.vec));
+      moonRef.current.quaternion.copy(rendererQuatToThree(frame.moon.quat, scratch.quat));
     }
     if (sunRef.current) {
       sunRef.current.position
@@ -297,6 +303,10 @@ export function FlightScene({
 
       <group ref={earthRef}>
         <Earth />
+      </group>
+
+      <group ref={moonRef}>
+        <Moon />
       </group>
 
       <group ref={inertialRef}>

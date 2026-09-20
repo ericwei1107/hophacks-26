@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 /* APOGEE / Launch Lab — orbital mission-control aesthetic. */
 
 :root {
@@ -19,11 +21,30 @@ html,
 body,
 #root {
   margin: 0;
-  height: 100%;
+  min-height: 100%;
   background: var(--ink);
   color: var(--offwhite);
   font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
-  overflow: hidden;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.landing-shell {
+  min-height: 100%;
+  background: #020408;
+}
+
+.landing-shell > #launch-lab {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  background: var(--ink);
 }
 
 .screen {

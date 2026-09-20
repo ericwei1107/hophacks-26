@@ -70,6 +70,7 @@ const frame = toUnityFrame(
     playbackSpeed: 1,
     playing: true,
     events: ["separation"],
+    seed: flight.seed,
   }),
 );
 

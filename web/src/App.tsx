@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 
+import BlackHoleHeroSectionDemo from "@/components/demo";
 import { AssemblyScreen } from "./ui/screens/AssemblyScreen";
 import { FlightScreen } from "./ui/screens/FlightScreen";
 import { DebriefScreen } from "./ui/screens/DebriefScreen";
@@ -25,7 +26,18 @@ export function App() {
 
   return (
     <>
-      {screen === "assembly" && <AssemblyScreen />}
+      {screen === "assembly" && (
+        <main className="landing-shell">
+          <BlackHoleHeroSectionDemo />
+          <section
+            id="launch-lab"
+            aria-label="APOGEE mission simulator"
+            className="scroll-mt-0"
+          >
+            <AssemblyScreen />
+          </section>
+        </main>
+      )}
       {screen === "flight" && <FlightScreen />}
       {screen === "debrief" && <DebriefScreen />}
     </>

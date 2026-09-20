@@ -85,4 +85,19 @@ describe("trans-lunar phases", () => {
       expect(result.lunarTransfer).toBeNull();
     }
   });
+
+  it("reaches lunar_miss just below the tli_shortfall boundary (Step L7 calibration fixture)", () => {
+    // A slightly heavier payload trims delta-v just enough (~1.25% short of
+    // required) to fall under evaluateTransfer's 2% shortfall tolerance —
+    // the burn is classified as "adequate", but the resulting transfer
+    // doesn't carry enough energy to actually reach the Moon's SOI. This is
+    // the natural, continuous boundary between tli_shortfall and lunar_miss;
+    // a slightly heavier payload still (5,900 kg) crosses into tli_shortfall.
+    const result = fly({ payloadWetMassKg: 5_800 });
+    expect(result.orbitAchieved).toBe(true);
+    expect(result.outcome).toBe("lunar_miss");
+    expect(result.lunarTransfer).not.toBeNull();
+    expect(result.lunarTransfer!.classification).toBe("lunar_miss");
+    expect(result.lunarTransfer!.periseleneRadiusM).toBeNull();
+  });
 });
