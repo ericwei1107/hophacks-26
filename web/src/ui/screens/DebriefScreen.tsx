@@ -27,6 +27,7 @@ import {
   copyConfigToClipboard,
   downloadText,
 } from "../../persistence/report";
+import { syncMissionToSpacetime } from "../../persistence/spacetime";
 function outcomeTitle(outcome: string): string {
   return outcome.replaceAll("_", " ").toUpperCase();
 }
@@ -185,7 +186,20 @@ export function DebriefScreen() {
       (completed, total) => setAnalysisProgress(`Monte Carlo ${Math.round((completed / total) * 100)}%`),
     );
     try {
-      setMonteCarlo(await promise);
+      const result = await promise;
+      setMonteCarlo(result);
+      // Best-effort, browser-side SpacetimeDB sync — only needed on this
+      // fallback path. When the Python backend is up (the primary path,
+      // above), it already persists the richer, full-fidelity result
+      // itself (payload_analysis.py::analyze_launched_payload), so this
+      // would just be a redundant, less-accurate second write.
+      void syncMissionToSpacetime({
+        mission: analysis.mission,
+        weather: handoff.weather,
+        monteCarlo: result,
+        seed: handoff.seed,
+        modelVersion: handoff.modelVersion,
+      });
     } catch {
       // canceled
     }

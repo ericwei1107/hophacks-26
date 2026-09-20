@@ -11,6 +11,7 @@ from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any
 
+from db import persist_mission_analysis
 from design import MissionConstraints, SpacecraftMission
 from emissions import CACHE_DIR, ARCHIVE_NAME, estimate_mission_footprint
 from environment import SpaceWeather, fetch_noaa_snapshot
@@ -18,6 +19,9 @@ from explanations import build_insights
 from insights import _api_key, build_analysis_brief, generate_llm_briefing
 from regulations import evaluate_mission_compliance, get_latest_debris_rules
 import simulate as s
+
+# Keep in sync with export_fixtures.py::MODEL_VERSION.
+MODEL_VERSION = "1.0.0"
 
 PAYLOAD_ISP_S = 325.0
 PAYLOAD_DRAG_COEFFICIENT = 2.2
@@ -233,6 +237,16 @@ def analyze_launched_payload(
             report["briefing"] = generate_llm_briefing(brief)
         except Exception as error:
             report["briefingError"] = str(error)
+
+    # Best-effort: pushes this already-computed, full-fidelity result to the
+    # shared SpacetimeDB mission store (see docs/spacetimedb-integration.md).
+    # Never raises — persist_mission_analysis prints and returns None on any
+    # failure (SpacetimeDB unreachable, no auth token, etc.), so this can't
+    # break an /api/analyze response. Mocked out in tests via
+    # `monkeypatch.setattr("payload_analysis.persist_mission_analysis", ...)`.
+    persist_mission_analysis(
+        mission, handoff.weather, summary, seed=handoff.seed, model_version=MODEL_VERSION,
+    )
 
     return report
 

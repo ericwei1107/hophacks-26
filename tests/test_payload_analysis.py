@@ -13,6 +13,7 @@ def skip_network_side_effects(monkeypatch):
     monkeypatch.setattr("payload_analysis.get_latest_debris_rules", lambda **_: [])
     monkeypatch.setattr("payload_analysis._safe_footprint", lambda _mission: None)
     monkeypatch.setattr("payload_analysis.briefing_configured", lambda: False)
+    monkeypatch.setattr("payload_analysis.persist_mission_analysis", lambda *a, **k: None)
 
 
 def _handoff(apogee=200.0, perigee=190.0, wet=5000.0) -> PayloadHandoff:
