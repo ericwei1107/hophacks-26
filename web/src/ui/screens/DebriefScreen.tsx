@@ -156,6 +156,13 @@ export function DebriefScreen() {
         insertionBudgetOk: report.insertionBudgetOk,
         mission: report.mission,
         result: report.result,
+        compliance: report.regulatory
+          ? {
+              missionName: report.regulatory.mission_name,
+              compliant: report.regulatory.compliant,
+              violations: report.regulatory.violations,
+            }
+          : null,
         explanations: report.explanations,
       });
       if (report.monteCarlo) {
