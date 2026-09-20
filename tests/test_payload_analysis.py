@@ -56,6 +56,7 @@ def test_analyze_runs_python_mission_stack_on_a_game_orbit():
     assert report["insights"]
     assert report["debris"] is not None
     assert report["debris"]["cam_scale"] >= 0.4
+    assert report["debris"]["catalog_sigma"] == 0.0015
     assert any("Baseline mission" in line for line in report["explanations"])
     assert any("SATCAT crowding" in line for line in report["explanations"])
 

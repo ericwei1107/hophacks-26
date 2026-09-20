@@ -25,3 +25,15 @@ def test_crowding_census_uses_injected_satcat(monkeypatch):
     census = crowding_census(545.0)
     assert census["counts"]["debris"] > 0
     assert census["cam_scale"] >= 1.0
+
+
+def test_seeded_catalog_uncertainty_is_small_and_deterministic():
+    exact = shell_census(SYNTHETIC_SATCAT, 400)
+    a = shell_census(SYNTHETIC_SATCAT, 400, seed=7)
+    b = shell_census(SYNTHETIC_SATCAT, 400, seed=7)
+    other = shell_census(SYNTHETIC_SATCAT, 400, seed=99)
+    assert a["cam_scale"] == b["cam_scale"]
+    assert a["catalog_sigma"] == 0.0015
+    assert exact["catalog_sigma"] == 0.0
+    assert abs(a["cam_scale"] - exact["cam_scale"]) / max(exact["cam_scale"], 1e-9) < 0.02
+    assert a["cam_scale"] != other["cam_scale"]

@@ -2,10 +2,16 @@
 
 This is a population screen, not operational collision probability (Pc). SATCAT
 counts objects in altitude shells; it does not propagate objects in 3D.
+
+Cached catalog rows are stored exactly. Optional seeded 0.15% noise is applied
+only when counting, so a sticky SATCAT cache is not identical to claiming
+perfect ephemeris. NOAA weather already moves because the feed updates;
+SATCAT does not, which is why the wobble lives here.
 """
 from __future__ import annotations
 
 import json
+import random
 import time
 from pathlib import Path
 from typing import Any, Iterable
@@ -14,6 +20,9 @@ from urllib.request import urlopen
 SATCAT_URL = "https://celestrak.org/satcat/records.php?FORMAT=JSON&ONORBIT=1"
 CACHE_PATH = Path(__file__).resolve().parent / ".cache" / "satcat_onorbit.json"
 CACHE_TTL_S = 6 * 60 * 60
+# Relative 1-sigma on apogee/perigee and on cam_scale. 0.15% sits between the
+# 0.1% and 0.2% catalog-uncertainty band; integer object counts usually stay put.
+CATALOG_RELATIVE_SIGMA = 0.0015
 
 # Labeled fallback: deliberately small and synthetic, never presented as SATCAT.
 SYNTHETIC_SATCAT = [
@@ -52,10 +61,27 @@ def cam_scale_from_counts(shell_total: int, reference_total: int) -> float:
     return max(0.4, min(2.5, shell_total / max(reference_total, 1)))
 
 
-def _altitude(row: dict[str, Any]) -> tuple[float, float] | None:
+def _catalog_rng(seed: int | None) -> random.Random | None:
+    if seed is None:
+        return None
+    return random.Random(seed)
+
+
+def _float_field(row: dict[str, Any], key: str, rng: random.Random | None = None) -> float | None:
+    """Parse like NOAA `to_timed_values`: skip bad cells, then optional 0.15% wobble."""
     try:
-        apogee, perigee = float(row["APOGEE"]), float(row["PERIGEE"])
+        value = float(row[key])
     except (KeyError, TypeError, ValueError):
+        return None
+    if rng is not None:
+        value *= 1.0 + rng.gauss(0.0, CATALOG_RELATIVE_SIGMA)
+    return value
+
+
+def _altitude(row: dict[str, Any], rng: random.Random | None = None) -> tuple[float, float] | None:
+    apogee = _float_field(row, "APOGEE", rng)
+    perigee = _float_field(row, "PERIGEE", rng)
+    if apogee is None or perigee is None:
         return None
     if min(apogee, perigee) < 80 or max(apogee, perigee) > 2000:
         return None
@@ -66,12 +92,17 @@ def _earth(row: dict[str, Any]) -> bool:
     return row.get("ORBIT_CENTER") in (None, "", "EA")
 
 
-def _counts(rows: Iterable[dict[str, Any]], altitude_km: float, half_width_km: float) -> dict[str, int]:
+def _counts(
+    rows: Iterable[dict[str, Any]],
+    altitude_km: float,
+    half_width_km: float,
+    rng: random.Random | None = None,
+) -> dict[str, int]:
     counts = {"payload": 0, "rocket_body": 0, "debris": 0, "unknown": 0}
     for row in rows:
         if not _earth(row):
             continue
-        bounds = _altitude(row)
+        bounds = _altitude(row, rng)
         if bounds is None or not (altitude_km - half_width_km <= sum(bounds) / 2 <= altitude_km + half_width_km):
             continue
         kind = {"PAY": "payload", "R/B": "rocket_body", "DEB": "debris"}.get(row.get("OBJECT_TYPE"), "unknown")
@@ -89,25 +120,48 @@ def _source_label(rows: list[dict[str, Any]]) -> str:
     return "CelesTrak SATCAT"
 
 
-def crowding_census(altitude_km: float, force_refresh: bool = False) -> dict[str, Any]:
+def crowding_census(
+    altitude_km: float,
+    force_refresh: bool = False,
+    seed: int | None = None,
+) -> dict[str, Any]:
     """Load SATCAT (cached) and count the ±30 km shell around altitude_km."""
-    return shell_census(load_satcat(force_refresh=force_refresh), altitude_km)
+    return shell_census(load_satcat(force_refresh=force_refresh), altitude_km, seed=seed)
 
 
-def shell_census(satcat: Iterable[dict[str, Any]], altitude_km: float, half_width_km: float = 30, reference_alt_km: float = 400) -> dict[str, Any]:
+def shell_census(
+    satcat: Iterable[dict[str, Any]],
+    altitude_km: float,
+    half_width_km: float = 30,
+    reference_alt_km: float = 400,
+    seed: int | None = None,
+) -> dict[str, Any]:
     rows = list(satcat)
-    counts = _counts(rows, altitude_km, half_width_km)
-    reference = _counts(rows, reference_alt_km, half_width_km)
+    rng = _catalog_rng(seed)
+    counts = _counts(rows, altitude_km, half_width_km, rng)
+    reference = _counts(rows, reference_alt_km, half_width_km, rng)
     scale = cam_scale_from_counts(counts["total"], reference["total"])
+    if rng is not None:
+        scale = max(0.4, min(2.5, scale * (1.0 + rng.gauss(0.0, CATALOG_RELATIVE_SIGMA))))
     obstacle = "quiet" if scale < 0.85 else "nominal" if scale <= 1.25 else "crowded" if scale <= 1.8 else "severe"
+    note = (
+        "Screening shell count; not collision probability (Pc). Close approaches use a "
+        "5 km screening volume, not NASA-grade Pc."
+    )
+    if seed is not None:
+        note += (
+            f" Seeded {CATALOG_RELATIVE_SIGMA * 100:.2f}% catalog uncertainty on apogee/"
+            "perigee and cam_scale; the cached SATCAT file is not rewritten."
+        )
     return {
         "altitude": altitude_km,
         "shell_low": altitude_km - half_width_km,
         "shell_high": altitude_km + half_width_km,
         "counts": counts,
         "reference_counts": reference,
-        "cam_scale": scale,
+        "cam_scale": round(scale, 6) if seed is not None else scale,
         "obstacle": obstacle,
         "source": _source_label(rows),
-        "note": "Screening shell count; not collision probability (Pc). Close approaches use a 5 km screening volume, not NASA-grade Pc.",
+        "note": note,
+        "catalog_sigma": CATALOG_RELATIVE_SIGMA if seed is not None else 0.0,
     }

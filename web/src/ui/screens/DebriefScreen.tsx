@@ -223,7 +223,7 @@ export function DebriefScreen() {
       setPythonError(error instanceof Error ? error.message : String(error));
     }
 
-    const census = await fetchCensus(handoff.achievedApogeeKm);
+    const census = await fetchCensus(handoff.achievedApogeeKm, false, handoff.seed);
     setDebrisCensus(census);
     const scaled = analyzePayload(handoff, GAME_MISSION_RULES, census.cam_scale);
     setPayloadAnalysis(scaled);

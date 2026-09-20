@@ -78,10 +78,10 @@ def weather() -> dict:
 
 
 @app.get("/api/satcat")
-def satcat(altitude_km: float = 400.0, refresh: bool = False) -> dict:
+def satcat(altitude_km: float = 400.0, refresh: bool = False, seed: int | None = None) -> dict:
     """Shell census only — never the full catalog."""
     try:
-        return crowding_census(altitude_km, force_refresh=refresh)
+        return crowding_census(altitude_km, force_refresh=refresh, seed=seed)
     except Exception as error:
         raise HTTPException(status_code=502, detail=f"SATCAT unavailable: {error}") from error
 

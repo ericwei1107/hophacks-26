@@ -163,7 +163,7 @@ def analyze_launched_payload(
         isp=PAYLOAD_ISP_S,
     )
     report["mission"] = mission.to_dict()
-    census = crowding_census(mission.target_altitude)
+    census = crowding_census(mission.target_altitude, seed=handoff.seed)
     report["debris"] = census
     ops = s.OperationalDraw(cam_scale=float(census["cam_scale"]))
 
