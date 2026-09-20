@@ -8,7 +8,7 @@ test("complete build -> launch -> flight -> debrief -> rebuild flow", async ({ p
   await expect(page).toHaveURL(/\/lab$/);
 
   // Assembly screen.
-  await expect(page.getByRole("heading", { name: /APOGEE/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Launch Lab/i })).toBeVisible();
   const launchButton = page.getByRole("button", { name: /LAUNCH/i });
   await expect(launchButton).toBeEnabled();
 
@@ -39,4 +39,10 @@ test("complete build -> launch -> flight -> debrief -> rebuild flow", async ({ p
   // Return to build.
   await page.getByRole("button", { name: /Return to build/i }).click();
   await expect(page.getByRole("button", { name: /LAUNCH/i })).toBeVisible();
+
+  // Editing a completed run restores the narrated stale-analysis notice.
+  await page.getByLabel("Mission payload (dry) value").fill("6500");
+  const staleNotice = page.locator(".narrated-text").filter({ hasText: "prior analysis invalidated" });
+  await expect(staleNotice).toBeVisible();
+  await expect(staleNotice.locator(".narration-button")).toHaveCount(1);
 });

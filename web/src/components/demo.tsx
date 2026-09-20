@@ -64,10 +64,10 @@ export default function BlackHoleHeroSectionDemo() {
             <header className="flex items-center justify-between border-b border-white/10 py-5 text-white">
               <a
                 href="#top"
-                aria-label="APOGEE home"
+                aria-label="Zenith home"
                 className="text-sm font-semibold tracking-[0.28em]"
               >
-                APOGEE
+                ZENITH
               </a>
               <nav aria-label="Landing page" className="flex items-center gap-5 text-xs text-white/60 sm:gap-8">
                 <a className="transition hover:text-white" href="#physics">
@@ -85,9 +85,9 @@ export default function BlackHoleHeroSectionDemo() {
                   Orbital mission simulator
                 </p>
                 <h1 className="text-[2.8rem] font-light leading-[1.02] tracking-[-0.04em] text-white sm:text-6xl lg:text-[4.75rem]">
-                  Light does not
+                  Houston, we
                   <br />
-                  leave here
+                  have a solution
                 </h1>
 
                 <NarratedText
@@ -152,9 +152,9 @@ export default function BlackHoleHeroSectionDemo() {
           <div className="mt-20 flex flex-col justify-between gap-6 border-t border-white/10 pt-8 sm:flex-row sm:items-end">
             <NarratedText
               className="max-w-2xl text-lg leading-relaxed text-white/55"
-              narration="APOGEE keeps the controls close to the physics: change one variable, launch again, and build intuition from the difference."
+              narration="Zenith keeps the controls close to the physics: change one variable, launch again, and build intuition from the difference."
             >
-              APOGEE keeps the controls close to the physics: change one variable,
+              Zenith keeps the controls close to the physics: change one variable,
               launch again, and build intuition from the difference.
             </NarratedText>
             <a

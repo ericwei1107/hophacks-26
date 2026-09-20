@@ -36,7 +36,7 @@ export function App() {
 function LaunchLab() {
   const screen = useAppStore((s) => s.screen);
   return (
-    <main aria-label="APOGEE mission simulator">
+    <main aria-label="Zenith mission simulator">
       {screen === "assembly" && <AssemblyScreen />}
       {screen === "flight" && <FlightScreen />}
       {screen === "debrief" && <DebriefScreen />}

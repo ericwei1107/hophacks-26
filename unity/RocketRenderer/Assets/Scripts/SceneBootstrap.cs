@@ -70,6 +70,7 @@ namespace Apogee.RocketRenderer
             near.depth = 0;
 
             StackCameras(far, near);
+            EnablePostProcessing(far, near);
             Cameras.FarCamera = far;
             Cameras.NearCamera = near;
 
@@ -86,6 +87,9 @@ namespace Apogee.RocketRenderer
             RenderSettings.ambientSkyColor = new Color(0.30f, 0.42f, 0.54f);
             RenderSettings.ambientEquatorColor = new Color(0.16f, 0.22f, 0.28f);
             RenderSettings.ambientGroundColor = new Color(0.04f, 0.07f, 0.10f);
+
+            // Distance haze near the ground, thinning to nothing with altitude.
+            EarthView.EnableHaze();
 
             // --- world --------------------------------------------------------
             var earthGo = new GameObject("Earth");
@@ -147,6 +151,47 @@ namespace Apogee.RocketRenderer
         }
 
         /// <summary>
+        /// Turn on post-processing for the stack.
+        ///
+        /// URP resolves post-processing on the camera that *finishes* the stack,
+        /// and enabling it on an earlier camera as well is not merely redundant:
+        /// the base camera then tries to resolve effects into a target the
+        /// overlay is still going to draw into. On the WebGPU backend that ends
+        /// with the pipeline producing no output at all — a completely
+        /// transparent canvas, with no error to explain it. So this goes on the
+        /// overlay only, and <see cref="CameraDirector"/> keeps that camera
+        /// enabled for the whole flight so the stack always ends with it.
+        ///
+        /// Dithering matters more than it sounds: the sky is one long gradient
+        /// from blue to black, and that is exactly what bands on an 8-bit
+        /// display.
+        /// </summary>
+        private static void EnablePostProcessing(Camera baseCamera, Camera lastInStack)
+        {
+            baseCamera.allowHDR = true;
+            lastInStack.allowHDR = true;
+
+            var baseData = baseCamera.GetUniversalAdditionalCameraData();
+            if (baseData != null)
+            {
+                // Explicitly off: only the last camera in the stack may resolve.
+                baseData.renderPostProcessing = false;
+                baseData.antialiasing = AntialiasingMode.None;
+            }
+
+            var lastData = lastInStack.GetUniversalAdditionalCameraData();
+            if (lastData == null)
+            {
+                return; // not URP: nothing to configure
+            }
+            lastData.renderPostProcessing = true;
+            lastData.dithering = true;
+            // FXAA rather than MSAA: one cheap pass, and MSAA does nothing
+            // for the particle edges that make up most of this scene.
+            lastData.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
+        }
+
+        /// <summary>
         /// URP camera stacking: the near camera becomes an overlay on the far
         /// one, so the two depth buffers stay separate and the Earth cannot
         /// z-fight with the pad.
@@ -173,8 +218,10 @@ namespace Apogee.RocketRenderer
             Destroy(go.GetComponent<Collider>());
             go.transform.SetParent(parent, false);
             var renderer = go.GetComponent<MeshRenderer>();
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-            renderer.sharedMaterial = new Material(shader) { color = new Color(0.54f, 0.56f, 0.6f) };
+            renderer.sharedMaterial = Shaders.Create(
+                new Color(0.54f, 0.56f, 0.6f),
+                "Universal Render Pipeline/Lit",
+                "Standard");
             go.SetActive(false);
             return go.transform;
         }

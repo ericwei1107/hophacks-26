@@ -150,7 +150,7 @@ export function AssemblyScreen() {
       </div>
 
       <div className="panel">
-        <h1>APOGEE <span className="dim">/ Launch Lab</span></h1>
+        <h1>Zenith <span className="dim">/ Launch Lab</span></h1>
 
         <section className="objective-card">
           <strong>Launch objective</strong>
@@ -207,7 +207,7 @@ export function AssemblyScreen() {
           </button>
           <button onClick={resetToReference}>Reset to reference build</button>
         </div>
-        {analysisStale && <p className="dim small">Build edited — prior analysis invalidated until rerun.</p>}
+        {analysisStale && <NarratedText className="dim small">Build edited — prior analysis invalidated until rerun.</NarratedText>}
         <p className="dim small">
           Weather: Kp {weather.weather.kp ?? "—"} · F10.7 {weather.weather.f107 ?? "—"} (
           {weather.source === "python" ? "Python NOAA" : weather.source === "noaa" ? "browser NOAA" : "reference snapshot"})
@@ -217,7 +217,7 @@ export function AssemblyScreen() {
               ? " · Payload analysis: local TypeScript"
               : ""}
         </p>
-        {persistenceNotice && <p className="check warning">⚠ {persistenceNotice}</p>}
+        {persistenceNotice && <NarratedText className="check warning" narration={persistenceNotice}>⚠ {persistenceNotice}</NarratedText>}
         <SettingsToggle />
       </div>
     </div>

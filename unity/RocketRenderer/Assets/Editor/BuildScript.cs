@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
@@ -34,6 +35,24 @@ namespace Apogee.RocketRenderer.EditorTools
         private const string ScenePath = "Assets/Scenes/Main.unity";
         private const string OutputRelativeToProject = "../../web/public/unity";
 
+        /// <summary>
+        /// Shaders the scene only ever names as a string, through Shader.Find.
+        ///
+        /// The build has no way to know they are used: the committed scene holds
+        /// one GameObject and every material is created at runtime, so nothing
+        /// references these assets and the shader stripper drops them. The player
+        /// then starts, calls Shader.Find, gets null, and dies on the first
+        /// `new Material(null)` with "Value cannot be null. Parameter name:
+        /// shader". Registering them as always-included is what keeps building
+        /// the scene from code compatible with stripping.
+        /// </summary>
+        private static readonly string[] RequiredShaders =
+        {
+            "Universal Render Pipeline/Lit",
+            "Universal Render Pipeline/Unlit",
+            "Universal Render Pipeline/Particles/Unlit",
+        };
+
         [MenuItem("Apogee/Build Web Player")]
         public static void BuildWeb()
         {
@@ -43,6 +62,7 @@ namespace Apogee.RocketRenderer.EditorTools
             Debug.Log($"[BuildScript] Building the Web player into {outputPath}");
 
             ApplyPlayerSettings();
+            EnsureAlwaysIncludedShaders();
             string scenePath = EnsureScene();
 
             if (Directory.Exists(outputPath))
@@ -102,6 +122,75 @@ namespace Apogee.RocketRenderer.EditorTools
             PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.None;
             PlayerSettings.runInBackground = true;
             EditorUserBuildSettings.development = false;
+        }
+
+        /// <summary>
+        /// Add <see cref="RequiredShaders"/> to the project's always-included
+        /// shader list, so the stripper keeps them even though the only thing
+        /// naming them is a string in a script.
+        ///
+        /// This edits ProjectSettings/GraphicsSettings.asset through
+        /// SerializedObject because the list has no public API. It is
+        /// idempotent: shaders already on the list are left alone, so repeated
+        /// builds do not grow it.
+        /// </summary>
+        private static void EnsureAlwaysIncludedShaders()
+        {
+            UnityEngine.Object[] assets =
+                AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset");
+            if (assets == null || assets.Length == 0 || assets[0] == null)
+            {
+                Debug.LogWarning(
+                    "[BuildScript] Could not open GraphicsSettings; runtime Shader.Find calls may "
+                    + "return null in the player.");
+                return;
+            }
+
+            var settings = new SerializedObject(assets[0]);
+            SerializedProperty list = settings.FindProperty("m_AlwaysIncludedShaders");
+            if (list == null || !list.isArray)
+            {
+                Debug.LogWarning(
+                    "[BuildScript] GraphicsSettings has no m_AlwaysIncludedShaders array; "
+                    + "runtime Shader.Find calls may return null in the player.");
+                return;
+            }
+
+            var present = new HashSet<string>();
+            for (int i = 0; i < list.arraySize; i++)
+            {
+                if (list.GetArrayElementAtIndex(i).objectReferenceValue is Shader shader)
+                {
+                    present.Add(shader.name);
+                }
+            }
+
+            bool changed = false;
+            foreach (string name in RequiredShaders)
+            {
+                if (present.Contains(name))
+                {
+                    continue;
+                }
+                Shader shader = Shader.Find(name);
+                if (shader == null)
+                {
+                    // Not fatal here: the runtime falls back rather than dying,
+                    // but the effect that wanted it will be missing.
+                    Debug.LogWarning($"[BuildScript] Shader not found in the editor: {name}");
+                    continue;
+                }
+                list.InsertArrayElementAtIndex(list.arraySize);
+                list.GetArrayElementAtIndex(list.arraySize - 1).objectReferenceValue = shader;
+                changed = true;
+                Debug.Log($"[BuildScript] Always-including shader: {name}");
+            }
+
+            if (changed)
+            {
+                settings.ApplyModifiedPropertiesWithoutUndo();
+                AssetDatabase.SaveAssets();
+            }
         }
 
         /// <summary>

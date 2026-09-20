@@ -150,9 +150,12 @@ namespace Apogee.RocketRenderer
         private static Material NewMaterial(Color color)
         {
             // URP's lit shader; falls back to the built-in one in a bare project.
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-            var material = new Material(shader);
-            material.color = color;
+            Material material = Shaders.Create(
+                color, "Universal Render Pipeline/Lit", "Standard");
+            if (material == null)
+            {
+                return null;
+            }
             if (material.HasProperty("_Smoothness"))
             {
                 material.SetFloat("_Smoothness", 0.35f);

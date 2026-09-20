@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using UnityEngine;
 
@@ -40,8 +41,10 @@ namespace Apogee.RocketRenderer
         private void Start()
         {
             // The page's HTML controls sit over this canvas; Unity grabbing the
-            // keyboard would swallow every keystroke meant for them.
-            WebGLInput.captureAllKeyboardInput = false;
+            // keyboard would swallow every keystroke meant for them. Resolved by
+            // reflection (rather than a direct UnityEngine.WebGLInput reference)
+            // so this compiles on any editor regardless of installed modules.
+            DisableWebGLKeyboardCapture();
 
             try
             {
@@ -151,7 +154,37 @@ namespace Apogee.RocketRenderer
             Scene?.ResetFlight();
         }
 
+        /// <summary>
+        /// Toggle post-processing from the page: "0" or "false" turns it off.
+        ///
+        /// A diagnostic hatch. Post-processing on the WebGPU backend can fail
+        /// with nothing in the console and nothing on the canvas, and this makes
+        /// it one message to rule in or out instead of a rebuild.
+        /// </summary>
+        public void SetPostProcessing(string value)
+        {
+            bool enabled = value != "0"
+                && !string.Equals(value, "false", StringComparison.OrdinalIgnoreCase);
+            Scene?.Cameras?.SetPostProcessing(enabled);
+        }
+
         // -- helpers -------------------------------------------------------------
+
+        private static void DisableWebGLKeyboardCapture()
+        {
+            try
+            {
+                Type webGlInputType = Type.GetType("UnityEngine.WebGLInput, UnityEngine.WebGLModule")
+                    ?? Type.GetType("UnityEngine.WebGLInput, UnityEngine");
+                FieldInfo field = webGlInputType?.GetField(
+                    "captureAllKeyboardInput", BindingFlags.Public | BindingFlags.Static);
+                field?.SetValue(null, false);
+            }
+            catch (Exception error)
+            {
+                Debug.LogWarning($"DisableWebGLKeyboardCapture skipped: {error.Message}");
+            }
+        }
 
         private void Announce()
         {

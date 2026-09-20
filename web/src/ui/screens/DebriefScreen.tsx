@@ -20,6 +20,7 @@ import { useAppStore, simClient } from "../store";
 import { TelemetryChart, type ChartChannel } from "../components/TelemetryChart";
 import { MissionVideoPlayer } from "../../media/MissionVideo";
 import { outcomeVideo } from "../../media/videos";
+import { NarrationButton } from "../../narration/NarrationButton";
 import { NarratedText } from "../../narration/NarratedText";
 import {
   buildRunReport,
@@ -49,15 +50,18 @@ function StatTile({
   label,
   value,
   tone,
+  narration,
 }: {
   label: string;
   value: string;
   tone?: "pass" | "fail" | "neutral";
+  narration?: string;
 }) {
   return (
     <div className={`stat-tile${tone ? ` ${tone}` : ""}`}>
       <span className="stat-value">{value}</span>
       <span className="stat-label">{label}</span>
+      {narration && <NarrationButton text={narration} />}
     </div>
   );
 }
@@ -424,7 +428,12 @@ export function DebriefScreen() {
           </div>
           {pythonError && <p className="check warning">⚠ {pythonError}</p>}
           {payloadAnalysis.explanations[0] && (
-            <p className="report-lead">{payloadAnalysis.explanations[0].replace("m^2", "m²")}</p>
+            <NarratedText
+              className="report-lead"
+              narration={payloadAnalysis.explanations[0].replace("m^2", "m²")}
+            >
+              {payloadAnalysis.explanations[0].replace("m^2", "m²")}
+            </NarratedText>
           )}
           {payloadAnalysis.result && (
             <div className="stat-grid">
@@ -438,19 +447,23 @@ export function DebriefScreen() {
               <StatTile label="Propellant left" value={`${payloadAnalysis.result.propellant_remaining.toFixed(0)} kg`} />
             </div>
           )}
-          {payloadAnalysis.explanations.slice(1).filter((line) => !line.startsWith("Baseline mission")).map((line) => (
-            <p key={line} className="report-note">{line.replace("m^2", "m²")}</p>
-          ))}
+          {payloadAnalysis.explanations.slice(1).filter((line) => !line.startsWith("Baseline mission")).map((line) => {
+            const narratedLine = line.replace("m^2", "m²");
+            return <NarratedText key={line} className="report-note" narration={narratedLine}>{narratedLine}</NarratedText>;
+          })}
           {monteCarlo && (
             <div className="report-block">
               <div className="pass-hero">
                 <p className={`pass-hero-value${monteCarlo.probability_pass >= 0.5 ? " pass" : monteCarlo.probability_pass >= 0.2 ? " warn" : " fail"}`}>
                   {(monteCarlo.probability_pass * 100).toFixed(1)}%
                 </p>
-                <p className="pass-hero-label">
+                <NarratedText
+                  className="pass-hero-label"
+                  narration={`Pass rate ${(monteCarlo.probability_pass * 100).toFixed(1)} percent across ${monteCarlo.total_runs.toLocaleString()} Monte Carlo runs${pythonReport ? ", using Python" : pythonError ? ", using TypeScript" : ""}.`}
+                >
                   pass rate across {monteCarlo.total_runs.toLocaleString()} Monte Carlo runs
                   {pythonReport ? " · Python" : pythonError ? " · TypeScript" : ""}
-                </p>
+                </NarratedText>
               </div>
               {Object.keys(monteCarlo.failure_modes).length > 0 && (
                 <div className="mode-list">
@@ -470,7 +483,7 @@ export function DebriefScreen() {
                     })}
                 </div>
               )}
-              <p className="report-footnote">Failure modes overlap, so the percentages are not exclusive slices.</p>
+              <NarratedText className="report-footnote">Failure modes overlap, so the percentages are not exclusive slices.</NarratedText>
               {monteCarlo.sensitivity_results.length > 0 && (
                 <>
                   <h3>Most sensitive parameters</h3>
@@ -553,12 +566,17 @@ export function DebriefScreen() {
               label="Reaches orbit"
               value={`${(robustness.orbitProbability * 100).toFixed(0)}%`}
               tone={robustness.orbitProbability >= 0.5 ? "pass" : "fail"}
+              narration={`Reaches orbit ${(robustness.orbitProbability * 100).toFixed(0)} percent of the time, with a 95 percent confidence interval of ${(robustness.orbitProbability95[0] * 100).toFixed(0)} to ${(robustness.orbitProbability95[1] * 100).toFixed(0)} percent.`}
             />
             <StatTile
               label="95% CI"
               value={`${(robustness.orbitProbability95[0] * 100).toFixed(0)}–${(robustness.orbitProbability95[1] * 100).toFixed(0)}%`}
             />
-            <StatTile label="Max-Q p95" value={`${(robustness.maxQPaP95 / 1000).toFixed(1)} kPa`} />
+            <StatTile
+              label="Max-Q p95"
+              value={`${(robustness.maxQPaP95 / 1000).toFixed(1)} kPa`}
+              narration={`Maximum dynamic pressure 95th percentile ${(robustness.maxQPaP95 / 1000).toFixed(1)} kilopascals; peak g 95th percentile ${robustness.maxGP95.toFixed(2)} g.`}
+            />
             <StatTile label="Peak-g p95" value={`${robustness.maxGP95.toFixed(2)} g`} />
           </div>
           <div className="mode-list">
@@ -590,10 +608,13 @@ export function DebriefScreen() {
               <h2>Parameter sensitivity</h2>
             </div>
           </div>
-          <p className="report-note">
+          <NarratedText
+            className="report-note"
+            narration={`Nominal orbit rate ${(sensitivity.nominal.orbitProbability * 100).toFixed(0)} percent. Change when each parameter is perturbed alone:`}
+          >
             Nominal orbit rate {(sensitivity.nominal.orbitProbability * 100).toFixed(0)}%. Change when each
             parameter is perturbed alone:
-          </p>
+          </NarratedText>
           <div className="mode-list">
             {sensitivity.entries.map((e) => (
               <div key={e.parameter} className="mode-row plain">

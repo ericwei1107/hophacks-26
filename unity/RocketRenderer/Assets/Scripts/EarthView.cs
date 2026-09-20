@@ -30,6 +30,10 @@ namespace Apogee.RocketRenderer
         private const float StarFadeStartM = 35_000f;
         private const float SkyBlackM = 110_000f;
 
+        /// <summary>Distance haze at sea level, and the height it thins over.</summary>
+        private const float GroundFogDensity = 0.00022f;
+        private const float HazeScaleHeightM = 8_500f;
+
         private Transform globe;
         private Transform atmosphere;
         private Transform ground;
@@ -72,6 +76,30 @@ namespace Apogee.RocketRenderer
             ground = go.transform;
         }
 
+        /// <summary>
+        /// Whether distance haze is configured. The fog itself is switched on
+        /// and off per camera by <see cref="CameraDirector"/>, because Unity's
+        /// fog is a global setting and the far camera must never see it: it
+        /// draws the Earth from 6371 km away, and any density that reads as air
+        /// over a few kilometres is completely opaque over a few thousand.
+        /// </summary>
+        public static bool HazeEnabled { get; private set; }
+
+        /// <summary>
+        /// Configure distance haze for the near camera. Density falls off with
+        /// the same scale height the atmosphere itself uses, so the pad sits in
+        /// visible air and orbit is perfectly clear, with everything in between
+        /// thinning out on its own.
+        /// </summary>
+        public static void EnableHaze()
+        {
+            RenderSettings.fog = false; // the director turns it on per camera
+            RenderSettings.fogMode = FogMode.ExponentialSquared;
+            RenderSettings.fogColor = SkyColor(0f);
+            RenderSettings.fogDensity = GroundFogDensity;
+            HazeEnabled = true;
+        }
+
         /// <summary>Place the globe and fade the sky, from one frame.</summary>
         public void Apply(RenderFrameDto frame)
         {
@@ -79,6 +107,15 @@ namespace Apogee.RocketRenderer
             transform.localRotation = frame.earthQuat;
 
             float altitude = Mathf.Max(0f, frame.altitude);
+
+            if (HazeEnabled)
+            {
+                // Air thins exponentially, and so does what it does to the view.
+                RenderSettings.fogDensity = GroundFogDensity * Mathf.Exp(-altitude / HazeScaleHeightM);
+                // Haze is lit sky, so it has to track the sky's own colour or it
+                // reads as grey smoke hanging in front of a black background.
+                RenderSettings.fogColor = SkyColor(altitude);
+            }
 
             if (ground != null)
             {
@@ -132,8 +169,12 @@ namespace Apogee.RocketRenderer
 
         private static Material NewMaterial(Color color, bool transparent)
         {
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-            var material = new Material(shader) { color = color };
+            Material material = Shaders.Create(
+                color, "Universal Render Pipeline/Lit", "Standard");
+            if (material == null)
+            {
+                return null;
+            }
             if (transparent)
             {
                 material.SetFloat("_Surface", 1f); // URP: transparent
@@ -179,10 +220,15 @@ namespace Apogee.RocketRenderer
 
         internal static Material UnlitAdditive(Color color)
         {
-            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit")
-                ?? Shader.Find("Particles/Standard Unlit")
-                ?? Shader.Find("Sprites/Default");
-            var material = new Material(shader) { color = color };
+            Material material = Shaders.Create(
+                color,
+                "Universal Render Pipeline/Particles/Unlit",
+                "Particles/Standard Unlit",
+                "Sprites/Default");
+            if (material == null)
+            {
+                return null;
+            }
             if (material.HasProperty("_Blend"))
             {
                 material.SetFloat("_Blend", 1f); // additive
