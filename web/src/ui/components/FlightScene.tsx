@@ -302,7 +302,7 @@ export function FlightScene({
       />
 
       <group ref={earthRef}>
-        <Earth />
+        <Earth frameRef={frameRef} lowEffects={lowEffects} />
       </group>
 
       <group ref={moonRef}>

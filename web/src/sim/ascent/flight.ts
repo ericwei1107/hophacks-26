@@ -16,7 +16,7 @@
  * receives an artificial velocity impulse.
  */
 
-import type { RocketConfig } from "../../domain/config";
+import { payloadWetMassKg, type RocketConfig } from "../../domain/config";
 import { deriveRocket, type DerivedRocket } from "../../domain/derive";
 import { createEngineCatalog, thrustAtPressure, type EngineSpec } from "../../domain/engines";
 import { CATALOG_VERSION, MODEL_VERSION } from "../../domain/version";
@@ -236,7 +236,8 @@ export function createFlight(
   if (perturbations !== NO_PERTURBATIONS) {
     effectiveConfig = {
       ...config,
-      payloadWetMassKg: config.payloadWetMassKg, // payload mass is fixed by the player
+      payloadDryMassKg: config.payloadDryMassKg, // payload mass is fixed by the player
+      payloadPropellantKg: config.payloadPropellantKg,
       stage1PropellantKg: config.stage1PropellantKg * perturbations.propellantScale,
       stage2PropellantKg: config.stage2PropellantKg * perturbations.propellantScale,
     };
@@ -335,7 +336,7 @@ function finMassKg(state: FlightState): number {
 /** Mass of everything currently attached, excluding active-stage propellant. */
 function baseMassKg(state: FlightState): number {
   const r = state.rocket;
-  let mass = r.config.payloadWetMassKg + r.stage2.dryMassKg + state.stage2PropellantKg;
+  let mass = payloadWetMassKg(r.config) + r.stage2.dryMassKg + state.stage2PropellantKg;
   if (!state.fairingJettisoned) {
     mass += fairingMassKg(state);
   }

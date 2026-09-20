@@ -94,6 +94,25 @@ describe("PlaybackController", () => {
     expect(controller.timeS).toBeCloseTo(flight.totalTimeS, 6);
   });
 
+  it("notifies completion once when active playback crosses the end", () => {
+    const { controller } = attached();
+    const completed = vi.fn();
+    controller.subscribeComplete(completed);
+    controller.seek(flight.totalTimeS - 0.1);
+    controller.advance(0.2);
+    controller.advance(1);
+    expect(completed).toHaveBeenCalledTimes(1);
+    expect(controller.playing).toBe(false);
+  });
+
+  it("does not treat scrubbing to the end as playback completion", () => {
+    const { controller } = attached();
+    const completed = vi.fn();
+    controller.subscribeComplete(completed);
+    controller.seek(flight.totalTimeS);
+    expect(completed).not.toHaveBeenCalled();
+  });
+
   it("does not move while paused", () => {
     const { controller } = attached();
     controller.seek(60);

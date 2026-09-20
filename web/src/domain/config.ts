@@ -1,5 +1,5 @@
 /**
- * Player-facing rocket configuration. The player configures only these eight
+ * Player-facing rocket configuration. The player configures only these nine
  * controls; everything else is derived by deriveRocket.
  */
 
@@ -8,8 +8,10 @@ import { MODEL_VERSION } from "./version";
 
 export interface RocketConfig {
   modelVersion: string;
-  /** Payload wet mass, kg (0.5–20 t). */
-  payloadWetMassKg: number;
+  /** Mission/science hardware delivered by the launch vehicle, kg. */
+  payloadDryMassKg: number;
+  /** Propellant carried by the payload for circularization and operations, kg. */
+  payloadPropellantKg: number;
   /** Fairing/body diameter, m (1–5). Sets the diameter of the whole stack. */
   diameterM: number;
   /** Stage 1 propellant capacity, kg (20–400 t). */
@@ -27,7 +29,8 @@ export interface RocketConfig {
 }
 
 export const CONFIG_RANGES = {
-  payloadWetMassKg: { min: 500, max: 20_000, step: 100, unit: "kg" },
+  payloadDryMassKg: { min: 400, max: 16_000, step: 100, unit: "kg" },
+  payloadPropellantKg: { min: 100, max: 4_000, step: 100, unit: "kg" },
   diameterM: { min: 1, max: 5, step: 0.1, unit: "m" },
   stage1PropellantKg: { min: 20_000, max: 400_000, step: 1_000, unit: "kg" },
   stage1EngineCount: { min: 1, max: 9, step: 1, unit: "" },
@@ -52,7 +55,8 @@ export const CONFIG_RANGES = {
 export function referenceConfig(): RocketConfig {
   return {
     modelVersion: MODEL_VERSION,
-    payloadWetMassKg: 5_000,
+    payloadDryMassKg: 4_000,
+    payloadPropellantKg: 1_000,
     diameterM: 3.7,
     stage1PropellantKg: 260_000,
     stage1EngineCount: 5,
@@ -61,4 +65,9 @@ export function referenceConfig(): RocketConfig {
     stage2Engine: "cryogenic",
     finSpanM: 2.0,
   };
+}
+
+/** Total payload carried through ascent. */
+export function payloadWetMassKg(config: RocketConfig): number {
+  return config.payloadDryMassKg + config.payloadPropellantKg;
 }

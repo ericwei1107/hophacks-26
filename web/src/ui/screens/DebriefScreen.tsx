@@ -12,6 +12,9 @@ import type { MonteCarloSummary } from "../../sim/orbital/types";
 import type { AscentRobustnessResult, AscentSensitivityResult } from "../../sim/ascent/robustness";
 import { useAppStore, simClient } from "../store";
 import { TelemetryChart, type ChartChannel } from "../components/TelemetryChart";
+import { MissionVideoPlayer } from "../../media/MissionVideo";
+import { outcomeVideo } from "../../media/videos";
+import { NarratedText } from "../../narration/NarratedText";
 import {
   buildRunReport,
   compareRunToCurrent,
@@ -44,7 +47,8 @@ export function DebriefScreen() {
             // trajectory, not something a LEO payload mission model can use.
             finalElements: flight.parkingElements ?? flight.finalElements,
             stage2PropellantRemainingKg: flight.stage2PropellantRemainingKg,
-            payloadWetMassKg: flight.config.payloadWetMassKg,
+            payloadDryMassKg: flight.config.payloadDryMassKg,
+            payloadPropellantKg: flight.config.payloadPropellantKg,
             weather: flight.weather,
             seed: flight.seed,
           })
@@ -55,7 +59,7 @@ export function DebriefScreen() {
   if (!flight) {
     return (
       <div className="screen debrief">
-        <p>No flight to debrief.</p>
+        <NarratedText>No flight to debrief.</NarratedText>
         <button onClick={() => setScreen("assembly")}>Back to build</button>
       </div>
     );
@@ -154,20 +158,23 @@ export function DebriefScreen() {
   return (
     <div className="screen debrief">
       <header className={`outcome ${flight.orbitAchieved ? "success" : "failure"}`}>
+        <MissionVideoPlayer video={outcomeVideo(flight.orbitAchieved)} className="outcome-video" />
         <h1>{diagnosis?.title ?? outcomeTitle(flight.outcome)}</h1>
         {el && (
-          <p className="orbit-line">
+          <NarratedText className="orbit-line" narration={`Orbit: ${el.perigeeAltitudeKm.toFixed(0)} by ${el.apogeeAltitudeKm?.toFixed(0) ?? "unknown"} kilometers, inclination ${el.inclinationDeg.toFixed(1)} degrees.`}>
             Orbit: {el.perigeeAltitudeKm.toFixed(0)} × {el.apogeeAltitudeKm?.toFixed(0) ?? "?"} km, inclination {el.inclinationDeg.toFixed(1)}°
-          </p>
+          </NarratedText>
         )}
       </header>
 
       <section className="cause-card">
         <h2>{diagnosis ? "Primary diagnosis" : "Flight result"}</h2>
-        <p className="cause-detail">{diagnosis?.explanation ?? flight.failureDetail ?? "The flight met its objective."}</p>
+        <NarratedText className="cause-detail" narration={diagnosis?.explanation ?? flight.failureDetail ?? "The flight met its objective."}>{diagnosis?.explanation ?? flight.failureDetail ?? "The flight met its objective."}</NarratedText>
         {failureEvent && <p className="cause-time">at {failureEvent.t.toFixed(1)} s</p>}
-        {diagnosis && <p className="cause-suggestion">{diagnosis.evidence} Try one change: {diagnosis.recommendedExperiment.label}.</p>}
+        {diagnosis && <NarratedText className="cause-suggestion" narration={`${diagnosis.evidence} Try one change: ${diagnosis.recommendedExperiment.label}.`}>{diagnosis.evidence} Try one change: {diagnosis.recommendedExperiment.label}.</NarratedText>}
         <div className="evidence">
+          <span>Mission mass delivered {(flight.config.payloadDryMassKg / 1000).toFixed(2)} t</span>
+          <span>Payload propellant {(flight.config.payloadPropellantKg / 1000).toFixed(2)} t</span>
           <span>Max-Q {(flight.maxQPa / 1000).toFixed(1)} kPa (limit 45)</span>
           <span>Peak g {flight.maxG.toFixed(2)} (limit 5.0)</span>
           {el && <span>Perigee {el.perigeeAltitudeKm.toFixed(0)} km (sustained ≥ 150)</span>}
@@ -189,7 +196,7 @@ export function DebriefScreen() {
               <span>Periselene altitude {((lunar.periseleneRadiusM - MOON_RADIUS_M) / 1000).toFixed(0)} km</span>
             )}
           </div>
-          <p className="dim small">
+          <NarratedText className="dim small" narration={`${lunar.classification === "lunar_arrival" ? "The transfer reached the Moon's sphere of influence within the aim corridor." : lunar.classification === "lunar_impact" ? "The transfer reached the Moon's sphere of influence, but periselene fell below the surface." : lunar.classification === "lunar_miss" ? "The transfer either missed the Moon's sphere of influence or landed outside the aim corridor." : lunar.classification === "tli_shortfall" ? "The upper stage ran out of usable delta-v before the transfer could reach the Moon's distance." : "The burn carried far more energy than the transfer needed."} The Earth-Moon coast is evaluated analytically (patched conic), not simulated step by step, and the Moon's own gravity during the Earth leg is not modelled.`}>
             {lunar.classification === "lunar_arrival" &&
               "The transfer reached the Moon's sphere of influence within the aim corridor."}
             {lunar.classification === "lunar_impact" &&
@@ -201,7 +208,7 @@ export function DebriefScreen() {
             {lunar.classification === "earth_escape" &&
               "The burn carried far more energy than the transfer needed."}
             {" "}The Earth-Moon coast is evaluated analytically (patched conic), not simulated step by step, and the Moon's own gravity during the Earth leg is not modelled — see LUNAR_MISSION_PLAN.md §3.
-          </p>
+          </NarratedText>
         </section>
       )}
 
@@ -264,8 +271,8 @@ export function DebriefScreen() {
         return (
           <section className="analysis">
             <h2>{label}</h2>
-            <p className="analysis-line">Outcome: {comparison.outcomeChange}</p>
-            <p className="dim small">{comparison.kind === "one_relevant_change" ? "This run changed the suggested control only, so the comparison can support a causal explanation." : "This comparison reports measurements without claiming that one change caused the difference."}</p>
+            <NarratedText className="analysis-line" narration={`Outcome: ${comparison.outcomeChange}`}>Outcome: {comparison.outcomeChange}</NarratedText>
+            <NarratedText className="dim small">{comparison.kind === "one_relevant_change" ? "This run changed the suggested control only, so the comparison can support a causal explanation." : "This comparison reports measurements without claiming that one change caused the difference."}</NarratedText>
             <ul>{comparison.configDiffs.map((diff) => <li key={diff}>{diff}</li>)}</ul>
           </section>
         );
@@ -294,7 +301,7 @@ export function DebriefScreen() {
               const { configDiffs, outcomeChange } = compareRunToCurrent(flight, previous);
               return (
                 <div>
-                  <p className="analysis-line">Outcome: {outcomeChange}</p>
+                  <NarratedText className="analysis-line" narration={`Outcome: ${outcomeChange}`}>Outcome: {outcomeChange}</NarratedText>
                   {configDiffs.length > 0 ? (
                     <ul>
                       {configDiffs.map((d) => (
@@ -302,7 +309,7 @@ export function DebriefScreen() {
                       ))}
                     </ul>
                   ) : (
-                    <p className="analysis-line">Identical build configuration.</p>
+                    <NarratedText className="analysis-line">Identical build configuration.</NarratedText>
                   )}
                 </div>
               );
@@ -314,7 +321,7 @@ export function DebriefScreen() {
         <section className="analysis">
           <h2>Payload three-year mission</h2>
           {payloadAnalysis.explanations.map((line, i) => (
-            <p key={i} className="analysis-line">{line}</p>
+            <NarratedText key={i} className="analysis-line">{line}</NarratedText>
           ))}
           {payloadAnalysis.result && (
           <div className="evidence">
@@ -327,7 +334,7 @@ export function DebriefScreen() {
           {monteCarlo && (
             <div className="monte-carlo">
               <h3>Monte Carlo ({monteCarlo.total_runs.toLocaleString()} runs)</h3>
-              <p>Pass rate {(monteCarlo.probability_pass * 100).toFixed(1)}%</p>
+              <NarratedText narration={`Pass rate ${(monteCarlo.probability_pass * 100).toFixed(1)} percent.`}>Pass rate {(monteCarlo.probability_pass * 100).toFixed(1)}%</NarratedText>
               {Object.keys(monteCarlo.failure_modes).length > 0 && (
                 <ul>
                   {Object.entries(monteCarlo.failure_modes)
@@ -337,7 +344,7 @@ export function DebriefScreen() {
                     ))}
                 </ul>
               )}
-              <p className="dim small">Failure modes overlap; percentages are not exclusive slices.</p>
+              <NarratedText className="dim small">Failure modes overlap; percentages are not exclusive slices.</NarratedText>
               {monteCarlo.sensitivity_results.length > 0 && (
                 <>
                   <h3>Most sensitive parameters</h3>
@@ -358,11 +365,11 @@ export function DebriefScreen() {
       {robustness && (
         <section className="analysis">
           <h2>Ascent robustness ({robustness.completedRuns} runs)</h2>
-          <p>
+          <NarratedText narration={`Reaches orbit ${(robustness.orbitProbability * 100).toFixed(0)}% of the time (95% confidence interval ${(robustness.orbitProbability95[0] * 100).toFixed(0)}–${(robustness.orbitProbability95[1] * 100).toFixed(0)}%).`}>
             Reaches orbit {(robustness.orbitProbability * 100).toFixed(0)}% of the time
             (95% CI {(robustness.orbitProbability95[0] * 100).toFixed(0)}–{(robustness.orbitProbability95[1] * 100).toFixed(0)}%)
-          </p>
-          <p>Max-Q p95 {(robustness.maxQPaP95 / 1000).toFixed(1)} kPa; peak-g p95 {robustness.maxGP95.toFixed(2)} g</p>
+          </NarratedText>
+          <NarratedText narration={`Maximum dynamic pressure 95th percentile ${(robustness.maxQPaP95 / 1000).toFixed(1)} kilopascals; peak g 95th percentile ${robustness.maxGP95.toFixed(2)} g.`}>Max-Q p95 {(robustness.maxQPaP95 / 1000).toFixed(1)} kPa; peak-g p95 {robustness.maxGP95.toFixed(2)} g</NarratedText>
           <ul>
             {Object.entries(robustness.outcomeCounts).map(([outcome, count]) => (
               <li key={outcome}>{outcomeTitle(outcome)}: {count}</li>
@@ -380,10 +387,10 @@ export function DebriefScreen() {
       {sensitivity && (
         <section className="analysis">
           <h2>Ascent parameter sensitivity (100 runs each)</h2>
-          <p className="dim small">
+          <NarratedText className="dim small" narration={`Nominal orbit rate ${(sensitivity.nominal.orbitProbability * 100).toFixed(0)}%. Change when each parameter is perturbed alone:`}>
             Nominal orbit rate {(sensitivity.nominal.orbitProbability * 100).toFixed(0)}%. Change when each
             parameter is perturbed alone:
-          </p>
+          </NarratedText>
           <ul>
             {sensitivity.entries.map((e) => (
               <li key={e.parameter}>

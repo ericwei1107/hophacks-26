@@ -12,6 +12,7 @@ import type { EngineId } from "../../domain/engines";
 import { useAppStore } from "../store";
 import { RocketMesh } from "../components/RocketMesh";
 import { SettingsToggle } from "../components/SettingsToggle";
+import { NarratedText } from "../../narration/NarratedText";
 
 function Slider({
   label,
@@ -22,6 +23,7 @@ function Slider({
   unit,
   onChange,
   format,
+  hint,
   suggested = false,
 }: {
   label: string;
@@ -32,6 +34,7 @@ function Slider({
   unit: string;
   onChange: (value: number) => void;
   format?: (value: number) => string;
+  hint?: string;
   suggested?: boolean;
 }) {
   const display = format ? format(value) : `${value} ${unit}`;
@@ -63,6 +66,7 @@ function Slider({
         aria-label={`${label} value`}
       />
       <span className="control-value">{display}</span>
+      {hint && <span className="control-hint">{hint}</span>}
     </label>
   );
 }
@@ -148,24 +152,25 @@ export function AssemblyScreen() {
 
         <section className="objective-card">
           <strong>Launch objective</strong>
-          <p>Place the payload in a 180–220 × 180–250 km orbit. Perigee must stay above 150 km; structural max-Q is 45 kPa and payload load is 5 g.</p>
+          <NarratedText>Deliver as much useful mission mass as possible, with enough onboard propellant to circularize and operate. First reach a 180–220 × 180–250 km parking orbit, then complete the lunar transfer.</NarratedText>
         </section>
         {experimentBaseline && suggestedExperiment && (
           <section className="experiment-card">
             <strong>Experiment baseline pinned</strong>
-            <p>Try one change: {suggestedExperiment.label}. Compare the next flight with {experimentBaseline.outcome.replaceAll("_", " ")}.</p>
+            <NarratedText narration={`Try one change: ${suggestedExperiment.label}. Compare the next flight with ${experimentBaseline.outcome.replaceAll("_", " ")}.`}>Try one change: {suggestedExperiment.label}. Compare the next flight with {experimentBaseline.outcome.replaceAll("_", " ")}.</NarratedText>
           </section>
         )}
 
         <section className="controls">
-          <Slider label="Payload wet mass" value={config.payloadWetMassKg} min={CONFIG_RANGES.payloadWetMassKg.min} max={CONFIG_RANGES.payloadWetMassKg.max} step={CONFIG_RANGES.payloadWetMassKg.step} unit="kg" onChange={(v) => updateConfig({ payloadWetMassKg: v })} format={(v) => `${(v / 1000).toFixed(1)} t`} suggested={suggestedExperiment?.control === "payloadWetMassKg"} />
-          <Slider label="Body diameter" value={config.diameterM} min={CONFIG_RANGES.diameterM.min} max={CONFIG_RANGES.diameterM.max} step={CONFIG_RANGES.diameterM.step} unit="m" onChange={(v) => updateConfig({ diameterM: v })} format={(v) => `${v.toFixed(1)} m`} suggested={suggestedExperiment?.control === "diameterM"} />
+          <Slider label="Mission payload (dry)" value={config.payloadDryMassKg} min={CONFIG_RANGES.payloadDryMassKg.min} max={CONFIG_RANGES.payloadDryMassKg.max} step={CONFIG_RANGES.payloadDryMassKg.step} unit="kg" onChange={(v) => updateConfig({ payloadDryMassKg: v })} format={(v) => `${(v / 1000).toFixed(1)} t`} hint="More delivered capability, but every kilogram must be accelerated to orbit." suggested={suggestedExperiment?.control === "payloadDryMassKg"} />
+          <Slider label="Payload propellant" value={config.payloadPropellantKg} min={CONFIG_RANGES.payloadPropellantKg.min} max={CONFIG_RANGES.payloadPropellantKg.max} step={CONFIG_RANGES.payloadPropellantKg.step} unit="kg" onChange={(v) => updateConfig({ payloadPropellantKg: v })} format={(v) => `${(v / 1000).toFixed(1)} t`} hint="Funds circularization and operations after launch, at the cost of ascent mass." suggested={suggestedExperiment?.control === "payloadPropellantKg"} />
+          <Slider label="Body diameter" value={config.diameterM} min={CONFIG_RANGES.diameterM.min} max={CONFIG_RANGES.diameterM.max} step={CONFIG_RANGES.diameterM.step} unit="m" onChange={(v) => updateConfig({ diameterM: v })} format={(v) => `${v.toFixed(1)} m`} hint="Fits engines and shortens tanks, but adds frontal drag and fairing mass." suggested={suggestedExperiment?.control === "diameterM"} />
           <Slider label="Stage 1 propellant" value={config.stage1PropellantKg} min={CONFIG_RANGES.stage1PropellantKg.min} max={CONFIG_RANGES.stage1PropellantKg.max} step={CONFIG_RANGES.stage1PropellantKg.step} unit="kg" onChange={(v) => updateConfig({ stage1PropellantKg: v })} format={(v) => `${(v / 1000).toFixed(0)} t`} />
-          <Slider label="Stage 1 engines" value={config.stage1EngineCount} min={CONFIG_RANGES.stage1EngineCount.min} max={CONFIG_RANGES.stage1EngineCount.max} step={1} unit="" onChange={(v) => updateConfig({ stage1EngineCount: Math.round(v) })} format={(v) => `${v}×`} suggested={suggestedExperiment?.control === "stage1EngineCount"} />
+          <Slider label="Stage 1 engines" value={config.stage1EngineCount} min={CONFIG_RANGES.stage1EngineCount.min} max={CONFIG_RANGES.stage1EngineCount.max} step={1} unit="" onChange={(v) => updateConfig({ stage1EngineCount: Math.round(v) })} format={(v) => `${v}×`} hint="Adds thrust, dry mass and fuel flow; excess thrust raises max-Q and g-load." suggested={suggestedExperiment?.control === "stage1EngineCount"} />
           <EngineSelect label="Stage 1 engine" value={config.stage1Engine} options={[{ id: "booster", name: "B-1 Booster" }, { id: "sustainer", name: "S-2 Sustainer" }]} onChange={(id) => updateConfig({ stage1Engine: id })} />
           <Slider label="Stage 2 propellant" value={config.stage2PropellantKg} min={CONFIG_RANGES.stage2PropellantKg.min} max={CONFIG_RANGES.stage2PropellantKg.max} step={CONFIG_RANGES.stage2PropellantKg.step} unit="kg" onChange={(v) => updateConfig({ stage2PropellantKg: v })} format={(v) => `${(v / 1000).toFixed(0)} t`} suggested={suggestedExperiment?.control === "stage2PropellantKg"} />
-          <EngineSelect label="Stage 2 engine" value={config.stage2Engine} options={[{ id: "vacuum", name: "V-9 Vacuum" }, { id: "sustainer", name: "S-2 Sustainer" }]} onChange={(id) => updateConfig({ stage2Engine: id })} />
-          <Slider label="Fin span" value={config.finSpanM} min={CONFIG_RANGES.finSpanM.min} max={CONFIG_RANGES.finSpanM.max} step={CONFIG_RANGES.finSpanM.step} unit="m" onChange={(v) => updateConfig({ finSpanM: v })} format={(v) => `${v.toFixed(1)} m`} suggested={suggestedExperiment?.control === "finSpanM"} />
+          <EngineSelect label="Stage 2 engine" value={config.stage2Engine} options={[{ id: "cryogenic", name: "H-1 Cryogenic — efficient, heavy" }, { id: "vacuum", name: "V-9 Vacuum — lighter, less efficient" }, { id: "sustainer", name: "S-2 Sustainer — compact, low vacuum performance" }]} onChange={(id) => updateConfig({ stage2Engine: id })} />
+          <Slider label="Fin span" value={config.finSpanM} min={CONFIG_RANGES.finSpanM.min} max={CONFIG_RANGES.finSpanM.max} step={CONFIG_RANGES.finSpanM.step} unit="m" onChange={(v) => updateConfig({ finSpanM: v })} format={(v) => `${v.toFixed(1)} m`} hint="Improves static stability, while adding structural mass and aerodynamic drag." suggested={suggestedExperiment?.control === "finSpanM"} />
         </section>
 
         <section className="readouts">
@@ -175,23 +180,24 @@ export function AssemblyScreen() {
           <Readout label="Stability margin" value={`${derived.staticMargin.toFixed(2)} cal`} warn={derived.staticMargin < 1} />
           <Readout label="Slenderness" value={derived.slenderness.toFixed(1)} warn={derived.slenderness > 15} />
           <Readout label="Wet mass" value={`${(derived.wetMassKg / 1000).toFixed(0)} t`} />
+          <Readout label="Useful payload" value={`${(config.payloadDryMassKg / 1000).toFixed(1)} t`} />
         </section>
 
         {errors.length > 0 && (
           <section className="checks errors">
             {errors.map((c) => (
-              <p key={c.id} className="check error">✕ {c.message}</p>
+              <NarratedText key={c.id} className="check error" narration={c.message}>✕ {c.message}</NarratedText>
             ))}
           </section>
         )}
         {warnings.length > 0 && (
           <section className="checks warnings">
             {warnings.map((c) => (
-              <p key={c.id} className="check warning">⚠ {c.message}</p>
+              <NarratedText key={c.id} className="check warning" narration={c.message}>⚠ {c.message}</NarratedText>
             ))}
           </section>
         )}
-        {flightError && <p className="check error">✕ {flightError}</p>}
+        {flightError && <NarratedText className="check error" narration={flightError}>✕ {flightError}</NarratedText>}
 
         <div className="actions">
           <button className="launch" onClick={launch} disabled={!canLaunch}>
@@ -199,8 +205,8 @@ export function AssemblyScreen() {
           </button>
           <button onClick={resetToReference}>Reset to reference build</button>
         </div>
-        {analysisStale && <p className="dim small">Build edited — prior analysis invalidated until rerun.</p>}
-        {persistenceNotice && <p className="check warning">⚠ {persistenceNotice}</p>}
+        {analysisStale && <NarratedText className="dim small">Build edited — prior analysis invalidated until rerun.</NarratedText>}
+        {persistenceNotice && <NarratedText className="check warning" narration={persistenceNotice}>⚠ {persistenceNotice}</NarratedText>}
         <SettingsToggle />
       </div>
     </div>

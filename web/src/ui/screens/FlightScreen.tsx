@@ -16,6 +16,7 @@ import type { LaunchRenderer } from "../../renderers/LaunchRenderer";
 import { selectRenderer } from "../../renderers/selectRenderer";
 import { useAppStore, type CameraMode } from "../store";
 import { PHASE_NAMES, type FlightSample } from "../telemetry";
+import { NarratedText } from "../../narration/NarratedText";
 
 const SPEEDS = [1, 5, 20];
 const CAMERAS: { id: CameraMode; label: string }[] = [
@@ -84,15 +85,20 @@ export function FlightScreen() {
       setSample(nextSample);
       setTimeS(controller.timeS);
     });
+    const unsubscribeComplete = controller.subscribeComplete(() => {
+      setPlaying(false);
+      setScreen("debrief");
+    });
     controller.setPlaying(useAppStore.getState().playing);
     controller.setSpeed(useAppStore.getState().playbackSpeed);
     controller.start();
     return () => {
       unsubscribe();
+      unsubscribeComplete();
       controller.dispose();
       controllerRef.current = null;
     };
-  }, [flight]);
+  }, [flight, setPlaying, setScreen]);
 
   // --- renderer: mounted lazily, once a flight exists ----------------------
   useEffect(() => {
@@ -210,7 +216,7 @@ export function FlightScreen() {
   if (!flight) {
     return (
       <div className="screen flight">
-        <p>No flight loaded.</p>
+        <NarratedText>No flight loaded.</NarratedText>
         <button onClick={() => setScreen("assembly")}>Back to build</button>
       </div>
     );

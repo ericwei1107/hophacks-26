@@ -25,7 +25,7 @@
 
 import { G0 } from "../sim/physics/constants";
 import { MODEL_VERSION } from "./version";
-import { CONFIG_RANGES, type RocketConfig } from "./config";
+import { CONFIG_RANGES, payloadWetMassKg, type RocketConfig } from "./config";
 import type { EngineCatalog, EngineSpec } from "./engines";
 
 export const PROPELLANT_DENSITY_KG_M3 = 1000.0;
@@ -33,6 +33,8 @@ export const USABLE_TANK_FRACTION = 0.95;
 export const STAGE1_STRUCTURAL_FRACTION = 0.072;
 export const STAGE2_STRUCTURAL_FRACTION = 0.05;
 export const DRAG_COEFFICIENT = 0.3;
+/** Educational fin skin/base drag applied to the four-fin planform area. */
+export const FIN_DRAG_COEFFICIENT = 0.015;
 export const FIN_NORMAL_FORCE_COEFFICIENT = 1.0;
 export const NOSE_CN_ALPHA = 2.0;
 export const NOSE_CP_FRACTION = 0.466;
@@ -153,7 +155,8 @@ export function deriveRocket(config: RocketConfig, catalog: EngineCatalog): Deri
 
   // --- Malformed configuration checks (block launch) -----------------------
   const rangeChecks: [keyof typeof CONFIG_RANGES, number][] = [
-    ["payloadWetMassKg", config.payloadWetMassKg],
+    ["payloadDryMassKg", config.payloadDryMassKg],
+    ["payloadPropellantKg", config.payloadPropellantKg],
     ["diameterM", config.diameterM],
     ["stage1PropellantKg", config.stage1PropellantKg],
     ["stage1EngineCount", config.stage1EngineCount],
@@ -195,7 +198,6 @@ export function deriveRocket(config: RocketConfig, catalog: EngineCatalog): Deri
 
   // --- Geometry -------------------------------------------------------------
   const frontalArea = (Math.PI * d ** 2) / 4;
-  const dragArea = DRAG_COEFFICIENT * frontalArea;
   const effectiveDensity = PROPELLANT_DENSITY_KG_M3 * USABLE_TANK_FRACTION;
 
   const fairingLength = 1.8 * d;
@@ -234,7 +236,7 @@ export function deriveRocket(config: RocketConfig, catalog: EngineCatalog): Deri
     kind: "payload",
     xStartM: 0,
     lengthM: fairingLength,
-    dryMassKg: config.payloadWetMassKg,
+    dryMassKg: payloadWetMassKg(config),
     propellantKg: 0,
     centerOfMassM: 0.55 * fairingLength,
   });
@@ -282,6 +284,8 @@ export function deriveRocket(config: RocketConfig, catalog: EngineCatalog): Deri
     sweepM: 0.4 * d,
     leadingEdgeM: totalLength - finRootChord,
   };
+  const finPlanformArea = config.finSpanM * (fins.rootChordM + fins.tipChordM) / 2;
+  const dragArea = DRAG_COEFFICIENT * frontalArea + 4 * FIN_DRAG_COEFFICIENT * finPlanformArea;
   if (config.finSpanM > 0) {
     components.push({
       kind: "fins",
@@ -296,7 +300,7 @@ export function deriveRocket(config: RocketConfig, catalog: EngineCatalog): Deri
   // --- Whole-vehicle values ---------------------------------------------------
   const dryMass =
     fairingMass +
-    config.payloadWetMassKg +
+    payloadWetMassKg(config) +
     stage2Structure +
     stage2EngineMass +
     stage1Structure +

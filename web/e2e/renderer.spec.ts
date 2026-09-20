@@ -31,19 +31,22 @@ function trackErrors(page: Page): string[] {
 test("the build screen never touches the Unity build", async ({ page }) => {
   const unityRequests = trackUnityRequests(page);
 
-  await page.goto("/");
+  await page.goto("/lab");
   await expect(page.getByRole("button", { name: /LAUNCH/i })).toBeEnabled();
-  await page.getByLabel("Payload wet mass value").fill("7000");
+  await page.getByLabel("Mission payload (dry) value").fill("7000");
   await page.waitForTimeout(500);
 
   expect(unityRequests, "the build screen must not wait on a Unity download").toEqual([]);
 });
 
-test("the launch view falls back to three.js when no Unity build is deployed", async ({ page }) => {
-  await page.goto("/?renderer=unity");
+test("the launch view falls back to three.js when WebGPU is unavailable", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "gpu", { value: undefined, configurable: true });
+  });
+  await page.goto("/lab?renderer=unity");
   await page.getByRole("button", { name: /LAUNCH/i }).click();
 
-  // Well inside the 30 s load timeout: the probe fails immediately.
+  // Capability detection should fall back immediately without touching Unity.
   await expect(page.locator(".renderer-badge")).toHaveText("THREE", { timeout: 30_000 });
   await expect(page.locator(".renderer-notice")).toBeVisible();
   await expect(page.getByText("ALTITUDE")).toBeVisible();
@@ -52,7 +55,7 @@ test("the launch view falls back to three.js when no Unity build is deployed", a
 test("?renderer=three forces the fallback and asks for nothing from Unity", async ({ page }) => {
   const unityRequests = trackUnityRequests(page);
 
-  await page.goto("/?renderer=three");
+  await page.goto("/lab?renderer=three");
   await page.getByRole("button", { name: /LAUNCH/i }).click();
 
   await expect(page.locator(".renderer-badge")).toHaveText("THREE");
@@ -64,7 +67,7 @@ test("?renderer=three forces the fallback and asks for nothing from Unity", asyn
 test("scrubbing back and forth leaves the view healthy", async ({ page }) => {
   const errors = trackErrors(page);
 
-  await page.goto("/?renderer=three");
+  await page.goto("/lab?renderer=three");
   await page.getByRole("button", { name: /LAUNCH/i }).click();
   await expect(page.getByText("ALTITUDE")).toBeVisible({ timeout: 20_000 });
 
@@ -88,7 +91,7 @@ test("scrubbing back and forth leaves the view healthy", async ({ page }) => {
 test("camera modes and zoom stay responsive through a flight", async ({ page }) => {
   const errors = trackErrors(page);
 
-  await page.goto("/?renderer=three");
+  await page.goto("/lab?renderer=three");
   await page.getByRole("button", { name: /LAUNCH/i }).click();
   await expect(page.getByText("ALTITUDE")).toBeVisible({ timeout: 20_000 });
 
@@ -115,14 +118,14 @@ test("camera modes and zoom stay responsive through a flight", async ({ page }) 
 });
 
 test("typing in HTML controls still works with the launch view on the page", async ({ page }) => {
-  await page.goto("/?renderer=three");
+  await page.goto("/lab?renderer=three");
   await page.getByRole("button", { name: /LAUNCH/i }).click();
   await expect(page.getByText("ALTITUDE")).toBeVisible({ timeout: 20_000 });
 
   await page.getByRole("button", { name: /DEBRIEF/i }).click();
   await page.getByRole("button", { name: /Return to build/i }).click();
 
-  const payload = page.getByLabel("Payload wet mass value");
+  const payload = page.getByLabel("Mission payload (dry) value");
   await payload.fill("8200");
   await expect(payload).toHaveValue("8200");
 
@@ -159,7 +162,7 @@ test("a Unity build that throws at startup falls back within the load timeout", 
   );
   await page.route("**/unity/Build/**", (route) => route.fulfill({ status: 500, body: "" }));
 
-  await page.goto("/");
+  await page.goto("/lab?renderer=unity");
   await page.getByRole("button", { name: /LAUNCH/i }).click();
 
   await expect(page.locator(".renderer-badge")).toHaveText("THREE", { timeout: 30_000 });

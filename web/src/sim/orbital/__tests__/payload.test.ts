@@ -29,7 +29,8 @@ function toHandoffSource(result: FlightResult): HandoffSource {
     // is true, which is also the only case this source is used.
     finalElements: result.finalState.parkingElements,
     stage2PropellantRemainingKg: result.stage2PropellantRemainingKg,
-    payloadWetMassKg: result.finalState.rocket.config.payloadWetMassKg,
+    payloadDryMassKg: result.finalState.rocket.config.payloadDryMassKg,
+    payloadPropellantKg: result.finalState.rocket.config.payloadPropellantKg,
     weather: result.finalState.environment.weather,
     seed: result.seed,
   };
@@ -77,6 +78,15 @@ describe("analyzePayload", () => {
     expect(analysis.ispS).toBe(325);
     expect(analysis.missionYears).toBe(3);
     expect(analysis.crossSectionAreaM2).toBeCloseTo(5 * 5 ** (2 / 3), 9);
+  });
+
+  it("rewards payload propellant without silently increasing dry mission mass", () => {
+    const handoff = createPayloadHandoff(toHandoffSource(flyReference()))!;
+    const fueled = analyzePayload({ ...handoff, payloadPropellantKg: handoff.payloadPropellantKg * 1.5 });
+    const baseline = analyzePayload(handoff);
+    expect(fueled.dryMassKg).toBe(baseline.dryMassKg);
+    expect(fueled.onboardPropellantKg).toBeGreaterThan(baseline.onboardPropellantKg);
+    expect(fueled.result!.available_delta_v).toBeGreaterThan(baseline.result!.available_delta_v);
   });
 
   it("charges circularization against payload propellant exactly once", () => {

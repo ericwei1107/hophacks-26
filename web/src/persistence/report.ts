@@ -68,7 +68,8 @@ export async function copyConfigToClipboard(config: RocketConfig): Promise<boole
 export function configDifferences(a: RocketConfig, b: RocketConfig): string[] {
   const diffs: string[] = [];
   const labels: Record<keyof typeof CONFIG_RANGES | "stage1Engine" | "stage2Engine", string> = {
-    payloadWetMassKg: "payload",
+    payloadDryMassKg: "mission payload",
+    payloadPropellantKg: "payload propellant",
     diameterM: "diameter",
     stage1PropellantKg: "stage-1 propellant",
     stage1EngineCount: "stage-1 engines",

@@ -6,6 +6,9 @@ playwright-report/
 test-results/
 .DS_Store
 *.local
+.env
+.env.*
+!.env.example
 
 # Unity build output: generated, never committed.
 public/unity/

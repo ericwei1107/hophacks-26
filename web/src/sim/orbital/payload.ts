@@ -6,7 +6,7 @@
  * result. The configured payload mass is its total wet mass; the spacecraft
  * specification is a fixed educational assumption reported to the player:
  *
- * - Dry mass: 80% of payload wet mass; onboard propellant: 20%.
+ * - Dry mission mass and onboard propellant are chosen independently.
  * - Specific impulse 325 s; drag coefficient 2.2.
  * - Cross-sectional area 5 × (wetMass/1000)^(2/3) m².
  * - Mission duration: three years; inclination from the achieved orbit.
@@ -33,12 +33,10 @@ import type { WeatherSnapshot } from "./weather";
 export const PAYLOAD_ISP_S = 325;
 export const PAYLOAD_DRAG_COEFFICIENT = 2.2;
 export const PAYLOAD_MISSION_YEARS = 3;
-export const PAYLOAD_DRY_FRACTION = 0.8;
-export const PAYLOAD_PROPELLANT_FRACTION = 0.2;
-
 export interface PayloadHandoff {
   modelVersion: string;
-  payloadWetMassKg: number;
+  payloadDryMassKg: number;
+  payloadPropellantKg: number;
   achievedPerigeeKm: number;
   achievedApogeeKm: number;
   achievedInclinationDeg: number;
@@ -73,7 +71,8 @@ export interface HandoffSource {
   orbitAchieved: boolean;
   finalElements: OrbitalElements | null;
   stage2PropellantRemainingKg: number;
-  payloadWetMassKg: number;
+  payloadDryMassKg: number;
+  payloadPropellantKg: number;
   weather: WeatherSnapshot;
   seed: number;
 }
@@ -86,7 +85,8 @@ export function createPayloadHandoff(source: HandoffSource): PayloadHandoff | nu
   }
   return {
     modelVersion: MODEL_VERSION,
-    payloadWetMassKg: source.payloadWetMassKg,
+    payloadDryMassKg: source.payloadDryMassKg,
+    payloadPropellantKg: source.payloadPropellantKg,
     achievedPerigeeKm: elements.perigeeAltitudeKm,
     achievedApogeeKm: elements.apogeeAltitudeKm,
     achievedInclinationDeg: elements.inclinationDeg,
@@ -110,9 +110,9 @@ export function analyzePayload(
   handoff: PayloadHandoff,
   rules: MissionRules = GAME_MISSION_RULES,
 ): PayloadAnalysis {
-  const wet = handoff.payloadWetMassKg;
-  const dryMassKg = wet * PAYLOAD_DRY_FRACTION;
-  const onboardPropellantKg = wet * PAYLOAD_PROPELLANT_FRACTION;
+  const dryMassKg = handoff.payloadDryMassKg;
+  const onboardPropellantKg = handoff.payloadPropellantKg;
+  const wet = dryMassKg + onboardPropellantKg;
   const crossSectionAreaM2 = 5 * (wet / 1000) ** (2 / 3);
 
   const circDv = circularizationDeltaV(handoff.achievedPerigeeKm, handoff.achievedApogeeKm);
@@ -166,7 +166,7 @@ function explainPayload(
   result: SimulationResult,
 ): string[] {
   const lines: string[] = [
-    `Payload ${(base.handoff.payloadWetMassKg / 1000).toFixed(1)} t: dry ${(base.dryMassKg / 1000).toFixed(2)} t, onboard propellant ${(base.onboardPropellantKg / 1000).toFixed(2)} t, Isp ${base.ispS} s, area ${base.crossSectionAreaM2.toFixed(1)} m^2, ${base.missionYears}-year mission at ${mission.target_altitude.toFixed(0)} km circularized (cost ${base.circularizationDeltaVMs.toFixed(0)} m/s).`,
+    `Delivered mission mass ${(base.dryMassKg / 1000).toFixed(2)} t with ${(base.onboardPropellantKg / 1000).toFixed(2)} t onboard propellant: Isp ${base.ispS} s, area ${base.crossSectionAreaM2.toFixed(1)} m², ${base.missionYears}-year mission at ${mission.target_altitude.toFixed(0)} km circularized (cost ${base.circularizationDeltaVMs.toFixed(0)} m/s).`,
   ];
   if (result.passed) {
     lines.push(

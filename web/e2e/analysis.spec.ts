@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("payload mission analysis runs from the debrief", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/lab");
   await page.waitForTimeout(600);
   await page.getByRole("button", { name: /LAUNCH/i }).click();
   await expect(page.getByText("ALTITUDE")).toBeVisible({ timeout: 15_000 });
