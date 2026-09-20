@@ -13,9 +13,9 @@ namespace Apogee.RocketRenderer
     /// binary scene assets that can only be edited inside the editor.
     ///
     /// Hierarchy:
-    ///   World          — the Earth, the ground disc, the pad smoke
+    ///   World          — the Earth, the launch site, the pad smoke
     ///   Vehicle        — the attitude pivot; the rocket hangs under it
-    ///   SpentStage     — the discarded booster, placed relative to the rocket
+    ///   SpentStage     — the discarded booster (the real stage-1 geometry), placed relative to the rocket
     ///   Cameras        — the far camera (Earth) and the near camera (vehicle)
     /// </summary>
     public class SceneBootstrap : MonoBehaviour
@@ -30,6 +30,8 @@ namespace Apogee.RocketRenderer
 
         private Transform attitudePivot;
         private Transform spentStage;
+        /// <summary>The booster geometry under SpentStage, centred on the stage's own position.</summary>
+        private Transform spentBooster;
 
         public void BuildScene()
         {
@@ -92,7 +94,7 @@ namespace Apogee.RocketRenderer
             earthGo.transform.SetParent(world, false);
             Earth = earthGo.AddComponent<EarthView>();
             Earth.Build(world);
-            Earth.BuildGroundDisc(world);
+            Earth.BuildLaunchSite(world);
 
             // --- vehicle -------------------------------------------------------
             var rocketGo = new GameObject("Rocket");
@@ -128,7 +130,8 @@ namespace Apogee.RocketRenderer
             Rocket.Build(geometry);
             Effects.RebuildPlumes();
             Effects.ClearAll();
-            ScaleSpentStage(geometry);
+            RebuildSpentStage(geometry);
+            Earth.Site?.Configure(geometry);
         }
 
         public void ApplyFrame(RenderFrameDto frame)
@@ -166,29 +169,33 @@ namespace Apogee.RocketRenderer
             baseData.cameraStack.Add(overlay);
         }
 
-        private static Transform BuildSpentStage(Transform parent)
+        private Transform BuildSpentStage(Transform parent)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            go.name = "SpentStage";
-            Destroy(go.GetComponent<Collider>());
+            var go = new GameObject("SpentStage");
             go.transform.SetParent(parent, false);
-            var renderer = go.GetComponent<MeshRenderer>();
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-            renderer.sharedMaterial = new Material(shader) { color = new Color(0.54f, 0.56f, 0.6f) };
+            spentBooster = new GameObject("Booster").transform;
+            spentBooster.SetParent(go.transform, false);
             go.SetActive(false);
             return go.transform;
         }
 
-        private void ScaleSpentStage(RocketGeometryDto geometry)
+        /// <summary>
+        /// The spent booster is the same stage-1 hardware the vehicle just
+        /// dropped, built from the same geometry. The frame places the stage's
+        /// own position, so the mesh is centred on its half-height.
+        /// </summary>
+        private void RebuildSpentStage(RocketGeometryDto geometry)
         {
-            if (spentStage == null)
+            if (spentBooster == null)
             {
                 return;
             }
-            spentStage.localScale = new Vector3(
-                geometry.diameter,
-                geometry.stage1.length * 0.5f,
-                geometry.diameter);
+            for (int i = spentBooster.childCount - 1; i >= 0; i--)
+            {
+                Destroy(spentBooster.GetChild(i).gameObject);
+            }
+            RocketBuilder.BuildBooster(spentBooster, geometry);
+            spentBooster.localPosition = new Vector3(0f, -geometry.stage1.length * 0.5f, 0f);
         }
     }
 }

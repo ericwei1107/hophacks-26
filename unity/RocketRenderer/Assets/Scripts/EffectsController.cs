@@ -86,14 +86,18 @@ namespace Apogee.RocketRenderer
             plumes = new ParticleSystem[positions.Length + 1];
             for (int i = 0; i < positions.Length; i++)
             {
-                plumes[i] = BuildPlume(plumeRoot, $"Stage1Plume{i}", rocket.Geometry.stage1NozzleDiameter);
+                plumes[i] = BuildPlume(plumeRoot, $"Stage1Plume{i}", rocket.Geometry.stage1NozzleDiameter, false);
                 plumes[i].transform.localPosition = positions[i];
             }
-            // The last entry is the upper stage's single, smaller plume.
+            // The last entry is the upper stage's plume: pale, wide and translucent,
+            // the way an engine firing into vacuum looks. It sits at the upper
+            // stage's own bell, so after separation the fire stays under the
+            // engine that is actually running.
             plumes[positions.Length] = BuildPlume(
                 plumeRoot,
                 "Stage2Plume",
-                rocket.Geometry.stage2NozzleDiameter);
+                rocket.Geometry.stage2NozzleDiameter,
+                true);
             plumes[positions.Length].transform.localPosition = rocket.Stage2NozzlePosition;
         }
 
@@ -151,13 +155,13 @@ namespace Apogee.RocketRenderer
 
                 var main = plume.main;
                 // Length with throttle, width with falling ambient pressure.
-                float length = (isStage1 ? 1f : 0.6f) * (6f + 26f * frame.throttle) * flicker;
+                float length = (isStage1 ? 1f : 0.75f) * (8f + 30f * frame.throttle) * flicker;
                 main.startLifetime = length / Mathf.Max(1f, main.startSpeed.constant);
                 main.startSizeMultiplier =
-                    (isStage1 ? 1f : 0.7f) * rocket.Geometry.diameter * 0.22f * spread * flicker;
+                    (isStage1 ? 1f : 1.3f) * rocket.Geometry.diameter * 0.24f * spread * flicker;
 
                 var shape = plume.shape;
-                shape.angle = Mathf.Lerp(3f, 16f, 1f - Mathf.Exp(-frame.altitude / 20_000f));
+                shape.angle = Mathf.Lerp(isStage1 ? 3f : 7f, isStage1 ? 16f : 24f, 1f - Mathf.Exp(-frame.altitude / 20_000f));
             }
         }
 
@@ -174,8 +178,8 @@ namespace Apogee.RocketRenderer
                 && closeness > 0.01f
                 && frame.playbackSpeed <= MaxEmissionPlaybackSpeed;
 
-            padSmoke.transform.localPosition =
-                new Vector3(0f, -(altitude + frame.comFromBase), 0f);
+            // The steam belongs to the pad, which the vehicle leaves behind.
+            padSmoke.transform.localPosition = LaunchSiteView.SiteOffset(frame);
             var emission = padSmoke.emission;
             emission.enabled = active;
             emission.rateOverTimeMultiplier = 900f * closeness * frame.throttle;
@@ -296,7 +300,7 @@ namespace Apogee.RocketRenderer
 
         // -- construction -------------------------------------------------------
 
-        private static ParticleSystem BuildPlume(Transform parent, string name, float nozzleDiameter)
+        private static ParticleSystem BuildPlume(Transform parent, string name, float nozzleDiameter, bool vacuum)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -306,9 +310,9 @@ namespace Apogee.RocketRenderer
             main.startSpeed = 140f;
             main.startLifetime = 0.25f;
             main.startSize = Mathf.Max(0.5f, nozzleDiameter * 0.8f);
-            main.startColor = new ParticleSystem.MinMaxGradient(
-                new Color(1f, 0.96f, 0.78f),
-                new Color(1f, 0.42f, 0.13f));
+            main.startColor = vacuum
+                ? new ParticleSystem.MinMaxGradient(new Color(0.95f, 0.98f, 1f), new Color(0.55f, 0.72f, 1f))
+                : new ParticleSystem.MinMaxGradient(new Color(1f, 0.96f, 0.78f), new Color(1f, 0.42f, 0.13f));
             main.maxParticles = 600;
             main.simulationSpace = ParticleSystemSimulationSpace.Local;
             main.gravityModifier = 0f;
@@ -331,11 +335,11 @@ namespace Apogee.RocketRenderer
 
             var colorOverLifetime = system.colorOverLifetime;
             colorOverLifetime.enabled = true;
-            colorOverLifetime.color = FlameGradient();
+            colorOverLifetime.color = vacuum ? VacuumGradient() : FlameGradient();
 
             var renderer = go.GetComponent<ParticleSystemRenderer>();
             renderer.renderMode = ParticleSystemRenderMode.Stretch;
-            renderer.lengthScale = 3.5f;
+            renderer.lengthScale = vacuum ? 2.5f : 3.5f;
             renderer.sharedMaterial = EarthView.UnlitAdditive(Color.white);
             return system;
         }
@@ -506,6 +510,26 @@ namespace Apogee.RocketRenderer
                 {
                     new GradientAlphaKey(1f, 0f),
                     new GradientAlphaKey(0.75f, 0.5f),
+                    new GradientAlphaKey(0f, 1f),
+                });
+            return new ParticleSystem.MinMaxGradient(gradient);
+        }
+
+        /// <summary>Pale blue-white, thin: an upper stage firing into vacuum.</summary>
+        private static ParticleSystem.MinMaxGradient VacuumGradient()
+        {
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(new Color(0.95f, 0.98f, 1f), 0f),
+                    new GradientColorKey(new Color(0.66f, 0.8f, 1f), 0.4f),
+                    new GradientColorKey(new Color(0.3f, 0.42f, 0.7f), 1f),
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0.7f, 0f),
+                    new GradientAlphaKey(0.35f, 0.5f),
                     new GradientAlphaKey(0f, 1f),
                 });
             return new ParticleSystem.MinMaxGradient(gradient);

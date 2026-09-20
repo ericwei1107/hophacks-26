@@ -152,8 +152,9 @@ namespace Apogee.RocketRenderer
                         * (ChaseDistanceM / zoom);
                     break;
                 case "ground":
-                    // A fixed pad-level camera: it does not follow the vehicle up.
-                    offset = new Vector3(180f, 28f - frame.altitude, 80f);
+                    // A camera on a tripod at the pad perimeter: it stays on the
+                    // ground where the pad is and tracks the vehicle climbing away.
+                    offset = LaunchSiteView.SiteOffset(frame) + new Vector3(190f / zoom, 24f, 110f / zoom);
                     break;
                 case "orbit":
                     // Looking at the Earth from far out, with the vehicle a marker.
