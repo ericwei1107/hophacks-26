@@ -1,4 +1,4 @@
-# Apogee — HopHacks 26
+# Zenith — HopHacks 26
 
 Build a rocket in the browser, fly it with the TypeScript ascent solver, then hand the parking orbit to Python for payload operations.
 
@@ -21,7 +21,7 @@ npm run dev
 
 Open http://localhost:5173. Vite proxies `/api` to the FastAPI process.
 
-Optional: put `XAI_API_KEY=` in a gitignored `.env` at the repo root for the Grok pitch closer. The sim runs without it.
+Optional: put `XAI_API_KEY=<your key>` in a gitignored `.env`, either at the repo root or in `web/`. It powers the Grok pitch closer and the spoken narration buttons. Restart the dev server after adding it; without a key those buttons read "Audio off" and everything else still works.
 
 ## What talks to what
 

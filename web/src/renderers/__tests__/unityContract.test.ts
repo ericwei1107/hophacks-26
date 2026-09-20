@@ -124,7 +124,13 @@ describe("the message surface", () => {
   });
 
   it("keeps the keyboard available to the HTML controls over the canvas", () => {
-    expect(SIM_BRIDGE).toContain("WebGLInput.captureAllKeyboardInput = false");
+    // Either form is fine: the direct assignment, or the reflection lookup that
+    // lets the project compile without the WebGL module installed. What matters
+    // is that captureAllKeyboardInput ends up false.
+    const direct = SIM_BRIDGE.includes("WebGLInput.captureAllKeyboardInput = false");
+    const viaReflection =
+      SIM_BRIDGE.includes('"captureAllKeyboardInput"') && SIM_BRIDGE.includes("SetValue(null, false)");
+    expect(direct || viaReflection).toBe(true);
   });
 });
 

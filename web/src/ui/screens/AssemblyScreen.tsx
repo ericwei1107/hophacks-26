@@ -8,6 +8,7 @@
  */
 
 import { ContactShadows, Html, OrbitControls } from "@react-three/drei";
+import { Link } from "react-router-dom";
 import { useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, type ComponentRef, type CSSProperties, type ReactNode } from "react";
 import * as THREE from "three";
@@ -436,9 +437,14 @@ export function AssemblyScreen() {
 
       <aside className="panel">
         <header className="panel-head">
-          <p className="kicker">Orbital mission simulator</p>
+          <div className="panel-brand">
+            <p className="kicker">Orbital mission simulator</p>
+            <Link className="home-link" to="/" aria-label="Back to the Zenith home page">
+              ← Home
+            </Link>
+          </div>
           <h1>
-            APOGEE <span className="dim">/ Launch Lab</span>
+            ZENITH <span className="dim">/ Launch Lab</span>
           </h1>
           <NarratedText className="objective">
             <strong>Launch objective.</strong> Deliver useful mission mass into a 180–220 × 180–250 km parking orbit,

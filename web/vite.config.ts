@@ -6,6 +6,22 @@ import { sites } from "@openai/sites-vite-plugin";
 import { defineConfig, loadEnv } from "vite";
 import { fileURLToPath, URL } from "node:url";
 
+/**
+ * The narration key may sit in web/.env or in a .env at the repo root — the
+ * README has pointed at the root for longer than this app has lived in web/.
+ * Check both so narration works wherever the team actually put it.
+ */
+function loadNarrationKey(mode: string): string | undefined {
+  const roots = [process.cwd(), fileURLToPath(new URL("..", import.meta.url))];
+  for (const root of roots) {
+    const value = loadEnv(mode, root, "").XAI_API_KEY;
+    if (value) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
 function xaiTtsDevProxy(xaiApiKey: string | undefined) {
   return {
     name: "xai-tts-dev-proxy",
@@ -47,7 +63,7 @@ function xaiTtsDevProxy(xaiApiKey: string | undefined) {
 export default defineConfig(({ mode }) => {
   // Vite does not put values from .env.local into process.env while this file loads.
   // Load the server secret explicitly and do not expose it through a VITE_ variable.
-  const { XAI_API_KEY: xaiApiKey } = loadEnv(mode, process.cwd(), "");
+  const xaiApiKey = loadNarrationKey(mode);
 
   return {
     plugins: [sites(), xaiTtsDevProxy(xaiApiKey), react(), tailwindcss(), glsl({ root: "/node_modules", removeDuplicatedImports: true, warnDuplicatedImports: false })],

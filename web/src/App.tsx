@@ -51,7 +51,7 @@ export function App() {
 function LaunchLab() {
   const screen = useAppStore((s) => s.screen);
   return (
-    <main aria-label="APOGEE mission simulator">
+    <main aria-label="Zenith mission simulator">
       <Suspense fallback={<p className="dim small">Loading lab…</p>}>
         {screen === "assembly" && <AssemblyScreen />}
         {screen === "flight" && <FlightScreen />}
