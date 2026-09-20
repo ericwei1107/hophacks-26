@@ -137,15 +137,16 @@ def perturb_weather_parameter(weather: SpaceWeather, parameter: str, rng: random
     new_value = perturb(getattr(weather, parameter), *WEATHER_STRESS_RANGES[parameter], rng)
     return replace(weather, **{parameter: _clip_weather_value(parameter, new_value)})
 
+WEATHER_BOUNDS = {
+    "kp": (0.0, 9.0),
+    "f107": (60.0, 280.0),
+    "solar_wind_speed": (250.0, 1200.0),
+    "solar_wind_density": (0.5, 80.0),
+    "solar_wind_temperature": (1.0e4, 1.0e6)
+}
+
 def _clip_weather_value(parameter: str, value: float) -> float:
-    bounds = {
-        "kp": (0.0, 9.0),
-        "f107": (60.0, 280.0),
-        "solar_wind_speed": (250.0, 1200.0),
-        "solar_wind_density": (0.5, 80.0),
-        "solar_wind_temperature": (1.0e4, 1.0e6)
-    }
-    return clip(value, *bounds[parameter])
+    return clip(value, *WEATHER_BOUNDS[parameter])
 
 def create_stressed_mission(mission: SpacecraftMission, rng: random.Random) -> SpacecraftMission:
     stressed = mission
@@ -211,9 +212,8 @@ def _finite_or(value: float | None, fallback: float) -> float:
         return fallback
     return value
 
-def estimate_atmospheric_density(altitude_km: float, weather: SpaceWeather, inclination_deg: float = 0.0) -> float:
-    if not math.isfinite(altitude_km) or not math.isfinite(inclination_deg):
-        return 1e-16
+def _thermosphere_profile(weather: SpaceWeather, inclination_deg: float) -> tuple[float, float]:
+    """Scale height (km) and weather multiplier; independent of altitude."""
     f107 = max(_finite_or(weather.f107, 70.0), 60.0)
     kp = max(_finite_or(weather.kp, 0.0), 0.0)
     speed = _finite_or(weather.solar_wind_speed, 400.0)
@@ -222,14 +222,20 @@ def estimate_atmospheric_density(altitude_km: float, weather: SpaceWeather, incl
 
     # Thermosphere expands under solar EUV and geomagnetic heating.
     scale_height = 42.0 + 0.07 * (f107 - 70.0) + 1.4 * kp
-    base_density = 1.225e-12 * math.exp(-(altitude_km - 400.0) / scale_height)
-
     solar_factor = (f107 / 150.0) ** 1.2
     geomagnetic_factor = 1.0 + 0.05 * kp + 0.12 * max(0.0, kp - 4.5) ** 1.3
     wind_factor = 1.0 + 0.0004 * (speed - 400.0) + 0.008 * (sw_density - 5.0) + 0.04 * ((sw_temp / 1.0e5) - 1.0)
     polar_factor = 1.0 + 0.08 * abs(math.sin(math.radians(inclination_deg))) * max(0.0, kp - 2.0) / 4.0
+    weather_factor = solar_factor * max(0.25, geomagnetic_factor) * max(0.4, wind_factor) * max(1.0, polar_factor)
+    return scale_height, weather_factor
 
-    return max(1e-16, base_density * solar_factor * max(0.25, geomagnetic_factor) * max(0.4, wind_factor) * max(1.0, polar_factor))
+
+def estimate_atmospheric_density(altitude_km: float, weather: SpaceWeather, inclination_deg: float = 0.0) -> float:
+    if not math.isfinite(altitude_km) or not math.isfinite(inclination_deg):
+        return 1e-16
+    scale_height, weather_factor = _thermosphere_profile(weather, inclination_deg)
+    base_density = 1.225e-12 * math.exp(-(altitude_km - 400.0) / scale_height)
+    return max(1e-16, base_density * weather_factor)
 
 def average_spacecraft_mass(mission: SpacecraftMission) -> float:
     return max(mission.mass + 0.5 * max(mission.fuel, 0.0), 1e-9)
@@ -281,6 +287,8 @@ def estimate_unpowered_decay(mission: SpacecraftMission, weather: SpaceWeather, 
     timestep = 7 * SECONDS_PER_DAY
     steps = max(1, math.ceil(duration_s / timestep))
     total_altitude_loss = 0.0
+    scale_height, weather_factor = _thermosphere_profile(weather, mission.target_inclination)
+    drag_area = mission.drag_coefficient * mission.cross_section_area
 
     for _ in range(steps):
         if altitude <= reentry_m:
@@ -288,9 +296,9 @@ def estimate_unpowered_decay(mission: SpacecraftMission, weather: SpaceWeather, 
 
         current_altitude_km = altitude / 1000
         radius = EARTH_RADIUS + altitude
-        density = estimate_atmospheric_density(current_altitude_km, weather, mission.target_inclination)
+        density = max(1e-16, 1.225e-12 * math.exp(-(current_altitude_km - 400.0) / scale_height) * weather_factor)
         velocity = atmospheric_relative_velocity(current_altitude_km, mission.target_inclination)
-        drag_force = 0.5 * density * velocity ** 2 * mission.drag_coefficient * mission.cross_section_area
+        drag_force = 0.5 * density * velocity ** 2 * drag_area
         drag_acceleration = drag_force / spacecraft_mass
         decay_rate = -2 * radius ** 2 * drag_acceleration * velocity / MU_EARTH
         altitude_change = decay_rate * timestep

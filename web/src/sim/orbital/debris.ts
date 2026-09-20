@@ -42,6 +42,8 @@ export const SYNTHETIC_SATCAT: SatcatRecord[] = [
 
 const CACHE_KEY = "apogee.satcat.onorbit";
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+let memoryRows: SatcatRecord[] | null = null;
+let memorySaved = 0;
 
 export function camScaleFromCounts(shellTotal: number, referenceTotal: number): number {
   return Math.max(0.4, Math.min(2.5, shellTotal / Math.max(referenceTotal, 1)));
@@ -91,21 +93,38 @@ export function shellCensus(rows: SatcatRecord[], altitude: number, halfWidth = 
 }
 
 export async function loadSatcat(forceRefresh = false): Promise<SatcatRecord[]> {
+  const now = Date.now();
+  if (!forceRefresh && memoryRows && now - memorySaved < CACHE_TTL_MS) {
+    return memoryRows;
+  }
   try {
     if (!forceRefresh) {
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached) as { saved: number; rows: SatcatRecord[] };
-        if (Date.now() - parsed.saved < CACHE_TTL_MS) return parsed.rows;
+        if (now - parsed.saved < CACHE_TTL_MS) {
+          memoryRows = parsed.rows;
+          memorySaved = parsed.saved;
+          return parsed.rows;
+        }
       }
     }
     const response = await fetch(SATCAT_URL);
     if (!response.ok) throw new Error(`SATCAT HTTP ${response.status}`);
     const rows = (await response.json()) as SatcatRecord[];
     if (!Array.isArray(rows)) throw new Error("SATCAT response was not an array");
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ saved: Date.now(), rows }));
+    memoryRows = rows;
+    memorySaved = now;
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ saved: now, rows }));
+    } catch {
+      // QuotaExceeded: keep the in-memory catalog; localStorage is optional.
+    }
     return rows;
   } catch {
-    return SYNTHETIC_SATCAT.map((row) => ({ ...row }));
+    const fallback = SYNTHETIC_SATCAT.map((row) => ({ ...row }));
+    memoryRows = fallback;
+    memorySaved = now;
+    return fallback;
   }
 }
