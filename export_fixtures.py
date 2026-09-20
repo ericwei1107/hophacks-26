@@ -4,6 +4,17 @@ The TypeScript port replays these fixtures to prove language parity. Perturbed
 cases carry their explicit inputs so the browser never has to reproduce
 Python's PRNG draws.
 
+Scope: this covers design.py, environment.py, and simulate.py only -- the
+mission model that web/src/sim/orbital/ ports. emissions.py, regulations.py,
+insights.py, and explanations.py (external API calls: Federal Register, an
+LLM) have no TypeScript port and no fixture coverage. That's an intentional
+scope boundary, not an oversight; see docs/python-ts-fixture-parity.md.
+
+After changing design.py, environment.py, or simulate.py, run
+`make sync-fixtures` (regenerates fixtures/ and replays the TS parity
+tests). `make check-fixtures` verifies the committed fixtures still match
+the reference model without writing anything, and is what CI runs.
+
 Usage: .venv/bin/python export_fixtures.py
 """
 

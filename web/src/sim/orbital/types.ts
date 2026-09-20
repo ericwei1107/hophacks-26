@@ -21,6 +21,23 @@ export interface SpacecraftMission {
   isp: number;
 }
 
+/**
+ * Runtime key list for SpacecraftMission, used to catch a Python field the
+ * TS port doesn't know about. `Record<keyof SpacecraftMission, true>` makes
+ * TypeScript refuse to compile this object literal if a key is missing or
+ * extra, so the list can't silently drift from the interface above.
+ */
+export const SPACECRAFT_MISSION_KEYS = Object.keys({
+  mass: true,
+  fuel: true,
+  lifespan: true,
+  target_altitude: true,
+  target_inclination: true,
+  cross_section_area: true,
+  drag_coefficient: true,
+  isp: true,
+} satisfies Record<keyof SpacecraftMission, true>) as (keyof SpacecraftMission)[];
+
 export interface SpaceWeather {
   kp: number | null;
   f107: number | null;
@@ -32,11 +49,27 @@ export interface SpaceWeather {
   solar_wind_temperature: number | null;
 }
 
+/** Runtime key list for SpaceWeather — see SPACECRAFT_MISSION_KEYS. */
+export const SPACE_WEATHER_KEYS = Object.keys({
+  kp: true,
+  f107: true,
+  solar_wind_speed: true,
+  solar_wind_density: true,
+  solar_wind_temperature: true,
+} satisfies Record<keyof SpaceWeather, true>) as (keyof SpaceWeather)[];
+
 export interface OperationalDraw {
   insertion_altitude_error_km: number;
   insertion_inclination_error_deg: number;
   cam_scale: number;
 }
+
+/** Runtime key list for OperationalDraw — see SPACECRAFT_MISSION_KEYS. */
+export const OPERATIONAL_DRAW_KEYS = Object.keys({
+  insertion_altitude_error_km: true,
+  insertion_inclination_error_deg: true,
+  cam_scale: true,
+} satisfies Record<keyof OperationalDraw, true>) as (keyof OperationalDraw)[];
 
 export interface SimulationResult {
   passed: boolean;
@@ -58,6 +91,26 @@ export interface SimulationResult {
   average_density: number;
   average_drag: number;
 }
+
+/** Runtime key list for SimulationResult — see SPACECRAFT_MISSION_KEYS. */
+export const SIMULATION_RESULT_KEYS = Object.keys({
+  passed: true,
+  failure_reasons: true,
+  available_delta_v: true,
+  required_delta_v: true,
+  drag_delta_v: true,
+  collision_avoidance_delta_v: true,
+  insertion_delta_v: true,
+  disposal_delta_v: true,
+  propellant_required: true,
+  propellant_consumed: true,
+  propellant_remaining: true,
+  initial_altitude: true,
+  final_altitude: true,
+  orbital_decay: true,
+  average_density: true,
+  average_drag: true,
+} satisfies Record<keyof SimulationResult, true>) as (keyof SimulationResult)[];
 
 export interface SensitivityResult {
   parameter: string;

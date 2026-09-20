@@ -1,147 +1,109 @@
-# Improving Python ↔ TypeScript connectivity (fixture-parity pipeline)
+# Python ↔ TypeScript connectivity (fixture-parity pipeline)
 
-This is a standalone instruction set, separate from `MAIN_PLAN.md` /
+Status: implemented. This is a standalone doc, separate from `MAIN_PLAN.md` /
 `docs/refactor-notes.md`. It only covers how the Python reference model and
 the TypeScript mission sim stay in sync — not the renderer, UI, or the
 CLI-only Python modules (`emissions.py`, `regulations.py`, `insights.py`,
-`explanations.py`), which have no TypeScript counterpart today and are out of
-scope here.
+`explanations.py`), which have no TypeScript counterpart and are out of
+scope here (see `export_fixtures.py`'s module docstring).
 
-## Current state (as of this writing)
+## Architecture
 
 - **Source of truth:** `design.py`, `environment.py`, `simulate.py` at repo
   root.
 - **Port:** `web/src/sim/orbital/{simulate,types,monteCarlo}.ts` — a hand
   written TypeScript reimplementation, not a transpilation.
 - **Bridge:** `export_fixtures.py` runs the Python model and writes
-  `fixtures/*.json`. `web/src/sim/orbital/__tests__/parity.test.ts` imports
-  those JSON files directly (via relative path) and asserts the TS port
+  `fixtures/*.json`. `web/src/sim/orbital/__tests__/parity.test.ts` loads
+  those fixtures (via `__tests__/fixtures.ts`) and asserts the TS port
   reproduces the same outputs within `1e-12` relative tolerance.
-- **Nothing wires these together automatically.** Fixture regeneration is a
-  manual `python export_fixtures.py` step. There is no CI (`find . -iname
-  "*.yml"` returns nothing), no pre-commit hook, and no script that fails a
-  build when the checked-in fixtures are stale relative to the Python source.
 
 The risk this creates: someone edits `simulate.py`, doesn't re-run
 `export_fixtures.py`, and the TS parity tests keep passing against
 **stale** fixtures — silently certifying parity that no longer holds.
 
-## Instructions
+## What's in place
 
-### 1. Make fixture staleness a CI failure, not a trust exercise
+### 1. CI drift gate — `.github/workflows/python-ts-parity.yml`
 
-Add a workflow (`.github/workflows/parity.yml`) that:
+Runs on every push/PR that touches the Python reference model, the
+fixtures, or the TS orbital sim. Steps: install Python + Node deps, run
+`pytest`, run `python scripts/check_fixture_drift.py`, run the TS parity +
+shape tests, then the full web test suite.
 
-1. Installs Python deps (`pip install -r requirements.txt`) and Node deps
-   (`npm --prefix web ci`).
-2. Runs `python export_fixtures.py`.
-3. Runs `git diff --exit-code -- fixtures/` — fail the build if regeneration
-   changed anything the committed fixtures didn't already have. This is the
-   actual drift check; everything else in this document is secondary to it.
-4. Runs `npm --prefix web test` (which includes `parity.test.ts`) and
-   `pytest`.
+**Important gotcha found while building this:** a naive
+`python export_fixtures.py && git diff --exit-code -- fixtures/` is
+flaky. Regenerating fixtures on a different Python patch version / libm
+build changed values in the last bit or two with zero code changes
+(observed: `237.40006869014277` vs `237.40006869014275`, a ~1e-16 relative
+difference) — CI would fail on every run for no real reason. Do **not**
+implement the gate as a raw text diff.
 
-This single step catches the most common failure mode: Python sim logic
-changed, fixtures weren't regenerated, TS silently parities against old
-numbers.
+Instead, `scripts/check_fixture_drift.py` loads the committed fixtures and
+a fresh in-memory export from `export_fixtures.py`'s own functions, and
+walks both trees: numbers are compared with `math.isclose(rel_tol=1e-9)`
+(matching the spirit of the TS parity tests' `1e-12`, slightly looser to
+be safe across environments), everything else (keys, strings, bools, list
+lengths) is compared exactly. It never writes to `fixtures/`. Verified it
+both (a) stays quiet on the committed fixtures as-is and (b) fails loudly
+on an injected value change and an injected key rename — see git history
+of this script for how that was checked.
 
-### 2. Wire regeneration into one command
-
-Add a root `Makefile` (or `package.json` script at repo root, whichever this
-team already reaches for) with a single entry point:
+### 2. One command to regenerate — `Makefile`
 
 ```
-sync-fixtures:
-	python export_fixtures.py
-	npm --prefix web test -- parity
+make sync-fixtures    # regenerate fixtures/ from Python, replay TS parity + shape tests
+make check-fixtures   # read-only: fail if committed fixtures drifted from the reference model
 ```
 
-Document this one command in `web/README.md` or the repo root README as
-"run this after touching `design.py`, `environment.py`, or `simulate.py`."
-Right now that instruction only lives in `export_fixtures.py`'s docstring
-and in scattered comments — nobody will find it there.
+Run `sync-fixtures` after touching `design.py`, `environment.py`, or
+`simulate.py`. `check-fixtures` is what CI runs; it's also useful locally
+before opening a PR.
 
-### 3. Version the contract, and check the version
+### 3. Fixture envelope version, checked on load — `web/src/sim/orbital/__tests__/fixtures.ts`
 
-`export_fixtures.py` already writes a `model_version` field into every
-fixture's envelope (`MODEL_VERSION = "1.0.0"`), but `parity.test.ts` never
-reads it. Add a check at fixture-load time:
+`export_fixtures.py` writes `model_version` (`MODEL_VERSION = "1.0.0"`)
+into every fixture's envelope. `fixtures.ts` checks every fixture against
+`EXPECTED_MODEL_VERSION` as soon as it's imported, and throws a specific
+error naming the mismatch if Python and TS disagree on the fixture shape
+version. Bump both constants together whenever the exported *shape*
+changes (new/renamed/restructured field) — not for ordinary value changes.
 
-```ts
-const EXPECTED_MODEL_VERSION = "1.0.0";
+### 4. Fixture-shape drift test — `web/src/sim/orbital/__tests__/fixtureShape.test.ts`
 
-function loadFixture<T extends { model_version: string }>(data: unknown): T {
-  const fixture = data as T;
-  if (fixture.model_version !== EXPECTED_MODEL_VERSION) {
-    throw new Error(
-      `fixture model_version ${fixture.model_version} != expected ${EXPECTED_MODEL_VERSION}; ` +
-        `regenerate with 'python export_fixtures.py' or bump EXPECTED_MODEL_VERSION`,
-    );
-  }
-  return fixture;
-}
-```
+Catches an added, renamed, or removed Python field that a value-only
+parity test wouldn't notice (it especially wouldn't notice a field TS never
+reads at all). It compares `Object.keys()` of fixture objects
+(`SpacecraftMission`, `SpaceWeather`, `SimulationResult`, `OperationalDraw`)
+against key lists exported from `types.ts`.
 
-Bump `MODEL_VERSION` in `export_fixtures.py` whenever the exported shape
-(not just the values) changes — new field, renamed field, restructured
-envelope. This turns a shape mismatch into one clear error message instead
-of a confusing `undefined` deep in a scalar comparison.
+Those key lists (`SPACECRAFT_MISSION_KEYS` etc.) are written as
+`Object.keys({...} satisfies Record<keyof T, true>)`, so TypeScript itself
+refuses to compile the file if the literal is missing a key the interface
+requires or has one the interface doesn't — the key list can't quietly
+drift from the interface it's supposed to mirror. No new runtime
+dependency (zod) was added; this gets most of the value for a mission
+model this size.
 
-### 4. Stop hand-syncing the type definitions
+### 5. Centralized fixture imports — `web/src/sim/orbital/__tests__/fixtures.ts`
 
-`web/src/sim/orbital/types.ts` (`SpacecraftMission`, `SpaceWeather`,
-`SimulationResult`) is manually kept in sync with the Python dataclasses in
-`design.py` / `environment.py` / `simulate.py`. Nothing enforces this today
-— a renamed or added Python field won't break TS compilation, it'll just be
-silently absent from the port until a parity test happens to notice a value
-mismatch (and won't notice a Python field that TS never reads at all).
+All five `fixtures/*.json` imports (and the version check) live in one
+file now. `parity.test.ts` and `fixtureShape.test.ts` both import from
+`./fixtures` instead of repeating `../../../../../fixtures/*.json`. If the
+fixture directory ever moves, there's one import block to fix.
 
-Two options, in order of effort:
+### 6. Scope boundary documented — `export_fixtures.py` module docstring
 
-- **Cheap:** add one test that walks `Object.keys()` of a decoded fixture's
-  `mission` / `weather` / `expected` objects and asserts they're a subset of
-  (or equal to) the TS interface's known keys, using a small runtime schema
-  (zod) instead of a bare `as T` cast in `loadFixture`. This catches added
-  or renamed Python fields immediately, in the same test run that already
-  exists.
-- **Stronger:** generate `types.ts` (or a zod schema that the hand-written
-  interfaces are checked against) directly from the Python side — e.g. emit
-  JSON Schema from the dataclasses in `export_fixtures.py`'s envelope step,
-  and run `json-schema-to-zod` or similar in a `pretest` script. Only worth
-  it if the schema keeps changing; for a small, largely-frozen mission model
-  the cheap option is proportionate.
+States explicitly that `emissions.py`, `regulations.py`, `insights.py`,
+and `explanations.py` have no TS port or fixture coverage, and points here
+and to `make sync-fixtures` / `make check-fixtures`.
 
-### 5. Make the fixture import path resilient
+## Verification performed
 
-`parity.test.ts` currently imports fixtures with
-`../../../../../fixtures/*.json` (five `../` segments). This works but
-breaks silently-into-"file not found" the moment anything moves. Centralize
-it:
-
-```ts
-// web/src/sim/orbital/__tests__/fixtures.ts
-export { default as correctionsJson } from "../../../../../fixtures/corrections.json";
-export { default as missionsJson } from "../../../../../fixtures/missions.json";
-// ...
-```
-
-One file owns the relative path; every test imports from it. If the fixture
-directory ever moves, there's exactly one line to fix instead of five
-scattered imports.
-
-### 6. Keep the scope boundary explicit
-
-`emissions.py`, `regulations.py`, `insights.py`, and `explanations.py` call
-external services (Federal Register, an LLM) and have no TypeScript port or
-fixture coverage. That's a legitimate scope decision, not an oversight — but
-nothing currently says so. Add one line to this document's top (done above)
-or to `export_fixtures.py`'s module docstring, so a future contributor
-doesn't assume parity coverage exists where it doesn't.
-
-## Why this ordering
-
-Step 1 (CI drift check) is the only item that actually prevents the failure
-mode described above; it should land first even on its own. Steps 2-5 make
-the workflow easier to use correctly and catch a wider class of drift
-(shape, not just values), but a CI gate on `git diff --exit-code -- fixtures/`
-is the floor.
+- `pytest -q`: 60 passed, 4 skipped (unchanged from before this work).
+- `npm test` (web): 217 → 221 passed (added `fixtureShape.test.ts`'s 4
+  cases; the pre-existing 217 still pass unmodified).
+- `npx tsc -b --force`: clean.
+- `make check-fixtures`: passes against the committed fixtures.
+- Manually verified the drift checker fails on both an injected numeric
+  change and an injected key rename, and passes once reverted.

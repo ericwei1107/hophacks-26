@@ -7,11 +7,6 @@
 
 import { describe, expect, it } from "vitest";
 
-import correctionsJson from "../../../../../fixtures/corrections.json";
-import missionsJson from "../../../../../fixtures/missions.json";
-import perturbedJson from "../../../../../fixtures/perturbed_cases.json";
-import weatherJson from "../../../../../fixtures/reference_weather.json";
-import scalarsJson from "../../../../../fixtures/scalar_helpers.json";
 import {
   atmosphericRelativeVelocity,
   estimateAtmosphericDensity,
@@ -22,10 +17,14 @@ import {
   simulate,
 } from "../simulate";
 import type { SimulationResult, SpacecraftMission, SpaceWeather } from "../types";
-
-function loadFixture<T>(data: unknown): T {
-  return data as T;
-}
+import {
+  correctionsJson,
+  loadFixture,
+  missionsJson,
+  perturbedJson,
+  scalarsJson,
+  weatherJson,
+} from "./fixtures";
 
 /** Python and JS doubles can differ by ~1 ulp in transcendentals. */
 const REL_TOL = 1e-12;

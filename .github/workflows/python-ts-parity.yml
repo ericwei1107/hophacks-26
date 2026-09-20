@@ -1,0 +1,53 @@
+name: Python/TypeScript parity
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    paths:
+      - "design.py"
+      - "environment.py"
+      - "simulate.py"
+      - "export_fixtures.py"
+      - "scripts/check_fixture_drift.py"
+      - "fixtures/**"
+      - "requirements.txt"
+      - "web/src/sim/orbital/**"
+      - ".github/workflows/python-ts-parity.yml"
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Python tests
+        run: pytest -q
+
+      - name: Check committed fixtures match the Python reference model
+        run: python scripts/check_fixture_drift.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Run TypeScript parity + shape tests against the fixtures
+        working-directory: web
+        run: npm test -- parity fixtureShape
+
+      - name: Run full web test suite
+        working-directory: web
+        run: npm test
