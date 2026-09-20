@@ -9,10 +9,14 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
 import type { RenderFrame } from "../../protocol";
-import planetVertex from "../shaders/planet.vert?raw";
-import earthFragment from "../shaders/earth.frag?raw";
-import cloudFragment from "../shaders/clouds.frag?raw";
-import atmosphereFragment from "../shaders/atmosphere.frag?raw";
+// No `?raw`: that returns the file verbatim and leaves the LYGIA
+// `#include "/lygia/..."` line for WebGL to choke on. Importing the shader
+// normally lets vite-plugin-glsl resolve it. Three.js chunk includes written
+// as `#include <common>` are passed through untouched and resolved by three.
+import planetVertex from "../shaders/planet.vert";
+import earthFragment from "../shaders/earth.frag";
+import cloudFragment from "../shaders/clouds.frag";
+import atmosphereFragment from "../shaders/atmosphere.frag";
 
 const EARTH_RADIUS_KM = 6371;
 
