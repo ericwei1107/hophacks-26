@@ -144,22 +144,22 @@ def build_analysis_brief(
     return brief
 
 
-def generate_llm_briefing(brief: dict) -> str:
+def generate_llm_briefing(brief: dict, timeout_s: float | None = None, retries: int = 2) -> str:
     api_key = _api_key()
     if not api_key:
         raise RuntimeError("No xAI key found. Set xai_api_key or XAI_API_KEY in .env.")
     model = os.environ.get("XAI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
     reasoning = os.environ.get("XAI_REASONING", DEFAULT_REASONING).strip() or DEFAULT_REASONING
-    timeout_s = float(os.environ.get("XAI_TIMEOUT", DEFAULT_TIMEOUT_S))
+    timeout_s = float(timeout_s if timeout_s is not None else os.environ.get("XAI_TIMEOUT", DEFAULT_TIMEOUT_S))
     payload = {"model": model, "temperature": 0.2, "max_tokens": MAX_OUTPUT_TOKENS, "reasoning_effort": reasoning, "messages": [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": ANALYSIS_PROMPT + "\n" + json.dumps(brief, separators=(",", ":"))}]}
     last_error = None
-    for attempt in range(2):
+    attempts = max(1, retries)
+    for attempt in range(attempts):
         try:
-            response = requests.post(XAI_CHAT_URL, headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, json=payload, timeout=(20, timeout_s))
+            response = requests.post(XAI_CHAT_URL, headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, json=payload, timeout=(10, timeout_s))
         except requests.exceptions.Timeout as error:
             last_error = error
-            if attempt == 0:
-                print("  xAI timed out, retrying once...")
+            if attempt + 1 < attempts:
                 continue
             raise RuntimeError(f"xAI timed out after {timeout_s:.0f}s.") from error
         if not response.ok:
@@ -174,13 +174,3 @@ def generate_llm_briefing(brief: dict) -> str:
             raise RuntimeError("xAI returned an empty briefing.")
         return text
     raise RuntimeError(str(last_error) if last_error else "xAI request failed.")
-
-
-def print_llm_briefing(mission, weather, constraints, summary, footprint=None, regulatory_result=None, regulatory_rules=None) -> None:
-    print("\nGenerating xAI closer...")
-    brief = build_analysis_brief(mission, weather, constraints, summary, footprint, regulatory_result, regulatory_rules)
-    try:
-        print(generate_llm_briefing(brief))
-    except Exception as error:
-        print("xAI briefing unavailable.")
-        print(f"  {error}")

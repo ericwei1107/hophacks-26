@@ -12,6 +12,7 @@ import type { EngineId } from "../../domain/engines";
 import { useAppStore } from "../store";
 import { RocketMesh } from "../components/RocketMesh";
 import { SettingsToggle } from "../components/SettingsToggle";
+import { usePythonBackendStatus } from "../../api/pythonBackend";
 
 function Slider({
   label,
@@ -104,8 +105,9 @@ function Readout({ label, value, warn }: { label: string; value: string; warn?: 
 }
 
 export function AssemblyScreen() {
-  const { config, derived, updateConfig, resetToReference, launch, flightLoading, flightError, analysisStale, experimentBaseline, suggestedExperiment, persistenceNotice } =
+  const { config, derived, updateConfig, resetToReference, launch, flightLoading, flightError, analysisStale, experimentBaseline, suggestedExperiment, persistenceNotice, weather } =
     useAppStore();
+  const pythonStatus = usePythonBackendStatus();
 
   const errors = derived.checks.filter((c: BuildCheck) => c.severity === "error");
   const warnings = derived.checks.filter((c: BuildCheck) => c.severity === "warning");
@@ -200,6 +202,15 @@ export function AssemblyScreen() {
           <button onClick={resetToReference}>Reset to reference build</button>
         </div>
         {analysisStale && <p className="dim small">Build edited — prior analysis invalidated until rerun.</p>}
+        <p className="dim small">
+          Weather: Kp {weather.weather.kp ?? "—"} · F10.7 {weather.weather.f107 ?? "—"} (
+          {weather.source === "python" ? "Python NOAA" : weather.source === "noaa" ? "browser NOAA" : "reference snapshot"})
+          {pythonStatus === "up"
+            ? " · Payload analysis: Python"
+            : pythonStatus === "down"
+              ? " · Payload analysis: local TypeScript"
+              : ""}
+        </p>
         {persistenceNotice && <p className="check warning">⚠ {persistenceNotice}</p>}
         <SettingsToggle />
       </div>

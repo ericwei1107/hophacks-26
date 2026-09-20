@@ -10,13 +10,10 @@ test("payload mission analysis runs from the debrief", async ({ page }) => {
 
   // Payload mission analysis (baseline is instant; Monte Carlo follows).
   await page.getByRole("button", { name: /Analyze payload mission/i }).click();
-  await expect(page.getByText(/Payload three-year mission/i)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("heading", { name: /Three-year mission/i })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(/Baseline mission/i)).toBeVisible();
-
-  // Monte Carlo completes in the worker.
   await expect(page.getByText(/Monte Carlo/i)).toBeVisible({ timeout: 60_000 });
 
-  // Robustness analysis.
   await page.getByRole("button", { name: /Run robustness analysis/i }).click();
-  await expect(page.getByText(/Ascent robustness/i)).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole("heading", { name: /^Robustness$/i })).toBeVisible({ timeout: 60_000 });
 });

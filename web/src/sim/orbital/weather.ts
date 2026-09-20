@@ -2,15 +2,15 @@
  * Space-weather sourcing.
  *
  * A deterministic reference snapshot is bundled with the game, so it is
- * fully playable offline. Live NOAA loading is optional; observations are
- * selected by timestamp and validity (never by array position), requests
- * time out after five seconds, and any failure falls back to the bundled
- * snapshot. One frozen snapshot is used for a flight and all its analyses.
+ * fully playable offline. The Python backend is tried first (same NOAA
+ * products, server-side). If that is down, the browser fetches NOAA itself.
+ * Any failure falls back to the bundled snapshot. One frozen snapshot is
+ * used for a flight and all its analyses.
  */
 
 import type { SpaceWeather } from "./types";
 
-export type WeatherSource = "reference" | "noaa";
+export type WeatherSource = "reference" | "noaa" | "python";
 
 export interface WeatherSnapshot {
   weather: SpaceWeather;
@@ -171,11 +171,37 @@ export function validateWeather(weather: SpaceWeather): boolean {
   ].every((value) => value !== null && Number.isFinite(value) && value >= 0);
 }
 
-/** Live weather when available, otherwise the bundled reference snapshot. */
-export async function loadWeatherSnapshot(): Promise<WeatherSnapshot> {
+async function fetchPythonWeatherSnapshot(
+  fetchImpl: typeof fetch = fetch,
+): Promise<WeatherSnapshot> {
+  const response = await fetchImpl("/api/weather", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Python weather failed: ${response.status}`);
+  }
+  const body = (await response.json()) as WeatherSnapshot;
+  if (!body?.weather || !validateWeather(body.weather)) {
+    throw new Error("Python weather payload was invalid.");
+  }
+  return {
+    weather: { ...body.weather },
+    source: "python",
+    sourceTimestamps: body.sourceTimestamps ?? {},
+    retrievedAt: body.retrievedAt ?? new Date().toISOString(),
+    freshnessMs: body.freshnessMs ?? null,
+  };
+}
+
+/** Python NOAA when the backend is up, else browser NOAA, else the reference snapshot. */
+export async function loadWeatherSnapshot(
+  fetchImpl: typeof fetch = fetch,
+): Promise<WeatherSnapshot> {
   try {
-    return await fetchNoaaSnapshot();
+    return await fetchPythonWeatherSnapshot(fetchImpl);
   } catch {
-    return referenceSnapshot();
+    try {
+      return await fetchNoaaSnapshot(fetchImpl);
+    } catch {
+      return referenceSnapshot();
+    }
   }
 }

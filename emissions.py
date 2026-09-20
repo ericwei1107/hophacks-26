@@ -53,9 +53,6 @@ KNOWN_PAYLOAD_KG = {
     "Vulcan Centaur": 27000.0
 }
 
-CLIMATE_SPECIES = ("CO2", "CH4", "C")
-OZONE_SPECIES = ("NO", "HCL", "CL", "CL2")
-PARTICLE_SPECIES = ("C", "AL2O3")
 CH4_GWP100 = 28.0
 
 @dataclass
@@ -298,58 +295,3 @@ def estimate_mission_footprint(mission: SpacecraftMission, archive: Path | None 
         attributed = attributed,
         co2e_attributed_kg = _co2e_kg(attributed)
     )
-
-def _format_mass(kg: float) -> str:
-    if abs(kg) >= 1000:
-        return f" {kg / 1000:.2f} t"
-    return f" {kg:.1f} kg"
-
-def _print_species(totals: EmissionTotals, names: tuple[str, ...]) -> None:
-    for name in names:
-        mass = totals.species_kg.get(name)
-        if mass:
-            print(f"    {name}: {_format_mass(mass)}")
-
-def print_footprint(footprint: MissionFootprint) -> None:
-    analog = footprint.analog
-    print("\nLaunch environmental footprint")
-    print(f"  Source: {footprint.source}")
-    print(f"  DOI: https://doi.org/{footprint.doi}")
-    print(
-        f"  Analog launch: {analog.vehicle} {analog.tag} "
-        f"({analog.date.strip()}, {analog.mission})"
-    )
-    print(
-        f"  Analog insertion: {analog.perigee_km:.0f} x {analog.apogee_km:.0f} km "
-        f"at {analog.inclination_deg:.1f} deg"
-    )
-    print(f"  Nearby 2024 analogs scored: {footprint.similar_count}")
-    print(
-        f"  Payload share: {footprint.spacecraft_wet_mass_kg:.0f} kg / "
-        f"{footprint.payload_capacity_kg:.0f} kg "
-        f"({footprint.payload_share:.2%})"
-    )
-
-    print("\n  Full analog launch")
-    print(f"    Total exhaust: {_format_mass(footprint.full_launch.total_kg)}")
-    _print_species(footprint.full_launch, ("CO2", "H2O", "CO", "C", "CH4", "NO", "HCL", "AL2O3"))
-
-    print("\n  Attributed to this spacecraft")
-    print(f"    Total exhaust: {_format_mass(footprint.attributed.total_kg)}")
-    print(f"    CO2e (CO2 + 28 x CH4): {_format_mass(footprint.co2e_attributed_kg)}")
-    _print_species(footprint.attributed, ("CO2", "H2O", "CO", "C", "CH4", "NO", "HCL", "AL2O3"))
-
-    if footprint.attributed.by_layer_kg:
-        print("\n  Attributed exhaust by altitude")
-        layer_order = (
-            "troposphere_0_15km",
-            "stratosphere_15_50km",
-            "mesosphere_50_80km",
-            "above_80km"
-        )
-        for layer in layer_order:
-            mass = footprint.attributed.by_layer_kg.get(layer)
-            if mass:
-                print(f"    {layer}: {_format_mass(mass)}")
-
-    print(f"\n  Cite: {footprint.citation}")

@@ -80,29 +80,3 @@ class MissionDesigner:
             if not minimum <= value <= maximum:
                 errors.append(message)
         return len(errors) == 0, errors
-
-    def prompt_user(self) -> SpacecraftMission:
-        c = self.constraints
-        print("\n=== Mission Specification ===")
-        print("Enter values within the displayed ranges.\n")
-
-        def get_float(label: str, minimum: float, maximum: float) -> float:
-            while True:
-                try:
-                    value = float(input(f"{label} [{minimum} - {maximum}]: "))
-                    if minimum <= value <= maximum:
-                        return value
-                    print(f"Value must be between {minimum} and {maximum}.")
-                except ValueError:
-                    print("Please enter a valid number.")
-
-        return SpacecraftMission(
-            mass = get_float("Spacecraft mass (kg)", c.mass_min, c.mass_max),
-            fuel = get_float("Fuel (kg)", c.fuel_min, c.fuel_max),
-            lifespan = get_float("Mission lifespan (years)", c.life_min, c.life_max),
-            target_altitude = get_float("Target altitude (km)", c.altitude_min, c.altitude_max),
-            target_inclination = get_float("Target inclination (degrees)", c.inclination_min, c.inclination_max),
-            cross_section_area = get_float("Cross-sectional area (m²)", c.area_min, c.area_max),
-            drag_coefficient = get_float("Drag coefficient", c.drag_coefficient_min, c.drag_coefficient_max),
-            isp = get_float("Specific impulse / Isp (seconds)", c.isp_min, c.isp_max)
-        )
