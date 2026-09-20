@@ -24,6 +24,8 @@ import {
   copyConfigToClipboard,
   downloadText,
 } from "../../persistence/report";
+import { fetchCensus, type SatcatCensus } from "../../sim/orbital/debris";
+
 function outcomeTitle(outcome: string): string {
   return outcome.replaceAll("_", " ").toUpperCase();
 }
@@ -31,6 +33,9 @@ function outcomeTitle(outcome: string): string {
 function prettyLabel(value: string): string {
   if (value === "f107") {
     return "F10.7";
+  }
+  if (value === "debris_environment") {
+    return "Crowding (SATCAT)";
   }
   const text = value
     .replace(/_error_deg$/, " error")
@@ -59,12 +64,63 @@ function StatTile({
   );
 }
 
+function CrowdingTable({ census }: { census: SatcatCensus }) {
+  const counts = census.counts;
+  return (
+    <div className="report-block">
+      <h3>Crowding obstacle (SATCAT)</h3>
+      <p className="report-note">
+        Objects in ±30 km of the parking altitude. cam_scale is vs a quieter 400 km
+        shell and multiplies avoidance fuel. Not collision probability.
+      </p>
+      <table className="census-table">
+        <tbody>
+          <tr>
+            <th>Shell</th>
+            <td>
+              {census.shell_low.toFixed(0)}–{census.shell_high.toFixed(0)} km
+            </td>
+          </tr>
+          <tr>
+            <th>Total objects</th>
+            <td>{counts.total}</td>
+          </tr>
+          <tr>
+            <th>Payloads</th>
+            <td>{counts.payload}</td>
+          </tr>
+          <tr>
+            <th>Rocket bodies</th>
+            <td>{counts.rocket_body}</td>
+          </tr>
+          <tr>
+            <th>Debris</th>
+            <td>{counts.debris}</td>
+          </tr>
+          <tr>
+            <th>cam_scale</th>
+            <td>{census.cam_scale}</td>
+          </tr>
+          <tr>
+            <th>Obstacle</th>
+            <td>{census.obstacle}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p className="report-footnote">
+        {census.source}. {census.note}
+      </p>
+    </div>
+  );
+}
+
 export function DebriefScreen() {
   const { flight, setScreen, returnToBuild, startExperiment, runSummaries, persistenceNotice } = useAppStore();
   const [hoverTimeS, setHoverTimeS] = useState<number | null>(null);
   const [payloadAnalysis, setPayloadAnalysis] = useState<PayloadAnalysis | null>(null);
   const [pythonReport, setPythonReport] = useState<PythonPayloadReport | null>(null);
   const [pythonError, setPythonError] = useState<string | null>(null);
+  const [debrisCensus, setDebrisCensus] = useState<SatcatCensus | null>(null);
   const pythonStatus = usePythonBackendStatus();
   const [monteCarlo, setMonteCarlo] = useState<MonteCarloSummary | null>(null);
   const [robustness, setRobustness] = useState<AscentRobustnessResult | null>(null);
@@ -130,15 +186,19 @@ export function DebriefScreen() {
     setMonteCarlo(null);
     setPythonReport(null);
     setPythonError(null);
+    setDebrisCensus(null);
 
     setAnalysisProgress("Python payload analysis…");
     try {
       const report = await analyzeLaunchedPayload(handoff, {
         runs: 1_000,
         sensitivityRuns: 200,
-        includeBriefing: false,
+        includeBriefing: true,
       });
       setPythonReport(report);
+      if (report.debris) {
+        setDebrisCensus(report.debris);
+      }
       setPayloadAnalysis({
         handoff,
         rules: GAME_MISSION_RULES,
@@ -163,7 +223,12 @@ export function DebriefScreen() {
       setPythonError(error instanceof Error ? error.message : String(error));
     }
 
-    if (!analysis.mission) {
+    const census = await fetchCensus(handoff.achievedApogeeKm);
+    setDebrisCensus(census);
+    const scaled = analyzePayload(handoff, GAME_MISSION_RULES, census.cam_scale);
+    setPayloadAnalysis(scaled);
+
+    if (!scaled.mission) {
       setAnalysisProgress(null);
       return;
     }
@@ -171,12 +236,13 @@ export function DebriefScreen() {
     setAnalysisProgress("Monte Carlo (local TypeScript)…");
     const { promise } = simClient.runOrbitalMonteCarlo(
       {
-        mission: analysis.mission,
+        mission: scaled.mission,
         weather: handoff.weather,
         runs: 10_000,
         sensitivityRuns: 1_000,
         seed: handoff.seed,
         rules: "game",
+        camScaleMean: census.cam_scale,
       },
       (completed, total) => setAnalysisProgress(`Monte Carlo ${Math.round((completed / total) * 100)}%`),
     );
@@ -404,6 +470,7 @@ export function DebriefScreen() {
           }
           return true;
         });
+        const census = pythonReport?.debris ?? debrisCensus;
         return (
         <section className="analysis report">
           <div className="report-head">
@@ -484,6 +551,7 @@ export function DebriefScreen() {
               )}
             </div>
           )}
+          {census && <CrowdingTable census={census} />}
           {extraInsights.length > 0 && (
             <div className="report-block">
               <h3>What this means</h3>
@@ -511,17 +579,20 @@ export function DebriefScreen() {
           )}
           {pythonReport?.regulatory && (
             <div className="report-block">
-              <h3>Debris screening</h3>
+              <h3>Five-year disposal rule</h3>
               <p className={`status-pill${pythonReport.regulatory.compliant ? " pass" : " fail"}`}>
                 {pythonReport.regulatory.compliant ? "Compliant" : "Not compliant"}
               </p>
               <p className="report-note">
                 {pythonReport.regulatory.compliant
-                  ? "Meets the five-year post-mission de-orbit screening check."
+                  ? "Post-mission decay is within the five-year de-orbit screening check (mission life is not used as decay time)."
                   : pythonReport.regulatory.violations.join(" ")}
               </p>
               <p className="report-footnote">Federal Register records are context, not legal advice.</p>
             </div>
+          )}
+          {pythonReport?.briefingError && (
+            <p className="check warning">⚠ Pitch closer: {pythonReport.briefingError}</p>
           )}
           {pythonReport?.briefing && (
             <div className="report-block">

@@ -1,3 +1,4 @@
+from debris import SYNTHETIC_SATCAT
 from payload_analysis import (
     PayloadHandoff,
     circularization_delta_v,
@@ -13,6 +14,7 @@ def skip_network_side_effects(monkeypatch):
     monkeypatch.setattr("payload_analysis.get_latest_debris_rules", lambda **_: [])
     monkeypatch.setattr("payload_analysis._safe_footprint", lambda _mission: None)
     monkeypatch.setattr("payload_analysis.briefing_configured", lambda: False)
+    monkeypatch.setattr("debris.load_satcat", lambda force_refresh=False: list(SYNTHETIC_SATCAT))
 
 
 def _handoff(apogee=200.0, perigee=190.0, wet=5000.0) -> PayloadHandoff:
@@ -52,7 +54,10 @@ def test_analyze_runs_python_mission_stack_on_a_game_orbit():
     assert report["result"] is not None
     assert report["monteCarlo"]["total_runs"] == 20
     assert report["insights"]
+    assert report["debris"] is not None
+    assert report["debris"]["cam_scale"] >= 0.4
     assert any("Baseline mission" in line for line in report["explanations"])
+    assert any("SATCAT crowding" in line for line in report["explanations"])
 
 
 def test_elliptical_insertion_can_exhaust_onboard_propellant():

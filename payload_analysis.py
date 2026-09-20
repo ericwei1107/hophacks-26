@@ -7,11 +7,12 @@ IGEL emissions, debris screening, and deterministic insights.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from debris import crowding_census
 from design import MissionConstraints, SpacecraftMission
 from emissions import CACHE_DIR, ARCHIVE_NAME, estimate_mission_footprint
 from environment import SpaceWeather, fetch_noaa_snapshot
@@ -133,6 +134,7 @@ def analyze_launched_payload(
         "explanations": [],
         "insights": [],
         "emissions": None,
+        "debris": None,
         "regulatory": None,
         "regulatoryRules": [],
         "briefing": None,
@@ -161,15 +163,19 @@ def analyze_launched_payload(
         isp=PAYLOAD_ISP_S,
     )
     report["mission"] = mission.to_dict()
+    census = crowding_census(mission.target_altitude)
+    report["debris"] = census
+    ops = s.OperationalDraw(cam_scale=float(census["cam_scale"]))
 
     with s.operating_altitude_floor(GAME_MIN_OPERATING_ALTITUDE_KM):
-        result = s.simulate(mission, handoff.weather)
+        result = s.simulate(mission, handoff.weather, ops)
         summary = s.run_monte_carlo(
             mission,
             handoff.weather,
             n=runs,
             sensitivity_runs=sensitivity_runs,
             seed=handoff.seed,
+            cam_scale_mean=float(census["cam_scale"]),
         )
 
     report["result"] = asdict(result)
@@ -184,7 +190,7 @@ def analyze_launched_payload(
         "baseline": asdict(summary.baseline),
     }
     report["explanations"] = _explain_payload(
-        handoff, dry_mass_kg, onboard_propellant_kg, area_m2, circ_dv, mission, result
+        handoff, dry_mass_kg, onboard_propellant_kg, area_m2, circ_dv, mission, result, census
     )
 
     footprint = _safe_footprint(mission)
@@ -200,9 +206,10 @@ def analyze_launched_payload(
             "citation": footprint.citation,
         }
 
+    decay_years = s.estimate_post_mission_decay_years(mission, handoff.weather, result)
     compliance_input = {
         "mission_name": "Launched payload",
-        "post_mission_decay_years": mission.lifespan,
+        "post_mission_decay_years": decay_years,
         "fuel_margin_percent": (
             100.0 * summary.baseline.propellant_remaining / mission.fuel
             if mission.fuel
@@ -229,6 +236,7 @@ def analyze_launched_payload(
             footprint,
             report["regulatory"],
             report["regulatoryRules"],
+            census,
         )
         try:
             report["briefing"] = generate_llm_briefing(brief)
@@ -246,6 +254,7 @@ def _explain_payload(
     circ_dv: float,
     mission: SpacecraftMission,
     result: s.SimulationResult,
+    census: dict[str, Any] | None = None,
 ) -> list[str]:
     lines = [
         (
@@ -278,6 +287,15 @@ def _explain_payload(
             f"Note: {(handoff.stage2_propellant_remaining_kg / 1000):.2f} t of "
             "upper-stage propellant was left over at cutoff — it stays with the "
             "spent stage and is not available to the payload."
+        )
+    if census:
+        counts = census.get("counts") or {}
+        lines.append(
+            f"SATCAT crowding in {census.get('shell_low'):.0f}–{census.get('shell_high'):.0f} km: "
+            f"{counts.get('total', 0)} objects "
+            f"({counts.get('payload', 0)} payloads, {counts.get('rocket_body', 0)} rocket bodies, "
+            f"{counts.get('debris', 0)} debris), cam_scale {census.get('cam_scale')}, "
+            f"{census.get('obstacle')} vs a quieter 400 km shell. Screening, not collision probability."
         )
     return lines
 

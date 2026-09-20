@@ -64,6 +64,7 @@ export interface OrbitalMonteCarloRequest {
   sensitivityRuns: number;
   seed: number;
   rules: "legacy" | "game";
+  camScaleMean?: number;
 }
 
 export interface AscentAnalysisRequest {

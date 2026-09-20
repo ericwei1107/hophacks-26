@@ -8,6 +8,7 @@
 import { Rng } from "../prng";
 import {
   BAD_LAUNCH_PROBABILITY,
+  DEFAULT_OPS,
   INSERTION_ALTITUDE_SIGMA_KM,
   INSERTION_INCLINATION_SIGMA_DEG,
   STORM_PROBABILITY,
@@ -119,7 +120,7 @@ export function createStressedWeather(weather: SpaceWeather, rng: Rng): SpaceWea
   return result;
 }
 
-export function createStressedOps(rng: Rng): OperationalDraw {
+export function createStressedOps(rng: Rng, camScaleMean = 1.0): OperationalDraw {
   const inclinationError =
     rng.uniform() < BAD_LAUNCH_PROBABILITY
       ? rng.gauss(0, 1.15)
@@ -127,11 +128,16 @@ export function createStressedOps(rng: Rng): OperationalDraw {
   return {
     insertion_altitude_error_km: clip(rng.gauss(0, INSERTION_ALTITUDE_SIGMA_KM), -40, 40),
     insertion_inclination_error_deg: clip(inclinationError, -2.4, 2.4),
-    cam_scale: clip(rng.gauss(1, 0.28), 0.45, 2.3),
+    cam_scale: clip(rng.gauss(camScaleMean, 0.08), 0.4, 2.5),
   };
 }
 
-function perturbOpsParameter(ops: OperationalDraw, parameter: string, rng: Rng): OperationalDraw {
+function perturbOpsParameter(
+  ops: OperationalDraw,
+  parameter: string,
+  rng: Rng,
+  camScaleMean = 1.0,
+): OperationalDraw {
   if (parameter === "insertion_altitude_error_km") {
     return { ...ops, insertion_altitude_error_km: clip(rng.gauss(0, INSERTION_ALTITUDE_SIGMA_KM), -40, 40) };
   }
@@ -139,7 +145,7 @@ function perturbOpsParameter(ops: OperationalDraw, parameter: string, rng: Rng):
     return { ...ops, insertion_inclination_error_deg: clip(rng.gauss(0, INSERTION_INCLINATION_SIGMA_DEG), -2.4, 2.4) };
   }
   if (parameter === "debris_environment") {
-    return { ...ops, cam_scale: clip(rng.gauss(1, 0.35), 0.45, 2.3) };
+    return { ...ops, cam_scale: clip(rng.gauss(camScaleMean, 0.12), 0.4, 2.5) };
   }
   return ops;
 }
@@ -156,12 +162,13 @@ export function runOverallMonteCarlo(
   seed: number | null = null,
   rules: MissionRules = LEGACY_MISSION_RULES,
   onChunk?: (progress: BatchProgress) => boolean | void,
+  camScaleMean = 1.0,
 ): { passes: number; failures: number; failureModes: Record<string, number>; baseline: SimulationResult } {
   if (n <= 0) {
     throw new Error("Monte Carlo run count must be positive.");
   }
   const rng = new Rng(seed ?? 0);
-  const baseline = simulate(mission, weather, undefined, rules);
+  const baseline = simulate(mission, weather, { ...DEFAULT_OPS, cam_scale: camScaleMean }, rules);
   let passes = 0;
   let failures = 0;
   const failureModes: Record<string, number> = {};
@@ -172,7 +179,7 @@ export function runOverallMonteCarlo(
     for (let i = start; i < end; i++) {
       const stressedMission = createStressedMission(mission, rng);
       const stressedWeather = createStressedWeather(weather, rng);
-      const stressedOps = createStressedOps(rng);
+      const stressedOps = createStressedOps(rng, camScaleMean);
       const result = simulate(stressedMission, stressedWeather, stressedOps, rules);
       if (result.passed) {
         passes++;
@@ -222,12 +229,14 @@ export function runParameterSensitivity(
   seed: number | null = null,
   rules: MissionRules = LEGACY_MISSION_RULES,
   onChunk?: (progress: BatchProgress) => boolean | void,
+  camScaleMean = 1.0,
 ): SensitivityResult[] {
   if (n <= 0) {
     throw new Error("Sensitivity run count must be positive.");
   }
   const rng = new Rng(seed ?? 0);
-  const baseline = simulate(mission, weather, undefined, rules);
+  const baselineOps = { ...DEFAULT_OPS, cam_scale: camScaleMean };
+  const baseline = simulate(mission, weather, baselineOps, rules);
   const baselineMargin = baseline.available_delta_v - baseline.required_delta_v;
   const results: SensitivityResult[] = [];
 
@@ -252,13 +261,13 @@ export function runParameterSensitivity(
     for (let i = 0; i < n; i++) {
       let stressedMission = mission;
       let stressedWeather = weather;
-      let stressedOps: OperationalDraw = { insertion_altitude_error_km: 0, insertion_inclination_error_deg: 0, cam_scale: 1 };
+      let stressedOps: OperationalDraw = { ...baselineOps };
       if (kind === "mission") {
         stressedMission = perturbParameter(mission, parameter, rng);
       } else if (kind === "weather") {
         stressedWeather = perturbWeatherParameter(weather, parameter, rng);
       } else {
-        stressedOps = perturbOpsParameter(stressedOps, parameter, rng);
+        stressedOps = perturbOpsParameter(stressedOps, parameter, rng, camScaleMean);
       }
       const result = simulate(stressedMission, stressedWeather, stressedOps, rules);
       if (result.passed) {
@@ -299,6 +308,7 @@ export function runMonteCarlo(
   seed: number | null = null,
   rules: MissionRules = LEGACY_MISSION_RULES,
   onChunk?: (progress: BatchProgress) => boolean | void,
+  camScaleMean = 1.0,
 ): MonteCarloSummary {
   if (n <= 0) {
     throw new Error("Monte Carlo run count must be positive.");
@@ -306,11 +316,23 @@ export function runMonteCarlo(
   if (sensitivityRuns <= 0) {
     throw new Error("Sensitivity run count must be positive.");
   }
-  const overall = runOverallMonteCarlo(mission, weather, n, seed, rules, (p) =>
-    onChunk?.({ completed: p.completed, total: n + sensitivityRuns * 19 }),
+  const overall = runOverallMonteCarlo(
+    mission,
+    weather,
+    n,
+    seed,
+    rules,
+    (p) => onChunk?.({ completed: p.completed, total: n + sensitivityRuns * 19 }),
+    camScaleMean,
   );
-  const sensitivity = runParameterSensitivity(mission, weather, sensitivityRuns, seed, rules, (p) =>
-    onChunk?.({ completed: n + p.completed, total: n + sensitivityRuns * 19 }),
+  const sensitivity = runParameterSensitivity(
+    mission,
+    weather,
+    sensitivityRuns,
+    seed,
+    rules,
+    (p) => onChunk?.({ completed: n + p.completed, total: n + sensitivityRuns * 19 }),
+    camScaleMean,
   );
   return {
     total_runs: overall.passes + overall.failures,

@@ -80,13 +80,34 @@ def _counts(rows: Iterable[dict[str, Any]], altitude_km: float, half_width_km: f
     return counts
 
 
+def _source_label(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return "synthetic fallback"
+    names = [str(row.get("OBJECT_NAME") or "") for row in rows[:8]]
+    if names and all(name.startswith("synthetic") for name in names):
+        return "synthetic fallback"
+    return "CelesTrak SATCAT"
+
+
+def crowding_census(altitude_km: float, force_refresh: bool = False) -> dict[str, Any]:
+    """Load SATCAT (cached) and count the ±30 km shell around altitude_km."""
+    return shell_census(load_satcat(force_refresh=force_refresh), altitude_km)
+
+
 def shell_census(satcat: Iterable[dict[str, Any]], altitude_km: float, half_width_km: float = 30, reference_alt_km: float = 400) -> dict[str, Any]:
     rows = list(satcat)
     counts = _counts(rows, altitude_km, half_width_km)
     reference = _counts(rows, reference_alt_km, half_width_km)
     scale = cam_scale_from_counts(counts["total"], reference["total"])
-    total = counts["total"]
     obstacle = "quiet" if scale < 0.85 else "nominal" if scale <= 1.25 else "crowded" if scale <= 1.8 else "severe"
-    source = "CelesTrak SATCAT" if rows and not rows == SYNTHETIC_SATCAT else "synthetic fallback"
-    note = "Screening shell count; not collision probability (Pc). Close approaches use a 5 km screening volume, not NASA-grade Pc."
-    return {"altitude": altitude_km, "shell_low": altitude_km - half_width_km, "shell_high": altitude_km + half_width_km, "counts": counts, "reference_counts": reference, "cam_scale": scale, "obstacle": obstacle, "source": source, "note": note}
+    return {
+        "altitude": altitude_km,
+        "shell_low": altitude_km - half_width_km,
+        "shell_high": altitude_km + half_width_km,
+        "counts": counts,
+        "reference_counts": reference,
+        "cam_scale": scale,
+        "obstacle": obstacle,
+        "source": _source_label(rows),
+        "note": "Screening shell count; not collision probability (Pc). Close approaches use a 5 km screening volume, not NASA-grade Pc.",
+    }

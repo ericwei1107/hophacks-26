@@ -258,13 +258,13 @@ export function estimateCollisionAvoidanceDeltaV(
   mission: SpacecraftMission,
   camScale = 1.0,
 ): number {
-  // Debris flux peaks near 750-850 km and is higher on polar/SSO paths.
-  const debrisEnvironment = Math.exp(-(((mission.target_altitude - 750.0) / 280.0) ** 2));
+  // SATCAT cam_scale is crowding vs a quieter 400 km shell (1.0 = reference).
+  // Inclination and area still change encounter geometry. Not Pc; no 750 km peak.
   const inclinationFactor =
     0.65 + 0.35 * Math.abs(Math.sin((mission.target_inclination * Math.PI) / 180));
   const areaFactor = mission.cross_section_area / 8.0;
-  const annual = 7.5 * debrisEnvironment * inclinationFactor * areaFactor;
-  return Math.max(0.0, annual * mission.lifespan * camScale);
+  const annual = 7.5 * inclinationFactor * areaFactor;
+  return Math.max(0.0, annual * mission.lifespan * Math.max(camScale, 0.4));
 }
 
 export function estimateInsertionDeltaV(

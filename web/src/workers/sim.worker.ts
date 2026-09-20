@@ -53,6 +53,7 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
             progress(runId, p.completed, p.total);
             return !canceled.has(runId);
           },
+          req.camScaleMean ?? 1,
         );
         post({ type: "completed", runId, result: summary });
         break;

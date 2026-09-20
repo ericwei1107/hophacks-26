@@ -109,6 +109,7 @@ export function circularizationDeltaV(perigeeKm: number, apogeeKm: number): numb
 export function analyzePayload(
   handoff: PayloadHandoff,
   rules: MissionRules = GAME_MISSION_RULES,
+  camScale = 1.0,
 ): PayloadAnalysis {
   const wet = handoff.payloadWetMassKg;
   const dryMassKg = wet * PAYLOAD_DRY_FRACTION;
@@ -155,7 +156,12 @@ export function analyzePayload(
     drag_coefficient: PAYLOAD_DRAG_COEFFICIENT,
     isp: PAYLOAD_ISP_S,
   };
-  const result = simulate(mission, handoff.weather.weather, undefined, rules);
+  const result = simulate(
+    mission,
+    handoff.weather.weather,
+    { insertion_altitude_error_km: 0, insertion_inclination_error_deg: 0, cam_scale: camScale },
+    rules,
+  );
 
   return { ...base, mission, result, explanations: explainPayload(base, mission, result) };
 }

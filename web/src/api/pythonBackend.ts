@@ -2,13 +2,14 @@
  * Browser client for the Python payload-operations backend.
  *
  * Ascent stays in the TypeScript worker. When uvicorn is up, weather and
- * post-insertion analysis (Monte Carlo, emissions, debris screening) come
+ * post-insertion analysis (Monte Carlo, emissions, SATCAT crowding) come
  * from the original Python stack via /api.
  */
 
 import { useEffect, useState } from "react";
 
 import type { PayloadHandoff } from "../sim/orbital/payload";
+import type { SatcatCensus } from "../sim/orbital/debris";
 import type { MonteCarloSummary, SimulationResult, SpacecraftMission } from "../sim/orbital/types";
 
 export interface PythonHealth {
@@ -51,6 +52,7 @@ export interface PythonPayloadReport {
   explanations: string[];
   insights: string[];
   emissions: PythonEmissions | null;
+  debris: SatcatCensus | null;
   regulatory: PythonRegulatory | null;
   regulatoryRules: Array<{ title?: string | null; html_url?: string | null }>;
   briefing: string | null;

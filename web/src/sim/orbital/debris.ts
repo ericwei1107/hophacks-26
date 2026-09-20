@@ -33,6 +33,37 @@ export interface SatcatCensus {
 export const SATCAT_URL =
   "https://celestrak.org/satcat/records.php?FORMAT=JSON&ONORBIT=1";
 
+function sourceFromRows(rows: SatcatRecord[]): string {
+  if (
+    rows.length === SYNTHETIC_SATCAT.length &&
+    rows.every(
+      (row, index) =>
+        row.APOGEE === SYNTHETIC_SATCAT[index]?.APOGEE &&
+        row.OBJECT_TYPE === SYNTHETIC_SATCAT[index]?.OBJECT_TYPE,
+    )
+  ) {
+    return "synthetic fallback";
+  }
+  return "CelesTrak SATCAT";
+}
+
+export async function fetchCensus(altitude: number, forceRefresh = false): Promise<SatcatCensus> {
+  try {
+    const query = new URLSearchParams({ altitude_km: String(altitude) });
+    if (forceRefresh) {
+      query.set("refresh", "true");
+    }
+    const response = await fetch(`/api/satcat?${query.toString()}`);
+    if (response.ok) {
+      return (await response.json()) as SatcatCensus;
+    }
+  } catch {
+    // Python backend is down; count locally (often synthetic: CelesTrak has no CORS).
+  }
+  const rows = await loadSatcat(forceRefresh);
+  return shellCensus(rows, altitude, 30, 400, sourceFromRows(rows));
+}
+
 export const SYNTHETIC_SATCAT: SatcatRecord[] = [
   ...Array.from({ length: 18 }, () => ({ APOGEE: 545, PERIGEE: 545, OBJECT_TYPE: "PAY" })),
   ...Array.from({ length: 14 }, () => ({ APOGEE: 540, PERIGEE: 540, OBJECT_TYPE: "DEB" })),
