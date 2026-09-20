@@ -19,6 +19,7 @@
     "@react-three/postprocessing": "^3.1.1",
     "react": "~19.2.0",
     "react-dom": "~19.2.0",
+    "spacetimedb": "^2.10.1",
     "three": "^0.186.0",
     "three.quarks": "^0.17.1",
     "zustand": "^5.0.15"

@@ -1,0 +1,16 @@
+{
+  "name": "apogee-launch-lab-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "SpacetimeDB module: mission/weather/trajectory/emissions/debris-compliance tables and server-side reducers for Apogee Launch Lab.",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "spacetimedb": "^2.10.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}

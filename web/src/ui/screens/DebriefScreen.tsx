@@ -18,6 +18,7 @@ import {
   copyConfigToClipboard,
   downloadText,
 } from "../../persistence/report";
+import { syncMissionToSpacetime } from "../../persistence/spacetime";
 function outcomeTitle(outcome: string): string {
   return outcome.replaceAll("_", " ").toUpperCase();
 }
@@ -104,7 +105,20 @@ export function DebriefScreen() {
       (completed, total) => setAnalysisProgress(`Monte Carlo ${Math.round((completed / total) * 100)}%`),
     );
     try {
-      setMonteCarlo(await promise);
+      const result = await promise;
+      setMonteCarlo(result);
+      // Best-effort: persists the mission/weather/trajectory result to
+      // SpacetimeDB and triggers server-side emissions + compliance
+      // analysis. Never blocks or throws into this screen (see
+      // persistence/spacetime.ts) — localStorage via pushRunSummary
+      // remains the source of truth this screen reads from.
+      void syncMissionToSpacetime({
+        mission: analysis.mission,
+        weather: handoff.weather,
+        monteCarlo: result,
+        seed: handoff.seed,
+        modelVersion: handoff.modelVersion,
+      });
     } catch {
       // canceled
     }
