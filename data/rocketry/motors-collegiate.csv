@@ -1,0 +1,123 @@
+commonName,manufacturerAbbrev,impulseClass,type,diameter,length,totalWeightG,propWeightG,propInfo,avgThrustN,maxThrustN,burnTimeS,totImpulseNs,certOrg,availability,source_url
+M520,Cesaroni,M,reload,98,548,6693,3658,Classic,542,1184,13.81,7441,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/7400M520-P/
+M711,Contrail,M,hybrid,75,1371,4900,727,,762.4,1872,7.22,5507,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Contrail/M711-BS/
+M900,RATT,M,hybrid,64,1828,3288,3288,,900,1945,12.3,6463,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/RATT/M900/
+M1000,Hypertek,M,hybrid,98,1405,8907,4236,,1000,,9.155,9155,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Hypertek/4630CCRGM-M1000/
+M1010,Hypertek,M,hybrid,98,1405,9000,4301,,1010,,9.024,9114,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Hypertek/4630CCRGMFX-M1010FX/
+M1297,AeroTech,M,reload,75,665,4637,2722,White Lightning,1297,2049,4.17,5417,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M1297W/
+M1315,AeroTech,M,reload,75,801,5645,3499,White Lightning,1248,2362,5.4,6714,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M1315W/
+M1400,Cesaroni,M,reload,75,757,5302,2992,Classic,1398,2292,4.47,6251,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/6251M1400-P/
+M1419,AeroTech,M,reload,98,579,6916,4077,White Lightning,1419,1591,7.1,7756,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M1419W/
+M1550,AeroTech,M,reload,75,801,5645,3170,Redline,1550,2180,3,5600,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M1550R/
+M1575,Contrail,M,hybrid,98,1524,10680,2210,,1556,2965,4.2,6547,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Contrail/M1575-BG/
+M1600,AeroTech,M,reload,98,579,6917,4026,Redline,1600,1917,4,7084,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M1600R/
+M1882,Loki,M,reload,76,787,5534,3130,Loki White,1882,2860,3,6303,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Loki/M1882-LW/
+M1939,AeroTech,M,reload,98,732,8988,5719,White Lightning,1939,2430,6.2,10480,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M1939W/
+M2000,AeroTech,M,reload,98,732,8987,5368,Redline,2000,2327,4,9218,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M2000R/
+M2281,Contrail,M,hybrid,75,1524,5579,1306,,2552,6040,2.14,5482,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Contrail/M2281-BF/
+M2400,AeroTech,M,reload,98,597,6451,3693,Blue Thunder,2400,3402,3.2,7717,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M2400T/
+M2500,AeroTech,M,reload,98,751,8064,4711,Blue Thunder,2500,3711,3.85,9671,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M2500T/
+M2505,Cesaroni,M,reload,98,579,6250,3339,White Thunder,2491,2953,3,7450,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/7450M2505-P/
+M2700,Contrail,M,hybrid,98,1524,10430,1730,,2645,5484,2.3,6034,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Contrail/M2700-BS/
+M2800,Contrail,M,hybrid,98,1524,10700,2210,,2570,4964,2.3,6060,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Contrail/M2800-BG/
+N2000,AeroTech,N,reload,98,1046,12280,7753,White Lightning,2000,3141,6.9,13350,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/N2000W/
+N2500,Cesaroni,N,reload,98,1010,11670,6778,Classic,2562,3876,5.38,13770,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/13766N2500-P/
+O6300,Contrail,O,hybrid,152,1829,28580,5216,,6354,12730,4.29,27240,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Contrail/O6300-BS/
+M1850,AeroTech,M,reload,75,923,6032,4122,White Lightning,1910,4489,4.01,7659,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M1850W/
+M650,AeroTech,M,reload,75,801,5125,3351,White Lightning,656,1475,9.13,5964,National Association of Rocketry,regular,http://www.thrustcurve.org/motors/AeroTech/M650W/
+M750,AeroTech,M,reload,98,732,8776,5540,White Lightning,744,1454,12.65,9325,National Association of Rocketry,regular,http://www.thrustcurve.org/motors/AeroTech/M750W/
+M795,Cesaroni,M,reload,98,702,8492,4892,Classic,794,794,12.76,10130,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/10133M795-P/
+M1060,Cesaroni,M,reload,98,548,6673,3622,Classic,1057,1495,7.23,7441,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/7441M1060-P/
+M1450,Cesaroni,M,reload,98,702,8578,4830,Classic,1456,2416,6.87,9955,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/9955M1450-P/
+N1100,Cesaroni,N,reload,98,1046,11590,6790,Classic,1120,1120,12.49,14010,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/14005N1100-P/
+M1491,Contrail,M,hybrid,76,1372,4876,664,,1693,5706,3.35,5676,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Contrail/M1491-BM/
+M2100,AeroTech,M,reload,98,598,6918,3948,Mojave Green,2100,,3.7,7802,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M2100G/
+O8000,Cesaroni,O,reload,161,957,32670,18610,White Thunder,8035,8605,5.1,40960,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/40960O8000-P/
+O5800,Cesaroni,O,reload,161,754,26370,13950,White Thunder,5787,6339,5.23,30610,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/30600O5800-P/
+M4770,Cesaroni,M,reload,98,548,6503,3579,Vmax,4770,6053,1.53,7312,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/7312M4770-P/
+M1890,Cesaroni,M,reload,98,702,8823,5280,Red Lightning,1889,2402,5.25,9876,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/9876M1890-P/
+N3180,Cesaroni,N,reload,98,1010,12200,7460,Red Lightning,3179,3770,4.47,14200,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/14200N3180-P/
+M1800,AeroTech,M,reload,98,751,9162,5599,Black Max,1833,3956,4.5,8208,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M1800FJ/
+M1500,AeroTech,M,reload,75,681,4896,2631,Mojave Green,1509,,3.46,5220,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M1500G/
+M2550,Loki,M,reload,76,785,5530,3130,Loki Blue,2550,,2.5,6502,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Loki/M2550-LB/
+N1000,AeroTech,N,reload,98,1046,12770,8293,White Lightning,1079,2262,13.05,14130,National Association of Rocketry,regular,http://www.thrustcurve.org/motors/AeroTech/N1000W/
+O4900,Cesaroni,O,reload,161,957,32650,17700,Blue Streak,4891,5587,7.6,37150,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/37148O4900-P/
+M1670,Cesaroni,M,reload,75,757,5231,2130,Blue Streak,1668,2232,3.63,6042,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/6026M1670-P/
+M1540,Cesaroni,M,reload,75,757,5906,3624,Imax,1537,2329,4.44,6819,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/6819M1540-P/
+M1810,Cesaroni,M,reload,75,757,5416,3196,Red Lightning,1811,2159,3.39,6132,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/6128M1810-P/
+M1200,Loki,M,reload,76,785,5368,2968,Spitfire,1242,1550,4.485,5123,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Loki/M1200-SF/
+M1770,Cesaroni,M,reload,75,893,5993,3520,Skidmark,1777,2195,3.34,5933,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/5933M1770-P/
+M1300,Cesaroni,M,reload,75,757,5657,3437,Imax/Dual Thrust,1304,2827,4.94,6738,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/6438M1300-P/
+N4100,Cesaroni,N,reload,98,1239,14750,9101,Red Lightning,4127,4797,4.31,17790,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/17790N4100-P/
+M1630,AMW,M,reload,75,1039,7237,3948,Tamed Tiger,1633,6805,5.03,8212,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/AMW/8212M1630-P/
+M900,Loki,M,reload,76,785,5530,3130,Loki Red,920,1060,6,5477,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Loki/M900-LR/
+M3000,Loki,M,reload,76,1038,7160,4350,Loki White,2946,4780,3,8838,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Loki/M3000-LW/
+N3800,Loki,N,reload,98,1016,11600,6125,Loki White,3851,4965,3.25,12500,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Loki/N3800-LW/
+M1790,Cesaroni,M,reload,98,702,8273,4706,Skidmark,1786,2093,4.53,8089,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/8088M1790-P/
+N2600,Cesaroni,N,reload,98,1010,11480,6618,Skidmark,2586,3048,4.28,11080,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/11077N2600-P/
+N3400,Cesaroni,N,reload,98,1239,13970,8282,Skidmark,3403,3742,4.19,14260,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/14263N3400-P/
+M1520,Cesaroni,M,reload,98,548,6718,2981,Blue Streak,1526,1825,4.97,7579,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/7579M1520-P/
+M1800,Cesaroni,M,reload,98,702,8342,4802,Blue Streak,1797,2241,5.49,9870,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/9870M1800-P/
+N2850,Cesaroni,N,reload,98,1010,11690,6759,Blue Streak,2836,3377,4.85,13770,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/13767N2850-P/
+N2900,Cesaroni,N,reload,98,1239,14170,8449,Classic,2868,4165,6.14,17610,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/17613N2900-P/
+M1230,Cesaroni,M,reload,75,621,4844,2900,Imax,1230,1587,4.48,5507,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/5506M1230-P/
+M2150,Cesaroni,M,reload,75,893,6324,3835,Red Lightning,2147,2614,3.47,7455,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/7455M2150-P/
+M2045,Cesaroni,M,reload,75,893,6071,3547,Blue Streak,2047,2952,3.61,7388,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/7388M2045-P/
+M2050,AMW,M,reload,75,1039,7129,3870,Skidmark,2050,2554,3.31,6775,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/AMW/6774M2050-P/
+M1780,AeroTech,M,reload,75,665,4715,2560,New Blue Thunder,1859,3056,3.1,5783,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M1780NT/
+M1845,AeroTech,M,reload,98,597,6682,3772,Blue Thunder,1875,3081,4.43,8307,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M1845NT/
+N3300,AeroTech,N,reload,98,1046,12050,7512,Redline,3168,4301,4.37,14040,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/N3300R/
+M3100,Cesaroni,M,reload,75,757,5018,2903,White Thunder,3075,3709,1.99,6118,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/6118M3100-P/
+M1675,Cesaroni,M,reload,75,757,5223,3019,Pink,1674,2499,3.68,6162,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/6162M1675-P/
+M1590,Cesaroni,M,reload,75,893,6076,3590,Classic,1592,2499,4.74,7545,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/7545M1590-P/
+M2250,Cesaroni,M,reload,75,621,4415,2489,C-Star,2268,2960,2.41,5472,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/5472M2250-P/
+M1560,Cesaroni,M,reload,98,394,4977,2452,White Thunder,1562,1805,3.42,5342,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/5342M1560-P/
+M3400,Cesaroni,M,reload,98,702,8108,4452,White Thunder,3421,3983,2.92,9995,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/9994M3400-P/
+N3800,Cesaroni,N,reload,98,1239,14260,8449,Blue Streak,3787,5097,4.65,17630,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/17631N3800-P/
+N5800,Cesaroni,N,reload,98,1239,14830,9021,C-Star,5774,8035,3.49,20150,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/20146N5800-P/
+M3700,Cesaroni,M,reload,75,803,5779,3019,White Thunder,3710,4158,1.83,6800,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/6800M3700-P/
+M2075,Cesaroni,M,reload,75,893,7191,3982,Smoky Sam,2075,3453,3.03,6287,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/6287M2075-P/
+N1975,Cesaroni,N,reload,98,1010,13250,8560,Green3,1975,2568,7.23,14270,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/14272N1975-P/
+N10000,Cesaroni,N,reload,98,1010,9919,5200,Vmax,10220,11560,1.01,10350,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/10347N10000-P/
+M2020,Cesaroni,M,reload,75,893,7032,4349,Imax,2022,2680,4.17,8429,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/8429M2020-P/
+M2080,Cesaroni,M,reload,75,1025,7040,4107,Skidmark,2082,2611,3.28,6827,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/6827M2080-P/
+M1545,Cesaroni,M,reload,75,1025,7878,4835,Green3,1547,1840,5.29,8187,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/8187M1545-P/
+O3700,Cesaroni,O,reload,161,957,31350,17160,Skidmark,3654,4082,8.19,29920,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/29920O3700-P/
+M1290,Cesaroni,M,reload,98,548,7411,4295,White,1288,1562,5.94,7649,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/7649M1290-P/
+N1800,Cesaroni,N,reload,98,702,9180,5727,White,1760,2216,5.89,10370,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/10367N1800-P/
+N2501,Cesaroni,N,reload,98,1010,13310,8496,White,2502,3892,6.09,15230,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/15227N2501-P/
+M840,Cesaroni,M,reload,75,879.3,6954,4249,White,837.9,2043,9,7521,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/7521M840-P/
+N3301,Cesaroni,N,reload,98,1239,16530,10660,White,3294,5076,5.86,19320,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/19318N3301-P/
+O25000,Cesaroni,O,SU,132,1407,23560,14470,Vmax,23510,29280,1.31,30790,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/30795O25000-P/
+M1305,AeroTech,M,reload,98,597,7098,4080,Metalstorm,1406,2098,4.8,6891,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M1305M/
+M1075,AeroTech,M,reload,98,597,6971,3846,Dark Matter,1070,1330,5.2,5571,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M1075DM/
+N2540,Cesaroni,N,reload,98,1239,16280,10700,Green3,2543,2915,7.04,17910,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/17907N2540-P/
+M1830,Cesaroni,M,reload,75,621,4524,2542,C-Star,1827,2342,3.07,5604,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/5604M1830-P/
+M1401,Cesaroni,M,reload,75,757,5774,3508,White,1396,1670,4.49,6268,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/6268M1401-P/
+M1160,Cesaroni,M,reload,75,757,5698,3454,Green3,1160,1382,5.07,5880,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/5880M1160-P/
+M2245,Cesaroni,M,reload,75,1025,8182,5074,Imax,2326,3357,4.29,9977,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/9977M2245-P/
+N2200,Cesaroni,N,reload,98,1010,11360,6122,Pink,2174,2879,5.55,12070,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/12066N2200-P/
+M6400,Cesaroni,M,reload,98,702,7919,4175,Vmax,6365,7238,1.36,8634,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/8634M6400-P/
+O3400,Cesaroni,O,reload,98,1239,16840,10930,Imax,3417,4750,6.16,21060,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/21062O3400-P/
+M685,AeroTech,M,reload,75,935.9,7008,4320,White Lightning,657,1517,11.5,7561,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M685W/
+N5600,Cesaroni,N,reload,98,1010,11280,6363,White Thunder,5636,6789,2.42,13630,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/13628N5600-P/
+N2220,AeroTech,N,reload,98,1046,12000,7183,Dark Matter,2199,4472,5.4,10660,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/N2220DM/
+M1101,Cesaroni,M,reload,75,621,4938,2993,White,1111,1475,4.68,5198,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/5198M1101-P/
+N1560,Cesaroni,N,reload,98,1239,15860,9946,White,1561,3216,10.76,16800,Canadian Association of Rocketry,regular,http://www.thrustcurve.org/motors/Cesaroni/16803N1560-P/
+M1350,AeroTech,M,SU,75,622,4808,2690,White Lightning,1357,1765,3.817,5178,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M1350W/
+M1650,Loki,M,reload,76,784,5630,3230,Cocktail,1648,3719,4,6535,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Loki/M1650LC/
+M3464,Loki,M,reload,76,1038,7597,4464,Loki Blue,3464,4328,2.7,9395,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Loki/M3464LB/
+M1969,Loki,M,reload,76,1038,7189,4266,Spitfire,1966,2447,3.7,7296,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Loki/M1969SF/
+M4500,AeroTech,M,reload,98,597,6622,3425,Super Thunder,4533,5549,1.6,7301,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M4500ST/
+M1378,Loki,M,reload,54,1108,4331,2600,Loki Red,1378,2270,3.88,5363,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Loki/M1378LR/
+M6000,AeroTech,M,reload,98,808,8030,3868,Super Thunder,5959,6789,1.38,8247,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M6000ST/
+M1340,AeroTech,M,SU,98,557,6998,4036,White Lightning,1340,1865,5.5,7369,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M1340W/
+M2050,AeroTech,M,reload,75,699.7,4559,2268,Propellant X,2048,2544,2.7,5493,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M2050X-P/
+O5500,AeroTech,O,SU,98,1507,16780,9779,Propellant X,5515,7552,4.03,21380,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/O5500X-PS/
+N1975,AeroTech,N,SU,98,1110,12210,7676,White Lightning,1971,2903,7.04,13890,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/N1975W-PS/
+M2225,AeroTech,M,reload,75,692,4695,2331,Super White Lightning,2239,2418,2.32,5205,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/M2225WS/
+N4000,AeroTech,N,reload,98,1433,16380,9800,White Lightning,3906,5398,4.65,18180,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/N4000W-PS/
+O6000,AeroTech,O,SU,152,1120,31520,22000,White Lightning,5853,9564,6.77,39620,National Association of Rocketry,regular,http://www.thrustcurve.org/motors/AeroTech/O6000W/
+N5500,Loki,N,reload,98,1383,14860,9182,Loki White,5344,6678,3.58,19140,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/Loki/N5500LW/
+N2700,AeroTech,N,reload,75,1233,9058,5275,White Lightning,2693,5554,3.8,10640,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/N2700W-PS/
+N3120,AeroTech,N,SU,75,1156,8200,4546,Propellant X,3121,4084,3.31,10330,"Tripoli Rocketry Association, Inc.",regular,http://www.thrustcurve.org/motors/AeroTech/N3120X-PS/

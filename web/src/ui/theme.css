@@ -60,6 +60,23 @@ body {
   border-top: 1px solid var(--line);
 }
 
+.citations-page { min-height: 100vh; background: #05070a; color: #fff; padding: 0 6vw 80px; }
+.citations-header { display: flex; align-items: center; justify-content: space-between; max-width: 1100px; margin: 0 auto; padding: 20px 0; border-bottom: 1px solid rgba(255, 255, 255, .12); }
+.citations-brand { color: #fff; font-size: 12px; font-weight: 600; letter-spacing: .28em; text-decoration: none; }
+.citations-header nav { display: flex; gap: 18px; }
+.citation-nav-link { color: #fff; font-size: 9px; text-decoration: none; transition: opacity .15s ease; }
+.citation-nav-link:hover { opacity: .7; }
+.citation-nav-home { text-decoration: underline; text-underline-offset: 4px; }
+.citations-content { max-width: 800px; margin: 0 auto; padding-top: 72px; }
+.citations-kicker { margin: 0; color: var(--accent-soft); font-size: 10px; letter-spacing: .28em; text-transform: uppercase; }
+.citations-content h1 { margin: 12px 0 14px; font-size: clamp(32px, 5vw, 54px); font-weight: 300; letter-spacing: -.035em; }
+.citations-intro { margin: 0 0 46px; color: rgba(255,255,255,.62); line-height: 1.6; }
+.citation-group { border-top: 1px solid rgba(255, 255, 255, .12); padding: 26px 0; }
+.citation-group h2 { margin: 0 0 16px; font-size: 13px; font-weight: 600; }
+.citation-group ol { margin: 0; padding-left: 23px; display: grid; gap: 11px; color: rgba(255,255,255,.67); font-size: 13px; line-height: 1.5; }
+.citation-group a { color: #fff; text-decoration-color: rgba(255,255,255,.35); text-underline-offset: 3px; }
+.citation-group a:hover { color: var(--accent-soft); }
+
 
 .screen {
   display: flex;
