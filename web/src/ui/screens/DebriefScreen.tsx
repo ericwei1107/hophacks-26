@@ -624,6 +624,17 @@ export function DebriefScreen() {
               <p className="report-footnote">{pythonReport.emissions.citation}</p>
             </div>
           )}
+          {pythonReport?.patternRecognition.matches.length ? (
+            <div className="report-block">
+              <h3>Data-driven operational factors</h3>
+              {pythonReport.patternRecognition.matches.map((factor) => (
+                <div className="check-row warn" key={`${factor.dataset}-${factor.scenarioId}`}>
+                  <span className="check-dot" />
+                  <span className="check-body"><span className="check-label">{factor.title} · {factor.severity}</span><span className="check-message">{factor.evidence.join(", ")} · {factor.mitigation}</span></span>
+                </div>
+              ))}
+            </div>
+          ) : null}
           {pythonReport?.regulatory && (
             <div className="report-block">
               <h3>Five-year disposal rule</h3>

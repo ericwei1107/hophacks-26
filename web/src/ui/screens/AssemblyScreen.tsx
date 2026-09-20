@@ -10,7 +10,7 @@
 import { ContactShadows, Html, OrbitControls } from "@react-three/drei";
 import { Link } from "react-router-dom";
 import { useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, type ComponentRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentRef, type CSSProperties, type ReactNode } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { useShallow } from "zustand/react/shallow";
@@ -25,6 +25,7 @@ import { SettingsToggle } from "../components/SettingsToggle";
 import { SpaceWeatherPanel } from "../components/SpaceWeatherPanel";
 import { usePythonBackendStatus } from "../../api/pythonBackend";
 import { NarratedText } from "../../narration/NarratedText";
+import { ROCKET_PRESETS } from "../../data/rocketPresets";
 
 type OrbitControlsRef = ComponentRef<typeof OrbitControls>;
 
@@ -368,6 +369,8 @@ export function AssemblyScreen() {
     persistenceNotice,
     weather,
     settings,
+    earthWeather,
+    setEarthWeather,
   } = useAppStore(
     useShallow((s) => ({
       config: s.config,
@@ -384,9 +387,12 @@ export function AssemblyScreen() {
       persistenceNotice: s.persistenceNotice,
       weather: s.weather,
       settings: s.settings,
+      earthWeather: s.earthWeather,
+      setEarthWeather: s.setEarthWeather,
     })),
   );
   const pythonStatus = usePythonBackendStatus();
+  const [presetId, setPresetId] = useState("");
 
   const errors = derived.checks.filter((c: BuildCheck) => c.severity === "error");
   const canLaunch = errors.length === 0 && !flightLoading;
@@ -464,6 +470,18 @@ export function AssemblyScreen() {
             </NarratedText>
           </section>
         )}
+        <ControlGroup index="00" title="Reference preset">
+          <label className="control control-select">
+            <span className="control-label">Rocket preset</span>
+            <span className="select-wrap"><select value={presetId} onChange={(event) => {
+              setPresetId(event.target.value);
+              const preset = ROCKET_PRESETS.find((item) => item.id === event.target.value);
+              if (preset) updateConfig(preset.settings);
+            }}><option value="">Choose a calibrated profile</option>{ROCKET_PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></span>
+            <span className="control-hint">A preset replaces every editable vehicle parameter with its compatible scenario configuration.</span>
+          </label>
+          {presetId && <p className="dim small">{ROCKET_PRESETS.find((preset) => preset.id === presetId)?.summary}</p>}
+        </ControlGroup>
 
         <ControlGroup index="01" title="Payload">
           <Slider
@@ -583,6 +601,18 @@ export function AssemblyScreen() {
             hint="Moves the center of pressure aft for stability, at a cost in mass and drag."
             suggested={suggestedExperiment?.control === "finSpanM"}
           />
+        </ControlGroup>
+        <ControlGroup index="05" title="Earth weather">
+          <Slider label="Temperature" value={earthWeather.temperatureC} min={-20} max={45} step={1} unit="°C" onChange={(temperatureC) => setEarthWeather({ temperatureC })} onCommit={persistBuild} />
+          <Slider label="Surface pressure" value={earthWeather.pressureHpa} min={850} max={1050} step={1} unit="hPa" onChange={(pressureHpa) => setEarthWeather({ pressureHpa })} onCommit={persistBuild} />
+          <Slider label="Relative humidity" value={earthWeather.relativeHumidityPct} min={0} max={100} step={1} unit="%" onChange={(relativeHumidityPct) => setEarthWeather({ relativeHumidityPct })} onCommit={persistBuild} />
+          <Slider label="Sustained wind" value={earthWeather.windSpeedMs} min={0} max={30} step={0.5} unit="m/s" onChange={(windSpeedMs) => setEarthWeather({ windSpeedMs })} onCommit={persistBuild} />
+          <Slider label="Crosswind" value={earthWeather.crosswindMs} min={0} max={25} step={0.5} unit="m/s" onChange={(crosswindMs) => setEarthWeather({ crosswindMs })} onCommit={persistBuild} />
+          <Slider label="Wind gust" value={earthWeather.windGustMs} min={0} max={35} step={0.5} unit="m/s" onChange={(windGustMs) => setEarthWeather({ windGustMs })} onCommit={persistBuild} />
+          <Slider label="Rain rate" value={earthWeather.precipitationMmH} min={0} max={20} step={0.1} unit="mm/h" onChange={(precipitationMmH) => setEarthWeather({ precipitationMmH })} onCommit={persistBuild} />
+          <Slider label="Visibility" value={earthWeather.visibilityKm} min={0.1} max={30} step={0.1} unit="km" onChange={(visibilityKm) => setEarthWeather({ visibilityKm })} onCommit={persistBuild} />
+          <Slider label="Convective energy" value={earthWeather.capeJKg} min={0} max={3000} step={50} unit="J/kg" onChange={(capeJKg) => setEarthWeather({ capeJKg })} onCommit={persistBuild} />
+          <p className="control-hint">Wind and density affect the solver; storm, rain, visibility, gust, and CAPE conditions remain explicit operational factors in the debrief.</p>
         </ControlGroup>
 
         <section className="stat-strip" aria-label="Derived values">

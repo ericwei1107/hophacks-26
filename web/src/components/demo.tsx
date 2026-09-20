@@ -44,6 +44,7 @@ export default function BlackHoleHeroSectionDemo() {
   const narrow = useNarrow();
   const location = useLocation();
   const labTarget = { pathname: "/lab", search: location.search };
+  const homeTarget = { pathname: "/", search: location.search };
 
   return (
     <>
@@ -69,13 +70,9 @@ export default function BlackHoleHeroSectionDemo() {
               >
                 ZENITH
               </a>
-              <nav aria-label="Landing page" className="flex items-center gap-5 text-xs text-white/60 sm:gap-8">
-                <a className="transition hover:text-white" href="#physics">
-                  The mission
-                </a>
-                <a className="transition hover:text-white" href="#physics">
-                  How it works
-                </a>
+              <nav aria-label="Landing page" className="flex items-center gap-4 text-[0.6rem] text-white sm:gap-5">
+                <Link className="underline underline-offset-4 transition hover:text-white/70" to={homeTarget}>Home</Link>
+                <Link className="transition hover:text-white/70" to="/citations">Citations</Link>
               </nav>
             </header>
 

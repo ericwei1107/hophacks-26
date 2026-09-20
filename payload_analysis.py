@@ -18,6 +18,7 @@ from environment import SpaceWeather, fetch_noaa_snapshot
 from explanations import build_insights
 from insights import _api_key, build_analysis_brief, generate_llm_briefing
 from regulations import evaluate_mission_compliance, get_latest_debris_rules
+from scenario_patterns import recognize_patterns
 import simulate as s
 
 PAYLOAD_ISP_S = 325.0
@@ -141,6 +142,7 @@ def analyze_launched_payload(
         "regulatory": None,
         "regulatoryRules": [],
         "briefing": None,
+        "patternRecognition": recognize_patterns(handoff.weather),
     }
 
     if not insertion_ok:
