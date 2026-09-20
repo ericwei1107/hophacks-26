@@ -18,6 +18,7 @@ import type { RenderFrame, RocketGeometry } from "../protocol";
 import type { SerializableFlightResult } from "../workers/protocol";
 import { FlightScene, type SceneCameraState } from "../ui/components/FlightScene";
 import { SafeCanvas } from "../ui/components/SafeCanvas";
+import { isSoftwareRenderer } from "../ui/webgl";
 import type { LaunchRenderer, RendererCameraMode, RendererInfo } from "./LaunchRenderer";
 
 const MIN_ZOOM = 0.0005;
@@ -28,6 +29,8 @@ export const THREE_RENDERER_INFO: RendererInfo = { id: "three", label: "three.js
 export interface ThreeLaunchRendererOptions {
   flight: SerializableFlightResult;
   lowEffects: boolean;
+  /** No camera shake. */
+  reducedMotion?: boolean;
   /** Initial camera mode, so a swap mid-flight keeps the player's choice. */
   cameraMode?: RendererCameraMode;
   zoom?: number;
@@ -38,6 +41,7 @@ export class ThreeLaunchRenderer implements LaunchRenderer {
 
   private readonly flight: SerializableFlightResult;
   private readonly lowEffects: boolean;
+  private readonly reducedMotion: boolean;
   private readonly frameRef: { current: RenderFrame | null } = { current: null };
   private readonly cameraRef: { current: SceneCameraState };
   private geometry: RocketGeometry | null = null;
@@ -46,7 +50,10 @@ export class ThreeLaunchRenderer implements LaunchRenderer {
 
   constructor(options: ThreeLaunchRendererOptions) {
     this.flight = options.flight;
-    this.lowEffects = options.lowEffects;
+    // A CPU rasterizer cannot afford bloom or particles: drop to low effects
+    // on its own rather than crawling.
+    this.lowEffects = options.lowEffects || isSoftwareRenderer();
+    this.reducedMotion = options.reducedMotion ?? false;
     this.cameraRef = {
       current: {
         mode: options.cameraMode ?? "overhead",
@@ -76,6 +83,7 @@ export class ThreeLaunchRenderer implements LaunchRenderer {
           frameRef: this.frameRef,
           cameraRef: this.cameraRef,
           lowEffects: this.lowEffects,
+          reducedMotion: this.reducedMotion,
         }),
       ),
     );

@@ -28,6 +28,35 @@ const CAMERAS: { id: CameraMode; label: string }[] = [
 /** Radians of camera swing per pixel dragged. */
 const DRAG_SENSITIVITY = 0.006;
 
+/** Callout text for flight events as they are crossed. */
+const EVENT_LABELS: Record<string, string> = {
+  liftoff: "LIFTOFF",
+  max_q: "MAX-Q",
+  stage1_burnout: "MAIN ENGINE CUTOFF",
+  separation: "STAGE SEPARATION",
+  stage2_ignition: "STAGE 2 IGNITION",
+  fairing_jettison: "FAIRING JETTISON",
+  stage2_burnout: "STAGE 2 BURNOUT",
+  stage2_cutoff: "STAGE 2 CUTOFF",
+  orbit_cutoff: "ORBIT INSERTION",
+  orbit_achieved: "ORBIT ACHIEVED",
+  circularization_ignition: "CIRCULARIZATION BURN",
+  tli_cutoff: "TRANS-LUNAR INJECTION",
+  failed: "FLIGHT FAILED",
+};
+
+/** Short labels drawn on the timeline itself, for the events worth a tick mark. */
+const TIMELINE_LABELS: Record<string, string> = {
+  max_q: "MAX-Q",
+  separation: "SEP",
+  fairing_jettison: "FAIRING",
+  orbit_cutoff: "ORBIT",
+  orbit_achieved: "ORBIT",
+  failed: "FAIL",
+};
+
+const TOAST_MS = 3200;
+
 function formatTime(s: number): string {
   const neg = s < 0;
   const abs = Math.abs(s);
@@ -46,6 +75,12 @@ function HudReadout({ label, value, unit }: { label: string; value: string; unit
       </span>
     </div>
   );
+}
+
+interface Toast {
+  key: number;
+  title: string;
+  detail: string | null;
 }
 
 export function FlightScreen() {
@@ -72,6 +107,8 @@ export function FlightScreen() {
   const [rendererId, setRendererId] = useState<"three" | "unity" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [toast, setToast] = useState<Toast | null>(null);
+  const toastTimer = useRef<number>(0);
 
   // --- controller: owns the clock, feeds the renderer and this HUD ---------
   useEffect(() => {
@@ -80,9 +117,19 @@ export function FlightScreen() {
     }
     const controller = new PlaybackController(flight);
     controllerRef.current = controller;
-    const unsubscribe = controller.subscribe((nextSample) => {
+    const unsubscribe = controller.subscribe((nextSample, frame) => {
       setSample(nextSample);
       setTimeS(controller.timeS);
+      if (frame.events.length > 0) {
+        // Announce the most significant event crossed this frame.
+        const id = [...frame.events].reverse().find((e) => EVENT_LABELS[e] !== undefined);
+        if (id) {
+          const record = flight.events.find((e) => e.id === id && Math.abs(e.t - frame.t) < 2);
+          setToast({ key: Date.now(), title: EVENT_LABELS[id]!, detail: record?.detail ?? null });
+          window.clearTimeout(toastTimer.current);
+          toastTimer.current = window.setTimeout(() => setToast(null), TOAST_MS);
+        }
+      }
     });
     controller.setPlaying(useAppStore.getState().playing);
     controller.setSpeed(useAppStore.getState().playbackSpeed);
@@ -91,6 +138,7 @@ export function FlightScreen() {
       unsubscribe();
       controller.dispose();
       controllerRef.current = null;
+      window.clearTimeout(toastTimer.current);
     };
   }, [flight]);
 
@@ -107,6 +155,7 @@ export function FlightScreen() {
       container,
       flight,
       lowEffects: settings.lowEffects,
+      reducedMotion: settings.reducedMotion,
       cameraMode: useAppStore.getState().cameraMode,
       zoom: useAppStore.getState().cameraZoom,
       onProgress: setProgress,
@@ -129,9 +178,9 @@ export function FlightScreen() {
       rendererRef.current = null;
       mounted?.dispose();
     };
-    // The renderer is rebuilt only for a new flight or an effects-quality
+    // The renderer is rebuilt only for a new flight or an effects setting
     // change; camera state is pushed into it imperatively.
-  }, [flight, settings.lowEffects]);
+  }, [flight, settings.lowEffects, settings.reducedMotion]);
 
   // Suspend playback while the tab is hidden.
   useEffect(() => {
@@ -251,13 +300,23 @@ export function FlightScreen() {
         {/* HUD overlay */}
         {sample && (
           <div className="hud">
-            <HudReadout label="TIME" value={formatTime(timeS)} />
-            <HudReadout label="ALTITUDE" value={sample.altitudeKm.toFixed(1)} unit="km" />
-            <HudReadout label="SPEED" value={(sample.speedMs / 1000).toFixed(2)} unit="km/s" />
-            <HudReadout label="FUEL" value={(sample.propellantKg / 1000).toFixed(1)} unit="t" />
-            <HudReadout label="G-LOAD" value={sample.properAccelG.toFixed(2)} unit="g" />
-            <HudReadout label="DYN PRESS" value={(sample.dynamicPressurePa / 1000).toFixed(1)} unit="kPa" />
-            <HudReadout label="PHASE" value={PHASE_NAMES[sample.phase] ?? "?"} />
+            <div className="hud-item hud-time">
+              <span className="hud-label">Mission time</span>
+              <span className="hud-value">{formatTime(timeS)}</span>
+            </div>
+            <HudReadout label="Altitude" value={sample.altitudeKm.toFixed(1)} unit="km" />
+            <HudReadout label="Speed" value={(sample.speedMs / 1000).toFixed(2)} unit="km/s" />
+            <HudReadout label="Fuel" value={(sample.propellantKg / 1000).toFixed(1)} unit="t" />
+            <HudReadout label="G-load" value={sample.properAccelG.toFixed(2)} unit="g" />
+            <HudReadout label="Dyn press" value={(sample.dynamicPressurePa / 1000).toFixed(1)} unit="kPa" />
+            <HudReadout label="Phase" value={PHASE_NAMES[sample.phase] ?? "?"} />
+          </div>
+        )}
+
+        {toast && (
+          <div className="event-toast" key={toast.key} role="status">
+            <span className="event-toast-title">{toast.title}</span>
+            {toast.detail && <span className="event-toast-detail">{toast.detail}</span>}
           </div>
         )}
 
@@ -270,7 +329,9 @@ export function FlightScreen() {
                 className={`timeline-event${timeS >= e.t ? " past" : ""}`}
                 style={{ left: `${(e.t / duration) * 100}%` }}
                 title={`${e.id} @ ${formatTime(e.t)}`}
-              />
+              >
+                {TIMELINE_LABELS[e.id] && <span className="timeline-label">{TIMELINE_LABELS[e.id]}</span>}
+              </div>
             ))}
             <div className="timeline-progress" style={{ width: `${progressFraction * 100}%` }} />
           </div>
@@ -278,16 +339,16 @@ export function FlightScreen() {
       </div>
 
       <div className="playback-bar">
-        <button onClick={() => setPlaying(!playing)}>{playing ? "❚❚ Pause" : "▶ Play"}</button>
-        {SPEEDS.map((s) => (
-          <button
-            key={s}
-            className={playbackSpeed === s ? "active" : ""}
-            onClick={() => setPlaybackSpeed(s)}
-          >
-            {s}×
-          </button>
-        ))}
+        <button className="play-btn" onClick={() => setPlaying(!playing)}>
+          {playing ? "❚❚ Pause" : "▶ Play"}
+        </button>
+        <div className="segmented" role="group" aria-label="Playback speed">
+          {SPEEDS.map((s) => (
+            <button key={s} className={playbackSpeed === s ? "active" : ""} onClick={() => setPlaybackSpeed(s)}>
+              {s}×
+            </button>
+          ))}
+        </div>
         <input
           type="range"
           className="scrubber"
@@ -309,13 +370,9 @@ export function FlightScreen() {
             +
           </button>
         </div>
-        <div className="camera-modes">
+        <div className="segmented camera-modes" role="group" aria-label="Camera">
           {CAMERAS.map((c) => (
-            <button
-              key={c.id}
-              className={cameraMode === c.id ? "active" : ""}
-              onClick={() => setCameraMode(c.id)}
-            >
+            <button key={c.id} className={cameraMode === c.id ? "active" : ""} onClick={() => setCameraMode(c.id)}>
               {c.label}
             </button>
           ))}
