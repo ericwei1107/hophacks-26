@@ -12,6 +12,7 @@ import {
 } from "../sim/ascent/flight";
 import type { GuidanceCoefficients } from "../sim/ascent/guidance";
 import type { FlightPerturbations } from "../sim/ascent/flight";
+import { earthWeatherEffects, type EarthWeatherConditions } from "../sim/ascent/earthWeather";
 import type { SerializableFlightResult, SerializedFlightInput } from "./protocol";
 
 export type { SerializableFlightResult, SerializedFlightInput } from "./protocol";
@@ -23,6 +24,7 @@ export function serializeFlightInput(
   guidance?: GuidanceCoefficients,
   perturbations?: FlightPerturbations,
   maxTimeS?: number,
+  earthWeather?: EarthWeatherConditions,
 ): SerializedFlightInput {
   return {
     config,
@@ -31,6 +33,7 @@ export function serializeFlightInput(
     launchLongitudeDeg: environment.launchLongitudeDeg,
     localWindEastMs: environment.localWindEastMs,
     localWindNorthMs: environment.localWindNorthMs,
+    ...(earthWeather !== undefined ? { earthWeather } : {}),
     seed,
     ...(guidance !== undefined ? { guidance } : {}),
     ...(perturbations !== undefined ? { perturbations } : {}),
@@ -40,12 +43,14 @@ export function serializeFlightInput(
 
 export function deserializeEnvironment(input: SerializedFlightInput): FlightEnvironment {
   const base = defaultEnvironment(input.weather);
+  const earthEffects = input.earthWeather ? earthWeatherEffects(input.earthWeather) : null;
   return {
     ...base,
+    ...(earthEffects ? { atmosphere: base.atmosphere.withDensityScale(earthEffects.densityScale) } : {}),
     launchLatitudeDeg: input.launchLatitudeDeg,
     launchLongitudeDeg: input.launchLongitudeDeg,
-    localWindEastMs: input.localWindEastMs,
-    localWindNorthMs: input.localWindNorthMs,
+    localWindEastMs: earthEffects?.windEastMs ?? input.localWindEastMs,
+    localWindNorthMs: earthEffects?.windNorthMs ?? input.localWindNorthMs,
   };
 }
 
@@ -98,5 +103,5 @@ export function runSerializedFlight(input: SerializedFlightInput): SerializableF
     ...(input.perturbations !== undefined ? { perturbations: input.perturbations } : {}),
     ...(input.maxTimeS !== undefined ? { maxTimeS: input.maxTimeS } : {}),
   });
-  return serializeFlightResult(result);
+  return { ...serializeFlightResult(result), ...(input.earthWeather ? { earthWeather: input.earthWeather } : {}) };
 }

@@ -14,6 +14,7 @@ import type { WeatherSnapshot } from "../sim/orbital/weather";
 import type { OrbitalElements } from "../sim/physics/orbital";
 import type { FlightAssessment, FlightEvidence } from "../sim/outcomes/types";
 import type { TransferResult } from "../sim/lunar/transfer";
+import type { EarthWeatherConditions } from "../sim/ascent/earthWeather";
 
 /** Plain-data flight input (class instances cannot cross the worker boundary). */
 export interface SerializedFlightInput {
@@ -23,6 +24,7 @@ export interface SerializedFlightInput {
   launchLongitudeDeg: number;
   localWindEastMs: number;
   localWindNorthMs: number;
+  earthWeather?: EarthWeatherConditions;
   seed: number;
   guidance?: GuidanceCoefficients;
   perturbations?: FlightPerturbations;
@@ -55,6 +57,7 @@ export interface SerializableFlightResult {
   totalTimeS: number;
   evidence: FlightEvidence;
   assessment: FlightAssessment;
+  earthWeather?: EarthWeatherConditions;
 }
 
 export interface OrbitalMonteCarloRequest {

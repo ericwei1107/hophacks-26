@@ -5,6 +5,7 @@ import { useAppStore } from "./ui/store";
 import { loadWeatherSnapshot } from "./sim/orbital/weather";
 
 const BlackHoleHeroSectionDemo = lazy(() => import("@/components/demo"));
+const CitationsPage = lazy(() => import("@/components/CitationsPage"));
 const AssemblyScreen = lazy(() =>
   import("./ui/screens/AssemblyScreen").then((module) => ({ default: module.AssemblyScreen })),
 );
@@ -41,6 +42,7 @@ export function App() {
     <Suspense fallback={<main className="landing-shell">Loading…</main>}>
       <Routes>
         <Route path="/" element={<main className="landing-shell"><BlackHoleHeroSectionDemo /></main>} />
+        <Route path="/citations" element={<CitationsPage />} />
         <Route path="/lab" element={<LaunchLab />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
