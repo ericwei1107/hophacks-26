@@ -26,6 +26,7 @@ import { referenceSnapshot, type WeatherSnapshot } from "../sim/orbital/weather"
 import { SimClient } from "../workers/client";
 import { serializeFlightInput, type SerializableFlightResult } from "../workers/serialize";
 import type { RecommendedExperiment } from "../sim/outcomes/types";
+import { referenceEarthWeather, type EarthWeatherConditions } from "../sim/ascent/earthWeather";
 
 export type Screen = "assembly" | "flight" | "debrief";
 export type CameraMode = "overhead" | "chase" | "ground" | "orbit";
@@ -43,6 +44,7 @@ interface AppStore {
   derived: DerivedRocket;
   settings: Settings;
   weather: WeatherSnapshot;
+  earthWeather: EarthWeatherConditions;
   runSummaries: RunSummary[];
   /** True when the config changed since the last recorded run. */
   analysisStale: boolean;
@@ -65,6 +67,7 @@ interface AppStore {
   resetToReference: () => void;
   setSettings: (patch: Partial<Settings>) => void;
   setWeather: (weather: WeatherSnapshot) => void;
+  setEarthWeather: (patch: Partial<EarthWeatherConditions>) => void;
   launch: () => Promise<void>;
   cancelFlight: () => void;
   setPlaying: (playing: boolean) => void;
@@ -90,6 +93,7 @@ export const useAppStore = create<AppStore>((set, get) => {
     derived: deriveCurrent(initialConfig),
     settings: loadSettings(),
     weather: referenceSnapshot(),
+    earthWeather: referenceEarthWeather(),
     runSummaries: initialSummaries,
     analysisStale: isAnalysisStale(initialConfig, initialSummaries[0] ?? null),
     experimentBaseline: null,
@@ -134,9 +138,10 @@ export const useAppStore = create<AppStore>((set, get) => {
     },
 
     setWeather: (weather) => set({ weather }),
+    setEarthWeather: (patch) => set({ earthWeather: { ...get().earthWeather, ...patch } }),
 
     launch: async () => {
-      const { config, weather } = get();
+      const { config, weather, earthWeather } = get();
       const derived = deriveCurrent(config);
       if (derived.checks.some((c) => c.severity === "error")) {
         set({ flightError: "Resolve build errors before launch." });
@@ -145,7 +150,7 @@ export const useAppStore = create<AppStore>((set, get) => {
       get().cancelFlight();
       set({ flightLoading: true, flightError: null, flight: null });
 
-      const input = serializeFlightInput(config, defaultEnvironment(weather), Math.floor(Math.random() * 1e9));
+      const input = serializeFlightInput(config, defaultEnvironment(weather), Math.floor(Math.random() * 1e9), undefined, undefined, undefined, earthWeather);
       const { promise, runId } = simClient.runFlight(input);
       activeFlightRunId = runId;
       try {

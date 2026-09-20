@@ -9,7 +9,7 @@
 
 import { ContactShadows, Html, OrbitControls } from "@react-three/drei";
 import { useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, type ComponentRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentRef, type CSSProperties, type ReactNode } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
@@ -21,6 +21,8 @@ import { useAppStore } from "../store";
 import { RocketMesh } from "../components/RocketMesh";
 import { SettingsToggle } from "../components/SettingsToggle";
 import { usePythonBackendStatus } from "../../api/pythonBackend";
+import { recognizeWeatherPatterns, type PatternRecognition } from "../../api/pythonBackend";
+import { ROCKET_PRESETS } from "../../data/rocketPresets";
 
 type OrbitControlsRef = ComponentRef<typeof OrbitControls>;
 
@@ -141,6 +143,12 @@ function Stat({ label, value, warn }: { label: string; value: string; warn?: boo
       <span className="stat-value">{value}</span>
     </div>
   );
+}
+
+function EarthWeatherInput({ label, value, min, max, step, unit, onChange }: {
+  label: string; value: number; min: number; max: number; step: number; unit: string; onChange: (value: number) => void;
+}) {
+  return <Slider label={label} value={value} min={min} max={max} step={step} unit={unit} onChange={onChange} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -358,8 +366,12 @@ export function AssemblyScreen() {
     persistenceNotice,
     weather,
     settings,
+    earthWeather,
+    setEarthWeather,
   } = useAppStore();
   const pythonStatus = usePythonBackendStatus();
+  const [presetId, setPresetId] = useState("");
+  const [operationalFactors, setOperationalFactors] = useState<PatternRecognition | null>(null);
 
   const errors = derived.checks.filter((c: BuildCheck) => c.severity === "error");
   const canLaunch = errors.length === 0 && !flightLoading;
@@ -373,6 +385,17 @@ export function AssemblyScreen() {
     const input = document.querySelector<HTMLElement>(".suggested-control input, .suggested-control select");
     input?.focus();
   }, [suggestedExperiment]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void recognizeWeatherPatterns(weather.weather, {
+      temperature_c: earthWeather.temperatureC, wind_speed_m_s: earthWeather.windSpeedMs,
+      wind_gust_m_s: earthWeather.windGustMs, crosswind_m_s: earthWeather.crosswindMs,
+      precipitation_mm_h: earthWeather.precipitationMmH, visibility_km: earthWeather.visibilityKm,
+      relative_humidity_pct: earthWeather.relativeHumidityPct, cape_j_kg: earthWeather.capeJKg,
+    }).then((value) => { if (!cancelled) setOperationalFactors(value); }).catch(() => { if (!cancelled) setOperationalFactors(null); });
+    return () => { cancelled = true; };
+  }, [weather, earthWeather]);
 
   const total = derived.totalLengthM;
 
@@ -429,6 +452,22 @@ export function AssemblyScreen() {
             </p>
           </section>
         )}
+
+        <ControlGroup index="00" title="Reference preset">
+          <label className="control control-select">
+            <span className="control-label">Rocket preset</span>
+            <span className="select-wrap"><select value={presetId} onChange={(event) => {
+              const preset = ROCKET_PRESETS.find((item) => item.id === event.target.value);
+              setPresetId(event.target.value);
+              if (preset) updateConfig(preset.settings);
+            }}>
+              <option value="">Choose a calibrated profile</option>
+              {ROCKET_PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}
+            </select></span>
+            <span className="control-hint">Selecting a preset replaces every editable vehicle parameter with its scenario profile.</span>
+          </label>
+          {presetId && <p className="dim small">{ROCKET_PRESETS.find((preset) => preset.id === presetId)?.summary}</p>}
+        </ControlGroup>
 
         <ControlGroup index="01" title="Payload">
           <Slider
@@ -525,6 +564,19 @@ export function AssemblyScreen() {
           />
         </ControlGroup>
 
+        <ControlGroup index="05" title="Earth weather">
+          <EarthWeatherInput label="Temperature" value={earthWeather.temperatureC} min={-20} max={45} step={1} unit="°C" onChange={(temperatureC) => setEarthWeather({ temperatureC })} />
+          <EarthWeatherInput label="Surface pressure" value={earthWeather.pressureHpa} min={850} max={1050} step={1} unit="hPa" onChange={(pressureHpa) => setEarthWeather({ pressureHpa })} />
+          <EarthWeatherInput label="Relative humidity" value={earthWeather.relativeHumidityPct} min={0} max={100} step={1} unit="%" onChange={(relativeHumidityPct) => setEarthWeather({ relativeHumidityPct })} />
+          <EarthWeatherInput label="Sustained wind" value={earthWeather.windSpeedMs} min={0} max={30} step={0.5} unit="m/s" onChange={(windSpeedMs) => setEarthWeather({ windSpeedMs })} />
+          <EarthWeatherInput label="Crosswind" value={earthWeather.crosswindMs} min={0} max={25} step={0.5} unit="m/s" onChange={(crosswindMs) => setEarthWeather({ crosswindMs })} />
+          <EarthWeatherInput label="Wind gust" value={earthWeather.windGustMs} min={0} max={35} step={0.5} unit="m/s" onChange={(windGustMs) => setEarthWeather({ windGustMs })} />
+          <EarthWeatherInput label="Rain rate" value={earthWeather.precipitationMmH} min={0} max={20} step={0.1} unit="mm/h" onChange={(precipitationMmH) => setEarthWeather({ precipitationMmH })} />
+          <EarthWeatherInput label="Visibility" value={earthWeather.visibilityKm} min={0.1} max={30} step={0.1} unit="km" onChange={(visibilityKm) => setEarthWeather({ visibilityKm })} />
+          <EarthWeatherInput label="Convective energy" value={earthWeather.capeJKg} min={0} max={3000} step={50} unit="J/kg" onChange={(capeJKg) => setEarthWeather({ capeJKg })} />
+          <p className="control-hint">Wind and density enter the flight solver. Rain, visibility, gusts and CAPE are explicit launch-commit factors below.</p>
+        </ControlGroup>
+
         <section className="stat-strip" aria-label="Derived values">
           <Stat label="Liftoff TWR" value={derived.liftoffTwr.toFixed(2)} warn={derived.liftoffTwr <= 1} />
           <Stat label="Ideal Δv" value={`${(derived.totalIdealDeltaVMs / 1000).toFixed(1)} km/s`} />
@@ -551,6 +603,13 @@ export function AssemblyScreen() {
           ))}
           {flightError && <p className="check error">✕ {flightError}</p>}
         </section>
+
+        {operationalFactors?.matches.length ? <section className="checks" aria-label="Data-driven operational factors">
+          <h2><span className="control-group-index">!</span>Operational factors</h2>
+          {operationalFactors.matches.map((factor) => <div className="check-row warn" key={`${factor.dataset}-${factor.scenarioId}`}>
+            <span className="check-dot" /><span className="check-body"><span className="check-label">{factor.title}</span><span className="check-message">{factor.evidence.join(", ")} · {factor.mitigation}</span></span>
+          </div>)}
+        </section> : null}
 
         <div className="actions">
           <button className="launch" onClick={launch} disabled={!canLaunch}>

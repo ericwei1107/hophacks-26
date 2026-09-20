@@ -35,6 +35,36 @@ export interface PythonRegulatory {
   violations: string[];
 }
 
+export interface PatternMatch {
+  dataset: "spaceWeather" | "earthWeather";
+  scenarioId: string;
+  title: string;
+  severity: string;
+  impact: string;
+  systemsAffected: string;
+  mitigation: string;
+  source: string;
+  confidence: number;
+  evidence: string[];
+}
+
+export interface PatternRecognition {
+  modelVersion: "scenario-recognition-v1";
+  referenceRows: Record<"space_weather" | "earth_weather" | "rocketry", number>;
+  matches: PatternMatch[];
+}
+
+export interface EarthWeatherInput {
+  temperature_c?: number;
+  wind_speed_m_s?: number;
+  wind_gust_m_s?: number;
+  crosswind_m_s?: number;
+  precipitation_mm_h?: number;
+  visibility_km?: number;
+  relative_humidity_pct?: number;
+  cape_j_kg?: number;
+}
+
 export interface PythonPayloadReport {
   source: "python";
   dryMassKg: number;
@@ -56,8 +86,24 @@ export interface PythonPayloadReport {
   regulatory: PythonRegulatory | null;
   regulatoryRules: Array<{ title?: string | null; html_url?: string | null }>;
   briefing: string | null;
+  patternRecognition: PatternRecognition;
   briefingError?: string;
   regulatoryError?: string;
+}
+
+export async function recognizeWeatherPatterns(
+  weather: PayloadHandoff["weather"]["weather"],
+  earthWeather?: EarthWeatherInput,
+): Promise<PatternRecognition> {
+  const response = await fetch("/api/patterns/recognize", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ weather, ...(earthWeather ? { earth_weather: earthWeather } : {}) }),
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return (await response.json()) as PatternRecognition;
 }
 
 const PYTHON_DOWN =
