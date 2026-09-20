@@ -18,6 +18,7 @@ import requests
 
 
 SWPC_PLASMA_URL = "https://services.swpc.noaa.gov/json/rtsw/rtsw_plasma_1m.json"
+SWPC_PLASMA_FALLBACK_URL = "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
 SWPC_MAG_URL = "https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json"
 SWPC_KP_URL = "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json"
 LASP_API_BASE = "https://lasp.colorado.edu/space-weather-portal/api/v1"
@@ -51,6 +52,15 @@ class SpaceWeatherDataFetcher:
             return response
         except requests.exceptions.RequestException as error:
             raise RuntimeError(f"Space-weather request failed for {url}: {error}") from error
+
+    def _get_with_404_fallback(self, url: str, fallback_url: str) -> requests.Response:
+        """Use the documented endpoint first, with a versioned operational fallback."""
+        try:
+            return self._get(url)
+        except RuntimeError as error:
+            if "404" not in str(error):
+                raise
+            return self._get(fallback_url)
 
     @staticmethod
     def _json(response: requests.Response, source: str) -> Any:
@@ -123,7 +133,10 @@ class SpaceWeatherDataFetcher:
 
     def fetch_swpc_solar_wind(self) -> pd.DataFrame:
         """Fetch and align one-minute NOAA plasma, IMF, and estimated Kp data."""
-        plasma = self._frame(self._json(self._get(SWPC_PLASMA_URL), "NOAA plasma"), "NOAA plasma")
+        plasma = self._frame(
+            self._json(self._get_with_404_fallback(SWPC_PLASMA_URL, SWPC_PLASMA_FALLBACK_URL), "NOAA plasma"),
+            "NOAA plasma",
+        )
         magnetic = self._frame(self._json(self._get(SWPC_MAG_URL), "NOAA magnetic field"), "NOAA magnetic field")
         kp = self._frame(self._json(self._get(SWPC_KP_URL), "NOAA Kp"), "NOAA Kp")
         plasma = self._rename_first(plasma, "solar_wind_speed_km_s", ("speed", "proton_speed", "bulk_speed"))
