@@ -6,6 +6,10 @@ import { referenceSnapshot } from "../../sim/orbital/weather";
 import { MODEL_VERSION } from "../../domain/version";
 
 describe("rocket presets", () => {
+  it("offers five launch-verified configurations", () => {
+    expect(ROCKET_PRESETS).toHaveLength(5);
+  });
+
   it.each(ROCKET_PRESETS)("launches the $name configuration", (preset) => {
       const result = runFlight({
         config: { ...preset.settings, modelVersion: MODEL_VERSION },
