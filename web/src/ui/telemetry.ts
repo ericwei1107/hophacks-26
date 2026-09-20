@@ -3,8 +3,7 @@
  * renderers read the same recording. This module keeps the UI-facing names.
  */
 
-export { createTrajectory, sampleTelemetry } from "../sim/trajectory";
-export type { FlightSample, Trajectory } from "../sim/trajectory";
+export type { FlightSample } from "../sim/trajectory";
 
 export const PHASE_NAMES = [
   "PAD",

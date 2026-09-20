@@ -74,7 +74,7 @@ export class ThreeLaunchRenderer implements LaunchRenderer {
       createElement(
         SafeCanvas,
         {
-          camera: { fov: 50, near: 0.0001, far: 100_000 },
+          camera: { fov: 50, near: 0.0001, far: 100_000, position: [0.12, 0.08, 0.12] },
           gl: { logarithmicDepthBuffer: true, alpha: false },
           dpr: this.lowEffects ? 1 : ([1, 1.5] as [number, number]),
         },

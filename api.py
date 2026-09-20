@@ -3,14 +3,13 @@
   python -m uvicorn api:app --reload --port 8000
 
 The browser still flies the rocket. These endpoints own live NOAA weather and
-post-insertion analysis (operations, Monte Carlo, emissions, SATCAT crowding).
+post-insertion analysis (operations, Monte Carlo, emissions).
 """
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from debris import crowding_census
 from environment import SpaceWeather
 from payload_analysis import (
     PayloadHandoff,
@@ -19,7 +18,6 @@ from payload_analysis import (
     igel_archive_cached,
     weather_snapshot_from_noaa,
 )
-from scenario_patterns import recognize_patterns, rocket_catalog
 
 app = FastAPI(title="Apogee Python backend", version="1.0")
 app.add_middleware(
@@ -65,22 +63,6 @@ class AnalyzeRequest(BaseModel):
     include_briefing: bool = False
 
 
-class EarthWeatherBody(BaseModel):
-    temperature_c: float | None = None
-    wind_speed_m_s: float | None = None
-    wind_gust_m_s: float | None = None
-    crosswind_m_s: float | None = None
-    precipitation_mm_h: float | None = None
-    visibility_km: float | None = None
-    relative_humidity_pct: float | None = None
-    cape_j_kg: float | None = None
-
-
-class PatternRequest(BaseModel):
-    weather: WeatherBody
-    earth_weather: EarthWeatherBody | None = None
-
-
 @app.get("/api/health")
 def health() -> dict:
     return {
@@ -97,26 +79,6 @@ def weather() -> dict:
         return weather_snapshot_from_noaa()
     except Exception as error:
         raise HTTPException(status_code=502, detail=f"NOAA unavailable: {error}") from error
-
-
-@app.get("/api/satcat")
-def satcat(altitude_km: float = 400.0, refresh: bool = False, seed: int | None = None) -> dict:
-    """Shell census only — never the full catalog."""
-    try:
-        return crowding_census(altitude_km, force_refresh=refresh, seed=seed)
-    except Exception as error:
-        raise HTTPException(status_code=502, detail=f"SATCAT unavailable: {error}") from error
-
-
-@app.get("/api/patterns/catalog")
-def pattern_catalog() -> dict:
-    return {"modelVersion": "scenario-recognition-v1", "rocketry": rocket_catalog()}
-
-
-@app.post("/api/patterns/recognize")
-def recognize(request: PatternRequest) -> dict:
-    earth = request.earth_weather.model_dump(exclude_none=True) if request.earth_weather else None
-    return recognize_patterns(SpaceWeather(**request.weather.model_dump()), earth)
 
 
 @app.post("/api/analyze")

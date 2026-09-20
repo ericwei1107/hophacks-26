@@ -28,6 +28,7 @@ import {
   rendererQuatToThree,
 } from "../../renderers/threeAxes";
 import type { SerializableFlightResult } from "../../workers/serialize";
+import { EARTH_RADIUS } from "../../sim/physics/constants";
 import { deriveRocket } from "../../domain/derive";
 import { createEngineCatalog } from "../../domain/engines";
 import { Earth } from "./Earth";
@@ -51,6 +52,7 @@ export interface SceneCameraState {
 const MAX_ELEVATION = 1.35;
 /** Above this playback speed, shake and other per-frame flourishes stop. */
 const MAX_EFFECTS_PLAYBACK_SPEED = 10;
+const EARTH_RADIUS_KM = EARTH_RADIUS / 1000;
 
 function endLabelFor(flight: SerializableFlightResult): string {
   if (flight.orbitAchieved) {
@@ -307,7 +309,10 @@ export function FlightScene({
       <ambientLight intensity={0.12} />
       <directionalLight ref={sunRef} intensity={1.35} color="#fff3dc" />
 
-      <group ref={earthRef}>
+      {/* Sit Earth under the pad before the first frame arrives. Leaving it
+          at the origin swallows the default camera inside a 6371 km globe
+          and the canvas stays black until playback starts. */}
+      <group ref={earthRef} position={[0, -EARTH_RADIUS_KM, 0]}>
         <Earth frameRef={frameRef} lowEffects={lowEffects} />
         <LaunchSite
           frameRef={frameRef}
@@ -356,7 +361,7 @@ export function FlightScene({
       </group>
 
       {!lowEffects && (
-        <EffectComposer multisampling={4}>
+        <EffectComposer multisampling={0}>
           <Bloom luminanceThreshold={1.05} luminanceSmoothing={0.25} mipmapBlur intensity={0.75} radius={0.6} />
         </EffectComposer>
       )}

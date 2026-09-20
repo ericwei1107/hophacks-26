@@ -29,11 +29,11 @@ Optional: put `XAI_API_KEY=<your key>` in a gitignored `.env`, either at the rep
 |---|---|
 | Live ascent | TypeScript workers |
 | NOAA space weather | Python `/api/weather`, then browser NOAA, then a bundled snapshot |
-| Payload Monte Carlo, IGEL analog, SATCAT crowding | Python `/api/analyze` |
-| SATCAT census only | Python `/api/satcat?altitude_km=` (no full catalog) |
+| Payload Monte Carlo, IGEL analog | Python `/api/analyze` |
+| SATCAT crowding screen | Browser TypeScript (`sim/orbital/debris.ts`) |
 
-If uvicorn is down, debrief falls back to the TypeScript port. Browser fetches of CelesTrak usually fail CORS, so that fallback uses a labeled synthetic mix unless `/api/satcat` is up.
+If uvicorn is down, debrief falls back to the TypeScript port. Browser fetches of CelesTrak usually fail CORS, so the crowding screen often uses a labeled synthetic mix.
 
 ## SATCAT crowding
 
-Objects in ±30 km of the mission altitude, split payload / rocket body / debris. `cam_scale` is that count vs a quieter 400 km shell, clipped 0.4–2.5, and it multiplies collision-avoidance Δv. This is a crowding **screen**, not operational collision probability.
+Objects in ±30 km of the mission altitude, split payload / rocket body / debris. `cam_scale` is that count vs a quieter 400 km shell, clipped 0.4–2.5, and it multiplies collision-avoidance Δv on the TypeScript fallback path. Python payload analysis uses a unit `cam_scale`. This is a crowding **screen**, not operational collision probability.

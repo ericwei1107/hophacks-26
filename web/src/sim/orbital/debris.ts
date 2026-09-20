@@ -58,21 +58,6 @@ export async function fetchCensus(
   forceRefresh = false,
   seed?: number,
 ): Promise<SatcatCensus> {
-  try {
-    const query = new URLSearchParams({ altitude_km: String(altitude) });
-    if (forceRefresh) {
-      query.set("refresh", "true");
-    }
-    if (seed !== undefined) {
-      query.set("seed", String(seed));
-    }
-    const response = await fetch(`/api/satcat?${query.toString()}`);
-    if (response.ok) {
-      return (await response.json()) as SatcatCensus;
-    }
-  } catch {
-    // Python backend is down; count locally (often synthetic: CelesTrak has no CORS).
-  }
   const rows = await loadSatcat(forceRefresh);
   return shellCensus(rows, altitude, 30, 400, sourceFromRows(rows), seed);
 }

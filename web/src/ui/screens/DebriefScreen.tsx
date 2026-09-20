@@ -209,6 +209,7 @@ export function DebriefScreen() {
     setDebrisCensus(null);
 
     setAnalysisProgress("Python payload analysis…");
+    const censusPromise = fetchCensus(handoff.achievedApogeeKm, false, handoff.seed);
     try {
       const report = await analyzeLaunchedPayload(handoff, {
         runs: 1_000,
@@ -216,9 +217,7 @@ export function DebriefScreen() {
         includeBriefing: true,
       });
       setPythonReport(report);
-      if (report.debris) {
-        setDebrisCensus(report.debris);
-      }
+      setDebrisCensus(await censusPromise);
       setPayloadAnalysis({
         handoff,
         rules: GAME_MISSION_RULES,
@@ -250,7 +249,7 @@ export function DebriefScreen() {
       setPythonError(error instanceof Error ? error.message : String(error));
     }
 
-    const census = await fetchCensus(handoff.achievedApogeeKm, false, handoff.seed);
+    const census = await censusPromise;
     setDebrisCensus(census);
     const scaled = analyzePayload(handoff, GAME_MISSION_RULES, census.cam_scale);
     setPayloadAnalysis(scaled);
@@ -508,7 +507,7 @@ export function DebriefScreen() {
           }
           return true;
         });
-        const census = pythonReport?.debris ?? debrisCensus;
+        const census = debrisCensus;
         return (
         <section className="analysis report">
           <div className="report-head">

@@ -108,22 +108,6 @@ def _require(chosen: tuple[float, str] | None, label: str) -> tuple[float, str]:
     return chosen
 
 
-def get_kp() -> float:
-    return _require(select_latest_valid(fetch_noaa("/products/noaa-planetary-k-index.json"), "Kp"), "Kp")[0]
-
-
-def get_f107() -> float:
-    return _require(select_latest_valid(fetch_noaa("/json/f107_cm_flux.json"), "flux"), "F10.7")[0]
-
-
-def get_solar_wind() -> dict:
-    data = fetch_noaa("/json/rtsw/rtsw_wind_1m.json")
-    speed = _require(select_latest_valid(data, "proton_speed"), "solar-wind speed")
-    density = _require(select_latest_valid(data, "proton_density"), "solar-wind density")
-    temperature = _require(select_latest_valid(data, "proton_temperature"), "solar-wind temperature")
-    return {"speed": speed[0], "density": density[0], "temperature": temperature[0]}
-
-
 def fetch_noaa_snapshot() -> dict[str, Any]:
     """Live NOAA snapshot in the shape the FastAPI weather endpoint returns.
 
@@ -189,17 +173,3 @@ def _fetch_live_noaa_snapshot() -> dict[str, Any]:
         "retrievedAt": now.isoformat(),
         "freshnessMs": freshness_ms,
     }
-
-
-def get_space_weather() -> SpaceWeather:
-    snapshot = fetch_noaa_snapshot()
-    return SpaceWeather(**snapshot["weather"])
-
-
-if __name__ == "__main__":
-    weather = get_space_weather()
-    print(f"Kp: {weather.kp}")
-    print(f"F10.7: {weather.f107}")
-    print(f"Speed: {weather.solar_wind_speed} km/s")
-    print(f"Density: {weather.solar_wind_density} particles/cm^3")
-    print(f"Temperature: {weather.solar_wind_temperature} K")

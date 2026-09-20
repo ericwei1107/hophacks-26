@@ -45,7 +45,7 @@ export function readRendererPreference(search = window.location.search): Rendere
   return value === "three" || value === "unity" ? value : "auto";
 }
 
-export function hasWebGpu(): boolean {
+function hasWebGpu(): boolean {
   return typeof navigator !== "undefined" && navigator.gpu != null;
 }
 
@@ -78,23 +78,15 @@ export async function selectRenderer(options: SelectRendererOptions): Promise<Re
     return mountThree(null);
   }
 
-  if (preference === "auto") {
-    return mountThree(null);
-  }
-
   if (!hasWebGpu()) {
     return mountThree(
-      preference === "unity"
-        ? "This browser has no WebGPU support, so the launch view is running on three.js."
-        : null,
+      "This browser has no WebGPU support, so the launch view is running on three.js.",
     );
   }
 
   if (!(await unityBuildAvailable(basePath))) {
     return mountThree(
-      preference === "unity"
-        ? `No Unity build is deployed at ${basePath}; the launch view is running on three.js.`
-        : null,
+      `No Unity build is deployed at ${basePath}; the launch view is running on three.js.`,
     );
   }
 
