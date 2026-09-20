@@ -12,6 +12,7 @@ import { useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type ComponentRef, type CSSProperties, type ReactNode } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { useShallow } from "zustand/react/shallow";
 
 import { SafeCanvas } from "../components/SafeCanvas";
 import { CONFIG_RANGES } from "../../domain/config";
@@ -20,8 +21,9 @@ import type { EngineId } from "../../domain/engines";
 import { useAppStore } from "../store";
 import { RocketMesh } from "../components/RocketMesh";
 import { SettingsToggle } from "../components/SettingsToggle";
+import { SpaceWeatherPanel } from "../components/SpaceWeatherPanel";
 import { usePythonBackendStatus } from "../../api/pythonBackend";
-import { recognizeWeatherPatterns, type PatternRecognition } from "../../api/pythonBackend";
+import { NarratedText } from "../../narration/NarratedText";
 import { ROCKET_PRESETS } from "../../data/rocketPresets";
 
 type OrbitControlsRef = ComponentRef<typeof OrbitControls>;
@@ -41,6 +43,7 @@ function Slider({
   format,
   hint,
   suggested = false,
+  onCommit,
 }: {
   label: string;
   value: number;
@@ -52,6 +55,7 @@ function Slider({
   format?: (value: number) => string;
   hint?: string;
   suggested?: boolean;
+  onCommit?: () => void;
 }) {
   const display = format ? format(value) : `${value} ${unit}`;
   const pct = max > min ? ((value - min) / (max - min)) * 100 : 0;
@@ -68,6 +72,8 @@ function Slider({
         value={value}
         style={trackStyle}
         onChange={(e) => onChange(Number(e.target.value))}
+        onPointerUp={onCommit}
+        onBlur={onCommit}
         aria-label={label}
       />
       <input
@@ -83,6 +89,7 @@ function Slider({
             onChange(Math.min(max, Math.max(min, v)));
           }
         }}
+        onBlur={onCommit}
         aria-label={`${label} value`}
       />
       {hint && <span className="control-hint">{hint}</span>}
@@ -143,12 +150,6 @@ function Stat({ label, value, warn }: { label: string; value: string; warn?: boo
       <span className="stat-value">{value}</span>
     </div>
   );
-}
-
-function EarthWeatherInput({ label, value, min, max, step, unit, onChange }: {
-  label: string; value: number; min: number; max: number; step: number; unit: string; onChange: (value: number) => void;
-}) {
-  return <Slider label={label} value={value} min={min} max={max} step={step} unit={unit} onChange={onChange} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -356,6 +357,7 @@ export function AssemblyScreen() {
     config,
     derived,
     updateConfig,
+    persistBuild,
     resetToReference,
     launch,
     flightLoading,
@@ -368,10 +370,28 @@ export function AssemblyScreen() {
     settings,
     earthWeather,
     setEarthWeather,
-  } = useAppStore();
+  } = useAppStore(
+    useShallow((s) => ({
+      config: s.config,
+      derived: s.derived,
+      updateConfig: s.updateConfig,
+      persistBuild: s.persistBuild,
+      resetToReference: s.resetToReference,
+      launch: s.launch,
+      flightLoading: s.flightLoading,
+      flightError: s.flightError,
+      analysisStale: s.analysisStale,
+      experimentBaseline: s.experimentBaseline,
+      suggestedExperiment: s.suggestedExperiment,
+      persistenceNotice: s.persistenceNotice,
+      weather: s.weather,
+      settings: s.settings,
+      earthWeather: s.earthWeather,
+      setEarthWeather: s.setEarthWeather,
+    })),
+  );
   const pythonStatus = usePythonBackendStatus();
   const [presetId, setPresetId] = useState("");
-  const [operationalFactors, setOperationalFactors] = useState<PatternRecognition | null>(null);
 
   const errors = derived.checks.filter((c: BuildCheck) => c.severity === "error");
   const canLaunch = errors.length === 0 && !flightLoading;
@@ -385,17 +405,6 @@ export function AssemblyScreen() {
     const input = document.querySelector<HTMLElement>(".suggested-control input, .suggested-control select");
     input?.focus();
   }, [suggestedExperiment]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void recognizeWeatherPatterns(weather.weather, {
-      temperature_c: earthWeather.temperatureC, wind_speed_m_s: earthWeather.windSpeedMs,
-      wind_gust_m_s: earthWeather.windGustMs, crosswind_m_s: earthWeather.crosswindMs,
-      precipitation_mm_h: earthWeather.precipitationMmH, visibility_km: earthWeather.visibilityKm,
-      relative_humidity_pct: earthWeather.relativeHumidityPct, cape_j_kg: earthWeather.capeJKg,
-    }).then((value) => { if (!cancelled) setOperationalFactors(value); }).catch(() => { if (!cancelled) setOperationalFactors(null); });
-    return () => { cancelled = true; };
-  }, [weather, earthWeather]);
 
   const total = derived.totalLengthM;
 
@@ -437,50 +446,63 @@ export function AssemblyScreen() {
           <h1>
             APOGEE <span className="dim">/ Launch Lab</span>
           </h1>
-          <p className="objective">
-            <strong>Launch objective.</strong> Place the payload in a 180–220 × 180–250 km orbit. Perigee must stay
-            above 150 km; structural max-Q is 45 kPa and payload load is 5 g.
-          </p>
+          <NarratedText className="objective">
+            <strong>Launch objective.</strong> Deliver useful mission mass into a 180–220 × 180–250 km parking orbit,
+            then complete the lunar transfer. Perigee must stay above 150 km; structural max-Q is 45 kPa and payload
+            load is 5 g.
+          </NarratedText>
         </header>
 
         {experimentBaseline && suggestedExperiment && (
           <section className="experiment-card">
             <strong>Experiment baseline pinned</strong>
-            <p>
+            <NarratedText
+              narration={`Try one change: ${suggestedExperiment.label}. Compare the next flight with ${experimentBaseline.outcome.replaceAll("_", " ")}.`}
+            >
               Try one change: {suggestedExperiment.label}. Compare the next flight with{" "}
               {experimentBaseline.outcome.replaceAll("_", " ")}.
-            </p>
+            </NarratedText>
           </section>
         )}
-
         <ControlGroup index="00" title="Reference preset">
           <label className="control control-select">
             <span className="control-label">Rocket preset</span>
             <span className="select-wrap"><select value={presetId} onChange={(event) => {
-              const preset = ROCKET_PRESETS.find((item) => item.id === event.target.value);
               setPresetId(event.target.value);
+              const preset = ROCKET_PRESETS.find((item) => item.id === event.target.value);
               if (preset) updateConfig(preset.settings);
-            }}>
-              <option value="">Choose a calibrated profile</option>
-              {ROCKET_PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}
-            </select></span>
-            <span className="control-hint">Selecting a preset replaces every editable vehicle parameter with its scenario profile.</span>
+            }}><option value="">Choose a calibrated profile</option>{ROCKET_PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></span>
+            <span className="control-hint">A preset replaces every editable vehicle parameter with its compatible scenario configuration.</span>
           </label>
           {presetId && <p className="dim small">{ROCKET_PRESETS.find((preset) => preset.id === presetId)?.summary}</p>}
         </ControlGroup>
 
         <ControlGroup index="01" title="Payload">
           <Slider
-            label="Payload wet mass"
-            value={config.payloadWetMassKg}
-            min={CONFIG_RANGES.payloadWetMassKg.min}
-            max={CONFIG_RANGES.payloadWetMassKg.max}
-            step={CONFIG_RANGES.payloadWetMassKg.step}
+            label="Mission payload (dry)"
+            value={config.payloadDryMassKg}
+            min={CONFIG_RANGES.payloadDryMassKg.min}
+            max={CONFIG_RANGES.payloadDryMassKg.max}
+            step={CONFIG_RANGES.payloadDryMassKg.step}
             unit="kg"
-            onChange={(v) => updateConfig({ payloadWetMassKg: v })}
+            onChange={(v) => updateConfig({ payloadDryMassKg: v })}
+            onCommit={persistBuild}
             format={(v) => `${(v / 1000).toFixed(1)} t`}
-            hint="Every kilogram rides all the way to orbit."
-            suggested={suggestedExperiment?.control === "payloadWetMassKg"}
+            hint="More delivered capability, but every kilogram must be accelerated to orbit."
+            suggested={suggestedExperiment?.control === "payloadDryMassKg"}
+          />
+          <Slider
+            label="Payload propellant"
+            value={config.payloadPropellantKg}
+            min={CONFIG_RANGES.payloadPropellantKg.min}
+            max={CONFIG_RANGES.payloadPropellantKg.max}
+            step={CONFIG_RANGES.payloadPropellantKg.step}
+            unit="kg"
+            onChange={(v) => updateConfig({ payloadPropellantKg: v })}
+            onCommit={persistBuild}
+            format={(v) => `${(v / 1000).toFixed(1)} t`}
+            hint="Funds circularization and operations after launch, at the cost of ascent mass."
+            suggested={suggestedExperiment?.control === "payloadPropellantKg"}
           />
         </ControlGroup>
 
@@ -493,6 +515,7 @@ export function AssemblyScreen() {
             step={CONFIG_RANGES.stage1PropellantKg.step}
             unit="kg"
             onChange={(v) => updateConfig({ stage1PropellantKg: v })}
+            onCommit={persistBuild}
             format={(v) => `${(v / 1000).toFixed(0)} t`}
             hint="Sets tank length, and with it slenderness."
           />
@@ -504,6 +527,7 @@ export function AssemblyScreen() {
             step={1}
             unit=""
             onChange={(v) => updateConfig({ stage1EngineCount: Math.round(v) })}
+            onCommit={persistBuild}
             format={(v) => `${v} ×`}
             hint="Thrust, dry mass and fuel flow; excess thrust raises max-Q and g-load."
             suggested={suggestedExperiment?.control === "stage1EngineCount"}
@@ -512,7 +536,10 @@ export function AssemblyScreen() {
             label="Stage 1 engine"
             value={config.stage1Engine}
             options={STAGE1_ENGINES}
-            onChange={(id) => updateConfig({ stage1Engine: id })}
+            onChange={(id) => {
+              updateConfig({ stage1Engine: id });
+              persistBuild();
+            }}
           />
         </ControlGroup>
 
@@ -525,6 +552,7 @@ export function AssemblyScreen() {
             step={CONFIG_RANGES.stage2PropellantKg.step}
             unit="kg"
             onChange={(v) => updateConfig({ stage2PropellantKg: v })}
+            onCommit={persistBuild}
             format={(v) => `${(v / 1000).toFixed(0)} t`}
             suggested={suggestedExperiment?.control === "stage2PropellantKg"}
           />
@@ -532,7 +560,10 @@ export function AssemblyScreen() {
             label="Stage 2 engine"
             value={config.stage2Engine}
             options={STAGE2_ENGINES}
-            onChange={(id) => updateConfig({ stage2Engine: id })}
+            onChange={(id) => {
+              updateConfig({ stage2Engine: id });
+              persistBuild();
+            }}
             hint="Vacuum engines want to ignite high; sea-level engines are compact but weak up there."
           />
         </ControlGroup>
@@ -546,6 +577,7 @@ export function AssemblyScreen() {
             step={CONFIG_RANGES.diameterM.step}
             unit="m"
             onChange={(v) => updateConfig({ diameterM: v })}
+            onCommit={persistBuild}
             format={(v) => `${v.toFixed(1)} m`}
             hint="Wide fits engines and shortens tanks, but adds drag and fairing mass."
             suggested={suggestedExperiment?.control === "diameterM"}
@@ -558,32 +590,32 @@ export function AssemblyScreen() {
             step={CONFIG_RANGES.finSpanM.step}
             unit="m"
             onChange={(v) => updateConfig({ finSpanM: v })}
+            onCommit={persistBuild}
             format={(v) => `${v.toFixed(1)} m`}
             hint="Moves the center of pressure aft for stability, at a cost in mass and drag."
             suggested={suggestedExperiment?.control === "finSpanM"}
           />
         </ControlGroup>
-
         <ControlGroup index="05" title="Earth weather">
-          <EarthWeatherInput label="Temperature" value={earthWeather.temperatureC} min={-20} max={45} step={1} unit="°C" onChange={(temperatureC) => setEarthWeather({ temperatureC })} />
-          <EarthWeatherInput label="Surface pressure" value={earthWeather.pressureHpa} min={850} max={1050} step={1} unit="hPa" onChange={(pressureHpa) => setEarthWeather({ pressureHpa })} />
-          <EarthWeatherInput label="Relative humidity" value={earthWeather.relativeHumidityPct} min={0} max={100} step={1} unit="%" onChange={(relativeHumidityPct) => setEarthWeather({ relativeHumidityPct })} />
-          <EarthWeatherInput label="Sustained wind" value={earthWeather.windSpeedMs} min={0} max={30} step={0.5} unit="m/s" onChange={(windSpeedMs) => setEarthWeather({ windSpeedMs })} />
-          <EarthWeatherInput label="Crosswind" value={earthWeather.crosswindMs} min={0} max={25} step={0.5} unit="m/s" onChange={(crosswindMs) => setEarthWeather({ crosswindMs })} />
-          <EarthWeatherInput label="Wind gust" value={earthWeather.windGustMs} min={0} max={35} step={0.5} unit="m/s" onChange={(windGustMs) => setEarthWeather({ windGustMs })} />
-          <EarthWeatherInput label="Rain rate" value={earthWeather.precipitationMmH} min={0} max={20} step={0.1} unit="mm/h" onChange={(precipitationMmH) => setEarthWeather({ precipitationMmH })} />
-          <EarthWeatherInput label="Visibility" value={earthWeather.visibilityKm} min={0.1} max={30} step={0.1} unit="km" onChange={(visibilityKm) => setEarthWeather({ visibilityKm })} />
-          <EarthWeatherInput label="Convective energy" value={earthWeather.capeJKg} min={0} max={3000} step={50} unit="J/kg" onChange={(capeJKg) => setEarthWeather({ capeJKg })} />
-          <p className="control-hint">Wind and density enter the flight solver. Rain, visibility, gusts and CAPE are explicit launch-commit factors below.</p>
+          <Slider label="Temperature" value={earthWeather.temperatureC} min={-20} max={45} step={1} unit="°C" onChange={(temperatureC) => setEarthWeather({ temperatureC })} onCommit={persistBuild} />
+          <Slider label="Surface pressure" value={earthWeather.pressureHpa} min={850} max={1050} step={1} unit="hPa" onChange={(pressureHpa) => setEarthWeather({ pressureHpa })} onCommit={persistBuild} />
+          <Slider label="Relative humidity" value={earthWeather.relativeHumidityPct} min={0} max={100} step={1} unit="%" onChange={(relativeHumidityPct) => setEarthWeather({ relativeHumidityPct })} onCommit={persistBuild} />
+          <Slider label="Sustained wind" value={earthWeather.windSpeedMs} min={0} max={30} step={0.5} unit="m/s" onChange={(windSpeedMs) => setEarthWeather({ windSpeedMs })} onCommit={persistBuild} />
+          <Slider label="Crosswind" value={earthWeather.crosswindMs} min={0} max={25} step={0.5} unit="m/s" onChange={(crosswindMs) => setEarthWeather({ crosswindMs })} onCommit={persistBuild} />
+          <Slider label="Wind gust" value={earthWeather.windGustMs} min={0} max={35} step={0.5} unit="m/s" onChange={(windGustMs) => setEarthWeather({ windGustMs })} onCommit={persistBuild} />
+          <Slider label="Rain rate" value={earthWeather.precipitationMmH} min={0} max={20} step={0.1} unit="mm/h" onChange={(precipitationMmH) => setEarthWeather({ precipitationMmH })} onCommit={persistBuild} />
+          <Slider label="Visibility" value={earthWeather.visibilityKm} min={0.1} max={30} step={0.1} unit="km" onChange={(visibilityKm) => setEarthWeather({ visibilityKm })} onCommit={persistBuild} />
+          <Slider label="Convective energy" value={earthWeather.capeJKg} min={0} max={3000} step={50} unit="J/kg" onChange={(capeJKg) => setEarthWeather({ capeJKg })} onCommit={persistBuild} />
+          <p className="control-hint">Wind and density affect the solver; storm, rain, visibility, gust, and CAPE conditions remain explicit operational factors in the debrief.</p>
         </ControlGroup>
 
         <section className="stat-strip" aria-label="Derived values">
           <Stat label="Liftoff TWR" value={derived.liftoffTwr.toFixed(2)} warn={derived.liftoffTwr <= 1} />
           <Stat label="Ideal Δv" value={`${(derived.totalIdealDeltaVMs / 1000).toFixed(1)} km/s`} />
           <Stat label="Wet mass" value={`${(derived.wetMassKg / 1000).toFixed(0)} t`} />
+          <Stat label="Useful payload" value={`${(config.payloadDryMassKg / 1000).toFixed(1)} t`} />
           <Stat label="Stability" value={`${derived.staticMargin.toFixed(2)} cal`} warn={derived.staticMargin < 1} />
           <Stat label="Slenderness" value={derived.slenderness.toFixed(1)} warn={derived.slenderness > 15} />
-          <Stat label="Drag area" value={`${derived.dragAreaM2.toFixed(2)} m²`} />
         </section>
 
         <section className="checks" aria-label="Build checks">
@@ -601,15 +633,12 @@ export function AssemblyScreen() {
               <span className="check-status">{row.status}</span>
             </div>
           ))}
-          {flightError && <p className="check error">✕ {flightError}</p>}
+          {flightError && (
+            <NarratedText className="check error" narration={flightError}>
+              ✕ {flightError}
+            </NarratedText>
+          )}
         </section>
-
-        {operationalFactors?.matches.length ? <section className="checks" aria-label="Data-driven operational factors">
-          <h2><span className="control-group-index">!</span>Operational factors</h2>
-          {operationalFactors.matches.map((factor) => <div className="check-row warn" key={`${factor.dataset}-${factor.scenarioId}`}>
-            <span className="check-dot" /><span className="check-body"><span className="check-label">{factor.title}</span><span className="check-message">{factor.evidence.join(", ")} · {factor.mitigation}</span></span>
-          </div>)}
-        </section> : null}
 
         <div className="actions">
           <button className="launch" onClick={launch} disabled={!canLaunch}>
@@ -622,16 +651,19 @@ export function AssemblyScreen() {
 
         <footer className="panel-foot">
           {analysisStale && <p className="dim small">Build edited — prior analysis invalidated until rerun.</p>}
+          <SpaceWeatherPanel snapshot={weather} />
           <p className="dim small">
-            Weather: Kp {weather.weather.kp ?? "—"} · F10.7 {weather.weather.f107 ?? "—"} (
-            {weather.source === "python" ? "Python NOAA" : weather.source === "noaa" ? "browser NOAA" : "reference snapshot"})
             {pythonStatus === "up"
-              ? " · Payload analysis: Python"
+              ? "Payload analysis: Python"
               : pythonStatus === "down"
-                ? " · Payload analysis: local TypeScript"
-                : ""}
+                ? "Payload analysis: local TypeScript"
+                : "Checking Python backend…"}
           </p>
-          {persistenceNotice && <p className="check warning">⚠ {persistenceNotice}</p>}
+          {persistenceNotice && (
+            <NarratedText className="check warning" narration={persistenceNotice}>
+              ⚠ {persistenceNotice}
+            </NarratedText>
+          )}
           <SettingsToggle />
         </footer>
       </aside>

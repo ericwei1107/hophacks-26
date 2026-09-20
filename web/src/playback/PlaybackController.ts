@@ -32,6 +32,7 @@ import type { SerializableFlightResult } from "../workers/protocol";
 export const IGNITION_HOLD_S = 3.5;
 
 export type PlaybackListener = (sample: FlightSample, frame: RenderFrame) => void;
+export type PlaybackCompleteListener = () => void;
 
 /** Visual spool-up during the pre-launch hold: 0 at the start, 1 by T−0.35 s. */
 function ignitionThrottle(t: number): number {
@@ -49,6 +50,7 @@ export class PlaybackController {
   private renderer: LaunchRenderer | null = null;
   private readonly events: FlightEvent[];
   private readonly listeners = new Set<PlaybackListener>();
+  private readonly completeListeners = new Set<PlaybackCompleteListener>();
 
   private time = -IGNITION_HOLD_S;
   private speed = 1;
@@ -119,6 +121,14 @@ export class PlaybackController {
     };
   }
 
+  /** Called once when active playback naturally crosses the recording's end. */
+  subscribeComplete(listener: PlaybackCompleteListener): () => void {
+    this.completeListeners.add(listener);
+    return () => {
+      this.completeListeners.delete(listener);
+    };
+  }
+
   /** Start the animation loop. Safe to call twice. */
   start(): void {
     if (this.raf !== 0) {
@@ -144,16 +154,24 @@ export class PlaybackController {
   dispose(): void {
     this.stop();
     this.listeners.clear();
+    this.completeListeners.clear();
     this.renderer = null;
   }
 
   /** Advance by a wall-clock delta. Exposed for tests; the loop calls it. */
   advance(deltaS: number): void {
+    const previous = this.time;
     if (this.isPlaying && Number.isFinite(deltaS)) {
       const next = this.time + deltaS * this.speed;
       this.time = Math.min(this.durationS, next);
     }
     this.emit();
+    if (this.isPlaying && previous < this.durationS && this.time >= this.durationS) {
+      this.isPlaying = false;
+      for (const listener of this.completeListeners) {
+        listener();
+      }
+    }
   }
 
   /**

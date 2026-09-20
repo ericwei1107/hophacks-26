@@ -1,8 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 import { BlackHoleHeroSection } from "@/components/ui/blackhole-hero-section";
+import { MissionVideoPlayer } from "@/media/MissionVideo";
+import { landingVideo } from "@/media/videos";
+import { NarratedText } from "@/narration/NarratedText";
 
 function useNarrow(query = "(max-width: 767px)") {
   const [narrow, setNarrow] = useState(false);
@@ -38,6 +42,8 @@ const principles = [
 
 export default function BlackHoleHeroSectionDemo() {
   const narrow = useNarrow();
+  const location = useLocation();
+  const labTarget = { pathname: "/lab", search: location.search };
 
   return (
     <>
@@ -53,21 +59,22 @@ export default function BlackHoleHeroSectionDemo() {
           steps={narrow ? 200 : 300}
           resolution={narrow ? 0.6 : 0.7}
         >
+          <MissionVideoPlayer video={landingVideo} className="hero-video" />
           <div className="mx-auto flex h-full min-h-[100svh] w-full max-w-[1600px] flex-col px-6 sm:px-10 lg:px-20">
             <header className="flex items-center justify-between border-b border-white/10 py-5 text-white">
               <a
                 href="#top"
-                aria-label="APOGEE home"
+                aria-label="Zenith home"
                 className="text-sm font-semibold tracking-[0.28em]"
               >
-                APOGEE
+                ZENITH
               </a>
               <nav aria-label="Landing page" className="flex items-center gap-5 text-xs text-white/60 sm:gap-8">
                 <a className="transition hover:text-white" href="#physics">
                   The mission
                 </a>
-                <a className="transition hover:text-white" href="#launch-lab">
-                  Launch lab
+                <a className="transition hover:text-white" href="#physics">
+                  How it works
                 </a>
               </nav>
             </header>
@@ -78,23 +85,26 @@ export default function BlackHoleHeroSectionDemo() {
                   Orbital mission simulator
                 </p>
                 <h1 className="text-[2.8rem] font-light leading-[1.02] tracking-[-0.04em] text-white sm:text-6xl lg:text-[4.75rem]">
-                  Light does not
+                  Houston, we
                   <br />
-                  leave here
+                  have a solution
                 </h1>
 
-                <p className="mt-6 max-w-md text-[0.95rem] leading-relaxed text-white/60 md:mt-7 md:text-base">
+                <NarratedText
+                  className="mt-6 max-w-md text-[0.95rem] leading-relaxed text-white/60 md:mt-7 md:text-base"
+                  narration="Gravity writes every trajectory. Build a launch vehicle, fly it through a living solar system, and see where your decisions lead."
+                >
                   Gravity writes every trajectory. Build a launch vehicle, fly it
                   through a living solar system, and see where your decisions lead.
-                </p>
+                </NarratedText>
 
                 <div className="mt-8 flex flex-wrap items-center gap-3 md:mt-10">
-                  <a
-                    href="#launch-lab"
+                  <Link
+                    to={labTarget}
                     className="rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:ring-offset-2 focus:ring-offset-black"
                   >
-                    Enter launch lab
-                  </a>
+                    Enter Launch Lab
+                  </Link>
                   <a
                     href="#physics"
                     className="rounded-full border border-white/20 px-6 py-3 text-sm text-white/80 transition hover:border-white/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/60"
@@ -133,22 +143,25 @@ export default function BlackHoleHeroSectionDemo() {
                 <article key={principle.number} className="bg-[#090c11] p-7 sm:min-h-64">
                   <span className="font-mono text-xs text-orange-300/70">{principle.number}</span>
                   <h3 className="mt-16 text-lg font-medium">{principle.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-white/50">{principle.copy}</p>
+                  <NarratedText className="mt-3 text-sm leading-relaxed text-white/50">{principle.copy}</NarratedText>
                 </article>
               ))}
             </div>
           </div>
 
           <div className="mt-20 flex flex-col justify-between gap-6 border-t border-white/10 pt-8 sm:flex-row sm:items-end">
-            <p className="max-w-2xl text-lg leading-relaxed text-white/55">
-              APOGEE keeps the controls close to the physics: change one variable,
+            <NarratedText
+              className="max-w-2xl text-lg leading-relaxed text-white/55"
+              narration="Zenith keeps the controls close to the physics: change one variable, launch again, and build intuition from the difference."
+            >
+              Zenith keeps the controls close to the physics: change one variable,
               launch again, and build intuition from the difference.
-            </p>
+            </NarratedText>
             <a
-              href="#launch-lab"
+              href="#top"
               className="w-fit border-b border-orange-300/70 pb-1 text-sm text-orange-100 transition hover:border-orange-200 hover:text-white"
             >
-              Configure your vehicle ↓
+              Return to mission control ↑
             </a>
           </div>
         </div>

@@ -10,14 +10,17 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 
 import { IGNITION_HOLD_S, PlaybackController } from "../../playback/PlaybackController";
 import type { LaunchRenderer } from "../../renderers/LaunchRenderer";
 import { selectRenderer } from "../../renderers/selectRenderer";
 import { useAppStore, type CameraMode } from "../store";
 import { PHASE_NAMES, type FlightSample } from "../telemetry";
+import { NarratedText } from "../../narration/NarratedText";
 
 const SPEEDS = [1, 5, 20];
+const HUD_MIN_INTERVAL_MS = 50;
 const CAMERAS: { id: CameraMode; label: string }[] = [
   { id: "overhead", label: "Overhead" },
   { id: "chase", label: "Chase" },
@@ -96,7 +99,21 @@ export function FlightScreen() {
     setCameraMode,
     setCameraZoom,
     setScreen,
-  } = useAppStore();
+  } = useAppStore(
+    useShallow((s) => ({
+      flight: s.flight,
+      playing: s.playing,
+      playbackSpeed: s.playbackSpeed,
+      cameraMode: s.cameraMode,
+      cameraZoom: s.cameraZoom,
+      settings: s.settings,
+      setPlaying: s.setPlaying,
+      setPlaybackSpeed: s.setPlaybackSpeed,
+      setCameraMode: s.setCameraMode,
+      setCameraZoom: s.setCameraZoom,
+      setScreen: s.setScreen,
+    })),
+  );
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<PlaybackController | null>(null);
@@ -117,7 +134,13 @@ export function FlightScreen() {
     }
     const controller = new PlaybackController(flight);
     controllerRef.current = controller;
+    let lastHudMs = 0;
     const unsubscribe = controller.subscribe((nextSample, frame) => {
+      const now = performance.now();
+      if (!frame.discontinuity && now - lastHudMs < HUD_MIN_INTERVAL_MS) {
+        return;
+      }
+      lastHudMs = now;
       setSample(nextSample);
       setTimeS(controller.timeS);
       if (frame.events.length > 0) {
@@ -131,16 +154,21 @@ export function FlightScreen() {
         }
       }
     });
+    const unsubscribeComplete = controller.subscribeComplete(() => {
+      setPlaying(false);
+      setScreen("debrief");
+    });
     controller.setPlaying(useAppStore.getState().playing);
     controller.setSpeed(useAppStore.getState().playbackSpeed);
     controller.start();
     return () => {
       unsubscribe();
+      unsubscribeComplete();
       controller.dispose();
       controllerRef.current = null;
       window.clearTimeout(toastTimer.current);
     };
-  }, [flight]);
+  }, [flight, setPlaying, setScreen]);
 
   // --- renderer: mounted lazily, once a flight exists ----------------------
   useEffect(() => {
@@ -259,7 +287,7 @@ export function FlightScreen() {
   if (!flight) {
     return (
       <div className="screen flight">
-        <p>No flight loaded.</p>
+        <NarratedText>No flight loaded.</NarratedText>
         <button onClick={() => setScreen("assembly")}>Back to build</button>
       </div>
     );

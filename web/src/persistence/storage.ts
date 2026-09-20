@@ -51,6 +51,31 @@ export const DEFAULT_SETTINGS: Settings = {
   muted: false,
 };
 
+type LegacyRocketConfig = Omit<RocketConfig, "payloadDryMassKg" | "payloadPropellantKg"> & {
+  payloadWetMassKg: number;
+};
+
+/** Convert the v1 fixed 80/20 payload into the independently configurable v2 fields. */
+function migrateConfig(value: unknown): RocketConfig | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const candidate = value as Partial<RocketConfig> & Partial<LegacyRocketConfig>;
+  if (Number.isFinite(candidate.payloadDryMassKg) && Number.isFinite(candidate.payloadPropellantKg)) {
+    return candidate as RocketConfig;
+  }
+  if (!Number.isFinite(candidate.payloadWetMassKg)) {
+    return null;
+  }
+  const { payloadWetMassKg, ...rest } = candidate as LegacyRocketConfig;
+  return {
+    ...rest,
+    modelVersion: MODEL_VERSION,
+    payloadDryMassKg: payloadWetMassKg * 0.8,
+    payloadPropellantKg: payloadWetMassKg * 0.2,
+  };
+}
+
 function safeRead<T>(key: string): T | null {
   try {
     const raw = localStorage.getItem(key);
@@ -70,9 +95,13 @@ function safeWrite(key: string, value: unknown): boolean {
 }
 
 export function loadBuild(): RocketConfig | null {
-  const build = safeRead<RocketConfig>(BUILD_KEY);
-  if (!build || build.modelVersion !== MODEL_VERSION) {
+  const raw = safeRead<unknown>(BUILD_KEY);
+  const build = migrateConfig(raw);
+  if (!build) {
     return null;
+  }
+  if ((raw as { modelVersion?: string } | null)?.modelVersion !== MODEL_VERSION) {
+    saveBuild(build);
   }
   return build;
 }
@@ -84,7 +113,10 @@ export function saveBuild(config: RocketConfig): void {
 export function loadRunSummaries(): RunSummary[] {
   const current = safeRead<RunSummary[]>(RUNS_KEY);
   const legacy = current ?? safeRead<RunSummary[]>(LEGACY_RUNS_KEY) ?? [];
-  return legacy.map((run) => ({ ...run, assessment: run.assessment ?? null }));
+  return legacy.flatMap((run) => {
+    const config = migrateConfig(run.config);
+    return config ? [{ ...run, config, assessment: run.assessment ?? null }] : [];
+  });
 }
 
 export interface PushRunSummaryResult {

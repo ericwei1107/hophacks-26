@@ -2,7 +2,7 @@
 
 exports[`reference build baseline > keeps the recorded orbit, loads and staging time 1`] = `
 {
-  "apogeeKm": 404586.943,
+  "apogeeKm": 407222.817,
   "eventIds": [
     "liftoff",
     "max_q",
@@ -21,15 +21,15 @@ exports[`reference build baseline > keeps the recorded orbit, loads and staging 
   "inclinationDeg": 0,
   "liftoffT": 0,
   "maxG": 4.5031,
-  "maxQPa": 34103.787,
-  "maxQT": 67.09999999999833,
-  "orbitAchievedT": 469.8002450348114,
-  "perigeeKm": 210.42,
-  "sampleCount": 10825,
-  "separationT": 154.69847744654436,
-  "stage1BurnoutT": 153.69847744654416,
-  "stage2IgnitionT": 155.69847744654456,
-  "stage2PropellantRemainingKg": 639.491,
-  "totalTimeS": 1141.1,
+  "maxQPa": 33995.706,
+  "maxQT": 67.14999999999833,
+  "orbitAchievedT": 469.4381414198132,
+  "perigeeKm": 210.019,
+  "sampleCount": 10817,
+  "separationT": 154.69847719465326,
+  "stage1BurnoutT": 153.69847719465304,
+  "stage2IgnitionT": 155.6984771946535,
+  "stage2PropellantRemainingKg": 635.252,
+  "totalTimeS": 1140.7,
 }
 `;

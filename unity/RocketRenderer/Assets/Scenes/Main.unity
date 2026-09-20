@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &1019260832
+--- !u!1 &677552814
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,9 +127,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1019260835}
-  - component: {fileID: 1019260834}
-  - component: {fileID: 1019260833}
+  - component: {fileID: 677552817}
+  - component: {fileID: 677552816}
+  - component: {fileID: 677552815}
   m_Layer: 0
   m_Name: SimBridge
   m_TagString: Untagged
@@ -137,38 +137,38 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1019260833
+--- !u!114 &677552815
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1019260832}
+  m_GameObject: {fileID: 677552814}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e7af653d53aba740b23b3171f901e29, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Apogee.RocketRenderer.SimBridge
-  Scene: {fileID: 1019260834}
---- !u!114 &1019260834
+  Scene: {fileID: 677552816}
+--- !u!114 &677552816
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1019260832}
+  m_GameObject: {fileID: 677552814}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7ecb331ea12053b45a5f14a1f2255dc0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Apogee.RocketRenderer.SceneBootstrap
---- !u!4 &1019260835
+--- !u!4 &677552817
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1019260832}
+  m_GameObject: {fileID: 677552814}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -181,4 +181,4 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1019260835}
+  - {fileID: 677552817}

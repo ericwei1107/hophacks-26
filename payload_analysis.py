@@ -8,7 +8,6 @@ IGEL emissions, debris screening, and deterministic insights.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -77,7 +76,11 @@ def spacecraft_from_wet_mass(wet_mass_kg: float) -> tuple[float, float, float]:
 
 
 def weather_snapshot_from_noaa() -> dict[str, Any]:
-    return fetch_noaa_snapshot()
+    snapshot = fetch_noaa_snapshot()
+    weather = SpaceWeather(**snapshot["weather"])
+    snapshot["effects"] = s.assess_space_weather_effects(weather, computed_by="python")
+    snapshot["source"] = "python"
+    return snapshot
 
 
 def igel_archive_cached() -> bool:

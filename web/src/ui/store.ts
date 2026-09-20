@@ -22,7 +22,7 @@ import {
   type Settings,
 } from "../persistence/storage";
 import { defaultEnvironment } from "../sim/ascent/flight";
-import { referenceSnapshot, type WeatherSnapshot } from "../sim/orbital/weather";
+import { ensureWeatherEffects, referenceSnapshot, type WeatherSnapshot } from "../sim/orbital/weather";
 import { SimClient } from "../workers/client";
 import { serializeFlightInput, type SerializableFlightResult } from "../workers/serialize";
 import type { RecommendedExperiment } from "../sim/outcomes/types";
@@ -64,6 +64,7 @@ interface AppStore {
 
   setScreen: (screen: Screen) => void;
   updateConfig: (patch: Partial<RocketConfig>) => void;
+  persistBuild: () => void;
   resetToReference: () => void;
   setSettings: (patch: Partial<Settings>) => void;
   setWeather: (weather: WeatherSnapshot) => void;
@@ -80,8 +81,37 @@ interface AppStore {
 
 const MIN_CAMERA_ZOOM = 0.0005;
 const MAX_CAMERA_ZOOM = 6;
+const PERSIST_BUILD_MS = 280;
 
 let activeFlightRunId: number | null = null;
+let persistBuildTimer: ReturnType<typeof setTimeout> | null = null;
+
+function schedulePersistBuild(config: RocketConfig): void {
+  if (persistBuildTimer !== null) {
+    clearTimeout(persistBuildTimer);
+  }
+  persistBuildTimer = setTimeout(() => {
+    persistBuildTimer = null;
+    saveBuild(config);
+  }, PERSIST_BUILD_MS);
+}
+
+function flushPersistBuild(config: RocketConfig): void {
+  if (persistBuildTimer !== null) {
+    clearTimeout(persistBuildTimer);
+    persistBuildTimer = null;
+  }
+  saveBuild(config);
+}
+
+function configPatchChanged(prev: RocketConfig, patch: Partial<RocketConfig>): boolean {
+  for (const key of Object.keys(patch) as (keyof RocketConfig)[]) {
+    if (patch[key] !== undefined && patch[key] !== prev[key]) {
+      return true;
+    }
+  }
+  return false;
+}
 
 export const useAppStore = create<AppStore>((set, get) => {
   const initialConfig = loadBuild() ?? referenceConfig();
@@ -112,8 +142,12 @@ export const useAppStore = create<AppStore>((set, get) => {
     setScreen: (screen) => set({ screen }),
 
     updateConfig: (patch) => {
-      const config = { ...get().config, ...patch, modelVersion: MODEL_VERSION };
-      saveBuild(config);
+      const prev = get().config;
+      if (!configPatchChanged(prev, patch)) {
+        return;
+      }
+      const config = { ...prev, ...patch, modelVersion: MODEL_VERSION };
+      schedulePersistBuild(config);
       set({
         config,
         derived: deriveCurrent(config),
@@ -121,9 +155,13 @@ export const useAppStore = create<AppStore>((set, get) => {
       });
     },
 
+    persistBuild: () => {
+      flushPersistBuild(get().config);
+    },
+
     resetToReference: () => {
       const config = referenceConfig();
-      saveBuild(config);
+      flushPersistBuild(config);
       set({
         config,
         derived: deriveCurrent(config),
@@ -137,11 +175,13 @@ export const useAppStore = create<AppStore>((set, get) => {
       set({ settings });
     },
 
-    setWeather: (weather) => set({ weather }),
+    setWeather: (weather) => set({ weather: ensureWeatherEffects(weather) }),
     setEarthWeather: (patch) => set({ earthWeather: { ...get().earthWeather, ...patch } }),
 
     launch: async () => {
-      const { config, weather, earthWeather } = get();
+      const { config, earthWeather } = get();
+      const weather = ensureWeatherEffects(get().weather);
+      flushPersistBuild(config);
       const derived = deriveCurrent(config);
       if (derived.checks.some((c) => c.severity === "error")) {
         set({ flightError: "Resolve build errors before launch." });

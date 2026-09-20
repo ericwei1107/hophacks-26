@@ -5,6 +5,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 
 import { analyzePayload, createPayloadHandoff, type PayloadAnalysis } from "../../sim/orbital/payload";
 import {
@@ -18,6 +19,11 @@ import type { MonteCarloSummary } from "../../sim/orbital/types";
 import type { AscentRobustnessResult, AscentSensitivityResult } from "../../sim/ascent/robustness";
 import { useAppStore, simClient } from "../store";
 import { TelemetryChart, type ChartChannel } from "../components/TelemetryChart";
+import { SpaceWeatherPanel } from "../components/SpaceWeatherPanel";
+import { MissionVideoPlayer } from "../../media/MissionVideo";
+import { outcomeVideo } from "../../media/videos";
+import { NarrationButton } from "../../narration/NarrationButton";
+import { NarratedText } from "../../narration/NarratedText";
 import {
   buildRunReport,
   compareRunToCurrent,
@@ -51,15 +57,18 @@ function StatTile({
   label,
   value,
   tone,
+  narration,
 }: {
   label: string;
   value: string;
   tone?: "pass" | "fail" | "neutral";
+  narration?: string;
 }) {
   return (
     <div className={`stat-tile${tone ? ` ${tone}` : ""}`}>
       <span className="stat-value">{value}</span>
       <span className="stat-label">{label}</span>
+      {narration && <NarrationButton text={narration} />}
     </div>
   );
 }
@@ -115,7 +124,16 @@ function CrowdingTable({ census }: { census: SatcatCensus }) {
 }
 
 export function DebriefScreen() {
-  const { flight, setScreen, returnToBuild, startExperiment, runSummaries, persistenceNotice } = useAppStore();
+  const { flight, setScreen, returnToBuild, startExperiment, runSummaries, persistenceNotice } = useAppStore(
+    useShallow((s) => ({
+      flight: s.flight,
+      setScreen: s.setScreen,
+      returnToBuild: s.returnToBuild,
+      startExperiment: s.startExperiment,
+      runSummaries: s.runSummaries,
+      persistenceNotice: s.persistenceNotice,
+    })),
+  );
   const [hoverTimeS, setHoverTimeS] = useState<number | null>(null);
   const [payloadAnalysis, setPayloadAnalysis] = useState<PayloadAnalysis | null>(null);
   const [pythonReport, setPythonReport] = useState<PythonPayloadReport | null>(null);
@@ -140,7 +158,8 @@ export function DebriefScreen() {
             // trajectory, not something a LEO payload mission model can use.
             finalElements: flight.parkingElements ?? flight.finalElements,
             stage2PropellantRemainingKg: flight.stage2PropellantRemainingKg,
-            payloadWetMassKg: flight.config.payloadWetMassKg,
+            payloadDryMassKg: flight.config.payloadDryMassKg,
+            payloadPropellantKg: flight.config.payloadPropellantKg,
             weather: flight.weather,
             seed: flight.seed,
           })
@@ -151,7 +170,7 @@ export function DebriefScreen() {
   if (!flight) {
     return (
       <div className="screen debrief">
-        <p>No flight to debrief.</p>
+        <NarratedText>No flight to debrief.</NarratedText>
         <button onClick={() => setScreen("assembly")}>Back to build</button>
       </div>
     );
@@ -159,6 +178,7 @@ export function DebriefScreen() {
 
   const assessment = flight.assessment;
   const diagnosis = assessment.primaryDiagnosis;
+  const otherCauses = assessment.environmentalCauses.filter((cause) => cause.severity !== "quiet");
   const currentSummary = runSummaries.find((run) => run.seed === flight.seed);
   const baseline = currentSummary?.baselineRunId ? runSummaries.find((run) => run.id === currentSummary.baselineRunId) : null;
   const failureEvent = flight.events.find((e) => e.id === "failed");
@@ -212,6 +232,13 @@ export function DebriefScreen() {
         insertionBudgetOk: report.insertionBudgetOk,
         mission: report.mission,
         result: report.result,
+        compliance: report.regulatory
+          ? {
+              missionName: report.regulatory.mission_name,
+              compliant: report.regulatory.compliant,
+              violations: report.regulatory.violations,
+            }
+          : null,
         explanations: report.explanations,
       });
       if (report.monteCarlo) {
@@ -247,7 +274,8 @@ export function DebriefScreen() {
       (completed, total) => setAnalysisProgress(`Monte Carlo ${Math.round((completed / total) * 100)}%`),
     );
     try {
-      setMonteCarlo(await promise);
+      const result = await promise;
+      setMonteCarlo(result);
     } catch {
       // canceled
     }
@@ -297,20 +325,28 @@ export function DebriefScreen() {
   return (
     <div className="screen debrief">
       <header className={`outcome ${flight.orbitAchieved ? "success" : "failure"}`}>
+        <MissionVideoPlayer video={outcomeVideo(flight.orbitAchieved)} className="outcome-video" />
         <h1>{diagnosis?.title ?? outcomeTitle(flight.outcome)}</h1>
         {el && (
-          <p className="orbit-line">
+          <NarratedText className="orbit-line" narration={`Orbit: ${el.perigeeAltitudeKm.toFixed(0)} by ${el.apogeeAltitudeKm?.toFixed(0) ?? "unknown"} kilometers, inclination ${el.inclinationDeg.toFixed(1)} degrees.`}>
             Orbit: {el.perigeeAltitudeKm.toFixed(0)} × {el.apogeeAltitudeKm?.toFixed(0) ?? "?"} km, inclination {el.inclinationDeg.toFixed(1)}°
-          </p>
+          </NarratedText>
         )}
       </header>
 
       <section className="cause-card">
         <h2>{diagnosis ? "Primary diagnosis" : "Flight result"}</h2>
-        <p className="cause-detail">{diagnosis?.explanation ?? flight.failureDetail ?? "The flight met its objective."}</p>
+        <NarratedText className="cause-detail" narration={diagnosis?.explanation ?? flight.failureDetail ?? "The flight met its objective."}>{diagnosis?.explanation ?? flight.failureDetail ?? "The flight met its objective."}</NarratedText>
         {failureEvent && <p className="cause-time">at {failureEvent.t.toFixed(1)} s</p>}
-        {diagnosis && <p className="cause-suggestion">{diagnosis.evidence} Try one change: {diagnosis.recommendedExperiment.label}.</p>}
+        {diagnosis && <NarratedText className="cause-suggestion" narration={`${diagnosis.evidence} Try one change: ${diagnosis.recommendedExperiment.label}.`}>{diagnosis.evidence} Try one change: {diagnosis.recommendedExperiment.label}.</NarratedText>}
+        {otherCauses.length > 0 && (
+          <NarratedText className="cause-environment" narration={`Space weather is a separate launch cause, not a vehicle control. ${otherCauses.map((cause) => cause.title).join(". ")}.`}>
+            Other launch causes: {otherCauses.map((cause) => cause.title).join("; ")}. These are environment, not a build slider.
+          </NarratedText>
+        )}
         <div className="evidence">
+          <span>Mission mass delivered {(flight.config.payloadDryMassKg / 1000).toFixed(2)} t</span>
+          <span>Payload propellant {(flight.config.payloadPropellantKg / 1000).toFixed(2)} t</span>
           <span>Max-Q {(flight.maxQPa / 1000).toFixed(1)} kPa (limit 45)</span>
           <span>Peak g {flight.maxG.toFixed(2)} (limit 5.0)</span>
           {el && <span>Perigee {el.perigeeAltitudeKm.toFixed(0)} km (sustained ≥ 150)</span>}
@@ -323,6 +359,8 @@ export function DebriefScreen() {
               : "Checking Python backend…"}
         </p>
       </section>
+
+      <SpaceWeatherPanel snapshot={flight.weather} />
 
       {lunar && (
         <section className="analysis">
@@ -339,7 +377,7 @@ export function DebriefScreen() {
               <span>Periselene altitude {((lunar.periseleneRadiusM - MOON_RADIUS_M) / 1000).toFixed(0)} km</span>
             )}
           </div>
-          <p className="dim small">
+          <NarratedText className="dim small" narration={`${lunar.classification === "lunar_arrival" ? "The transfer reached the Moon's sphere of influence within the aim corridor." : lunar.classification === "lunar_impact" ? "The transfer reached the Moon's sphere of influence, but periselene fell below the surface." : lunar.classification === "lunar_miss" ? "The transfer either missed the Moon's sphere of influence or landed outside the aim corridor." : lunar.classification === "tli_shortfall" ? "The upper stage ran out of usable delta-v before the transfer could reach the Moon's distance." : "The burn carried far more energy than the transfer needed."} The Earth-Moon coast is evaluated analytically (patched conic), not simulated step by step, and the Moon's own gravity during the Earth leg is not modelled.`}>
             {lunar.classification === "lunar_arrival" &&
               "The transfer reached the Moon's sphere of influence within the aim corridor."}
             {lunar.classification === "lunar_impact" &&
@@ -351,7 +389,7 @@ export function DebriefScreen() {
             {lunar.classification === "earth_escape" &&
               "The burn carried far more energy than the transfer needed."}
             {" "}The Earth-Moon coast is evaluated analytically (patched conic), not simulated step by step, and the Moon's own gravity during the Earth leg is not modelled — see LUNAR_MISSION_PLAN.md §3.
-          </p>
+          </NarratedText>
         </section>
       )}
 
@@ -414,8 +452,8 @@ export function DebriefScreen() {
         return (
           <section className="analysis">
             <h2>{label}</h2>
-            <p className="analysis-line">Outcome: {comparison.outcomeChange}</p>
-            <p className="dim small">{comparison.kind === "one_relevant_change" ? "This run changed the suggested control only, so the comparison can support a causal explanation." : "This comparison reports measurements without claiming that one change caused the difference."}</p>
+            <NarratedText className="analysis-line" narration={`Outcome: ${comparison.outcomeChange}`}>Outcome: {comparison.outcomeChange}</NarratedText>
+            <NarratedText className="dim small">{comparison.kind === "one_relevant_change" ? "This run changed the suggested control only, so the comparison can support a causal explanation." : "This comparison reports measurements without claiming that one change caused the difference."}</NarratedText>
             <ul>{comparison.configDiffs.map((diff) => <li key={diff}>{diff}</li>)}</ul>
           </section>
         );
@@ -444,7 +482,7 @@ export function DebriefScreen() {
               const { configDiffs, outcomeChange } = compareRunToCurrent(flight, previous);
               return (
                 <div>
-                  <p className="analysis-line">Outcome: {outcomeChange}</p>
+                  <NarratedText className="analysis-line" narration={`Outcome: ${outcomeChange}`}>Outcome: {outcomeChange}</NarratedText>
                   {configDiffs.length > 0 ? (
                     <ul>
                       {configDiffs.map((d) => (
@@ -452,7 +490,7 @@ export function DebriefScreen() {
                       ))}
                     </ul>
                   ) : (
-                    <p className="analysis-line">Identical build configuration.</p>
+                    <NarratedText className="analysis-line">Identical build configuration.</NarratedText>
                   )}
                 </div>
               );
@@ -484,7 +522,12 @@ export function DebriefScreen() {
           </div>
           {pythonError && <p className="check warning">⚠ {pythonError}</p>}
           {payloadAnalysis.explanations[0] && (
-            <p className="report-lead">{payloadAnalysis.explanations[0].replace("m^2", "m²")}</p>
+            <NarratedText
+              className="report-lead"
+              narration={payloadAnalysis.explanations[0].replace("m^2", "m²")}
+            >
+              {payloadAnalysis.explanations[0].replace("m^2", "m²")}
+            </NarratedText>
           )}
           {payloadAnalysis.result && (
             <div className="stat-grid">
@@ -498,19 +541,23 @@ export function DebriefScreen() {
               <StatTile label="Propellant left" value={`${payloadAnalysis.result.propellant_remaining.toFixed(0)} kg`} />
             </div>
           )}
-          {payloadAnalysis.explanations.slice(1).filter((line) => !line.startsWith("Baseline mission")).map((line) => (
-            <p key={line} className="report-note">{line.replace("m^2", "m²")}</p>
-          ))}
+          {payloadAnalysis.explanations.slice(1).filter((line) => !line.startsWith("Baseline mission")).map((line) => {
+            const narratedLine = line.replace("m^2", "m²");
+            return <NarratedText key={line} className="report-note" narration={narratedLine}>{narratedLine}</NarratedText>;
+          })}
           {monteCarlo && (
             <div className="report-block">
               <div className="pass-hero">
                 <p className={`pass-hero-value${monteCarlo.probability_pass >= 0.5 ? " pass" : monteCarlo.probability_pass >= 0.2 ? " warn" : " fail"}`}>
                   {(monteCarlo.probability_pass * 100).toFixed(1)}%
                 </p>
-                <p className="pass-hero-label">
+                <NarratedText
+                  className="pass-hero-label"
+                  narration={`Pass rate ${(monteCarlo.probability_pass * 100).toFixed(1)} percent across ${monteCarlo.total_runs.toLocaleString()} Monte Carlo runs${pythonReport ? ", using Python" : pythonError ? ", using TypeScript" : ""}.`}
+                >
                   pass rate across {monteCarlo.total_runs.toLocaleString()} Monte Carlo runs
                   {pythonReport ? " · Python" : pythonError ? " · TypeScript" : ""}
-                </p>
+                </NarratedText>
               </div>
               {Object.keys(monteCarlo.failure_modes).length > 0 && (
                 <div className="mode-list">
@@ -530,7 +577,7 @@ export function DebriefScreen() {
                     })}
                 </div>
               )}
-              <p className="report-footnote">Failure modes overlap, so the percentages are not exclusive slices.</p>
+              <NarratedText className="report-footnote">Failure modes overlap, so the percentages are not exclusive slices.</NarratedText>
               {monteCarlo.sensitivity_results.length > 0 && (
                 <>
                   <h3>Most sensitive parameters</h3>
@@ -628,12 +675,17 @@ export function DebriefScreen() {
               label="Reaches orbit"
               value={`${(robustness.orbitProbability * 100).toFixed(0)}%`}
               tone={robustness.orbitProbability >= 0.5 ? "pass" : "fail"}
+              narration={`Reaches orbit ${(robustness.orbitProbability * 100).toFixed(0)} percent of the time, with a 95 percent confidence interval of ${(robustness.orbitProbability95[0] * 100).toFixed(0)} to ${(robustness.orbitProbability95[1] * 100).toFixed(0)} percent.`}
             />
             <StatTile
               label="95% CI"
               value={`${(robustness.orbitProbability95[0] * 100).toFixed(0)}–${(robustness.orbitProbability95[1] * 100).toFixed(0)}%`}
             />
-            <StatTile label="Max-Q p95" value={`${(robustness.maxQPaP95 / 1000).toFixed(1)} kPa`} />
+            <StatTile
+              label="Max-Q p95"
+              value={`${(robustness.maxQPaP95 / 1000).toFixed(1)} kPa`}
+              narration={`Maximum dynamic pressure 95th percentile ${(robustness.maxQPaP95 / 1000).toFixed(1)} kilopascals; peak g 95th percentile ${robustness.maxGP95.toFixed(2)} g.`}
+            />
             <StatTile label="Peak-g p95" value={`${robustness.maxGP95.toFixed(2)} g`} />
           </div>
           <div className="mode-list">
@@ -665,10 +717,13 @@ export function DebriefScreen() {
               <h2>Parameter sensitivity</h2>
             </div>
           </div>
-          <p className="report-note">
+          <NarratedText
+            className="report-note"
+            narration={`Nominal orbit rate ${(sensitivity.nominal.orbitProbability * 100).toFixed(0)} percent. Change when each parameter is perturbed alone:`}
+          >
             Nominal orbit rate {(sensitivity.nominal.orbitProbability * 100).toFixed(0)}%. Change when each
             parameter is perturbed alone:
-          </p>
+          </NarratedText>
           <div className="mode-list">
             {sensitivity.entries.map((e) => (
               <div key={e.parameter} className="mode-row plain">
