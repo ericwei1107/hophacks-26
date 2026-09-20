@@ -4,7 +4,7 @@ from dataclasses import dataclass, field, replace
 import math
 import random
 from design import SpacecraftMission
-from environment import SpaceWeather
+from environment import REFERENCE_WEATHER, SpaceWeather
 
 # covers mass growth, array deployment, and Cd underestimates.
 MISSION_STRESS_RANGES = {
@@ -236,6 +236,98 @@ def estimate_atmospheric_density(altitude_km: float, weather: SpaceWeather, incl
     scale_height, weather_factor = _thermosphere_profile(weather, inclination_deg)
     base_density = 1.225e-12 * math.exp(-(altitude_km - 400.0) / scale_height)
     return max(1e-16, base_density * weather_factor)
+
+
+def _severity_rank(severity: str) -> int:
+    return {"quiet": 0, "elevated": 1, "storm": 2}.get(severity, 0)
+
+
+def _weather_causes(weather: SpaceWeather, density_ratio: float) -> list[dict[str, str]]:
+    kp = _finite_or(weather.kp, 0.0)
+    f107 = _finite_or(weather.f107, 70.0)
+    speed = _finite_or(weather.solar_wind_speed, 400.0)
+    sw_density = _finite_or(weather.solar_wind_density, 5.0)
+
+    if kp >= 5.0:
+        kp_cause = ("storm", "Geomagnetic storm", "Kp at storm levels heats and inflates the thermosphere, raising high-altitude drag during the vacuum portion of ascent and later stationkeeping.")
+    elif kp >= 4.0:
+        kp_cause = ("elevated", "Geomagnetic activity", "Active geomagnetic conditions expand the upper atmosphere. This is an environmental cause, not a vehicle control.")
+    else:
+        kp_cause = ("quiet", "Quiet geomagnetic field", "Kp is quiet, so geomagnetic heating is not adding extra thermospheric drag.")
+
+    if f107 >= 200.0:
+        f107_cause = ("storm", "High solar EUV", "F10.7 is at high solar-cycle levels, so the thermosphere is expanded and high-altitude density is up.")
+    elif f107 >= 180.0:
+        f107_cause = ("elevated", "Elevated solar EUV", "F10.7 is high enough to inflate the thermosphere versus the reference snapshot.")
+    else:
+        f107_cause = ("quiet", "Moderate solar EUV", "F10.7 is near or below the reference 150 sfu used for the quiet thermosphere.")
+
+    if speed >= 700.0 or sw_density >= 20.0:
+        wind_cause = ("storm", "Disturbed solar wind", "Fast or dense solar wind couples into geomagnetic heating and raises the weather factor on thermospheric density.")
+    elif speed >= 500.0 or sw_density >= 10.0:
+        wind_cause = ("elevated", "Enhanced solar wind", "Solar-wind speed or density is above the quiet reference and contributes to upper-atmosphere drag.")
+    else:
+        wind_cause = ("quiet", "Nominal solar wind", "Solar-wind speed and density are near the quiet reference (400 km/s, 5 /cm³).")
+
+    if density_ratio >= 1.5:
+        drag_cause = ("storm", "Thermosphere well above reference", "High-altitude density is at least 1.5× the quiet reference. Drag above 150 km is an environmental cause of extra Δv, not a build slider.")
+    elif density_ratio >= 1.15:
+        drag_cause = ("elevated", "Thermosphere above reference", "High-altitude density is elevated versus the quiet reference snapshot. Ascent still uses this weather freeze.")
+    else:
+        drag_cause = ("quiet", "Thermosphere near reference", "High-altitude density is within about 15% of the quiet reference. Weather is still a launch input, just not a storm driver.")
+
+    packed = [
+        ("geomagnetic", kp, kp_cause, f"Kp {kp:.2f} (quiet < 4, storm ≥ 5)."),
+        ("solar_euv", f107, f107_cause, f"F10.7 {f107:.0f} sfu (reference 150)."),
+        ("solar_wind", speed, wind_cause, f"Solar wind {speed:.0f} km/s, {sw_density:.1f} /cm³."),
+        ("thermosphere_drag", density_ratio, drag_cause, f"Density at 150 km is {density_ratio:.2f}× the quiet reference."),
+    ]
+    causes = []
+    for cause_id, _value, (severity, title, explanation), evidence in packed:
+        causes.append(
+            {
+                "id": cause_id,
+                "title": title,
+                "severity": severity,
+                "explanation": explanation,
+                "evidence": evidence,
+            }
+        )
+    return causes
+
+
+def assess_space_weather_effects(
+    weather: SpaceWeather,
+    inclination_deg: float = 0.0,
+    computed_by: str = "python",
+) -> dict:
+    """Precompute thermosphere impact vs the quiet reference snapshot.
+
+    TypeScript ascent reuses this block when Python already computed it.
+    """
+    scale_height, weather_factor = _thermosphere_profile(weather, inclination_deg)
+    _ref_scale, reference_factor = _thermosphere_profile(REFERENCE_WEATHER, inclination_deg)
+    density_150 = estimate_atmospheric_density(150.0, weather, inclination_deg)
+    density_400 = estimate_atmospheric_density(400.0, weather, inclination_deg)
+    reference_150 = estimate_atmospheric_density(150.0, REFERENCE_WEATHER, inclination_deg)
+    ratio = density_150 / reference_150 if reference_150 > 0 else 1.0
+    causes = _weather_causes(weather, ratio)
+    overall = "quiet"
+    for cause in causes:
+        if _severity_rank(cause["severity"]) > _severity_rank(overall):
+            overall = cause["severity"]
+    return {
+        "scaleHeightKm": scale_height,
+        "weatherFactor": weather_factor,
+        "referenceWeatherFactor": reference_factor,
+        "densityAt150Km": density_150,
+        "densityAt400Km": density_400,
+        "referenceDensityAt150Km": reference_150,
+        "densityRatioVsReference": ratio,
+        "overallSeverity": overall,
+        "causes": causes,
+        "computedBy": computed_by,
+    }
 
 def average_spacecraft_mass(mission: SpacecraftMission) -> float:
     return max(mission.mass + 0.5 * max(mission.fuel, 0.0), 1e-9)

@@ -15,6 +15,7 @@ describe("evaluateFlightOutcome", () => {
     expect(assessment.metrics).toHaveLength(5);
     expect(assessment.primaryDiagnosis?.id).toBe("underpowered");
     expect(assessment.primaryDiagnosis?.recommendedExperiment.control).toBe("stage1EngineCount");
+    expect(assessment.environmentalCauses).toEqual([]);
   });
 
   it("labels the existing static-margin termination as a simplified rule", () => {
@@ -57,5 +58,18 @@ describe("evaluateFlightOutcome", () => {
     // The reference build (12,501 m/s) clears the lunar floor but sits
     // below the warn line — see LUNAR_MISSION_PLAN.md §1's calibration box.
     expect(deltaV.band).toBe("marginal");
+  });
+
+  it("records space weather as an environmental cause, not a build diagnosis", () => {
+    const assessment = evaluateFlightOutcome(rocket, "target_orbit", evidence, {
+      weather: { kp: 7, f107: 220, solar_wind_speed: 800, solar_wind_density: 25, solar_wind_temperature: 300_000 },
+      source: "python",
+      sourceTimestamps: {},
+      retrievedAt: "2026-09-20T00:00:00Z",
+      freshnessMs: 0,
+    });
+    expect(assessment.primaryDiagnosis).toBeNull();
+    expect(assessment.environmentalCauses.some((cause) => cause.severity === "storm")).toBe(true);
+    expect(assessment.environmentalCauses.some((cause) => cause.id === "geomagnetic")).toBe(true);
   });
 });

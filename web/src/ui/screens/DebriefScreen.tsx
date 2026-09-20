@@ -5,6 +5,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 
 import { analyzePayload, createPayloadHandoff, type PayloadAnalysis } from "../../sim/orbital/payload";
 import {
@@ -18,6 +19,7 @@ import type { MonteCarloSummary } from "../../sim/orbital/types";
 import type { AscentRobustnessResult, AscentSensitivityResult } from "../../sim/ascent/robustness";
 import { useAppStore, simClient } from "../store";
 import { TelemetryChart, type ChartChannel } from "../components/TelemetryChart";
+import { SpaceWeatherPanel } from "../components/SpaceWeatherPanel";
 import { MissionVideoPlayer } from "../../media/MissionVideo";
 import { outcomeVideo } from "../../media/videos";
 import { NarratedText } from "../../narration/NarratedText";
@@ -27,7 +29,7 @@ import {
   copyConfigToClipboard,
   downloadText,
 } from "../../persistence/report";
-import { syncMissionToSpacetime } from "../../persistence/spacetime";
+
 function outcomeTitle(outcome: string): string {
   return outcome.replaceAll("_", " ").toUpperCase();
 }
@@ -64,7 +66,16 @@ function StatTile({
 }
 
 export function DebriefScreen() {
-  const { flight, setScreen, returnToBuild, startExperiment, runSummaries, persistenceNotice } = useAppStore();
+  const { flight, setScreen, returnToBuild, startExperiment, runSummaries, persistenceNotice } = useAppStore(
+    useShallow((s) => ({
+      flight: s.flight,
+      setScreen: s.setScreen,
+      returnToBuild: s.returnToBuild,
+      startExperiment: s.startExperiment,
+      runSummaries: s.runSummaries,
+      persistenceNotice: s.persistenceNotice,
+    })),
+  );
   const [hoverTimeS, setHoverTimeS] = useState<number | null>(null);
   const [payloadAnalysis, setPayloadAnalysis] = useState<PayloadAnalysis | null>(null);
   const [pythonReport, setPythonReport] = useState<PythonPayloadReport | null>(null);
@@ -108,6 +119,7 @@ export function DebriefScreen() {
 
   const assessment = flight.assessment;
   const diagnosis = assessment.primaryDiagnosis;
+  const otherCauses = assessment.environmentalCauses.filter((cause) => cause.severity !== "quiet");
   const currentSummary = runSummaries.find((run) => run.seed === flight.seed);
   const baseline = currentSummary?.baselineRunId ? runSummaries.find((run) => run.id === currentSummary.baselineRunId) : null;
   const failureEvent = flight.events.find((e) => e.id === "failed");
@@ -195,18 +207,6 @@ export function DebriefScreen() {
     try {
       const result = await promise;
       setMonteCarlo(result);
-      // Best-effort, browser-side SpacetimeDB sync — only needed on this
-      // fallback path. When the Python backend is up (the primary path,
-      // above), it already persists the richer, full-fidelity result
-      // itself (payload_analysis.py::analyze_launched_payload), so this
-      // would just be a redundant, less-accurate second write.
-      void syncMissionToSpacetime({
-        mission: analysis.mission,
-        weather: handoff.weather,
-        monteCarlo: result,
-        seed: handoff.seed,
-        modelVersion: handoff.modelVersion,
-      });
     } catch {
       // canceled
     }
@@ -270,6 +270,11 @@ export function DebriefScreen() {
         <NarratedText className="cause-detail" narration={diagnosis?.explanation ?? flight.failureDetail ?? "The flight met its objective."}>{diagnosis?.explanation ?? flight.failureDetail ?? "The flight met its objective."}</NarratedText>
         {failureEvent && <p className="cause-time">at {failureEvent.t.toFixed(1)} s</p>}
         {diagnosis && <NarratedText className="cause-suggestion" narration={`${diagnosis.evidence} Try one change: ${diagnosis.recommendedExperiment.label}.`}>{diagnosis.evidence} Try one change: {diagnosis.recommendedExperiment.label}.</NarratedText>}
+        {otherCauses.length > 0 && (
+          <NarratedText className="cause-environment" narration={`Space weather is a separate launch cause, not a vehicle control. ${otherCauses.map((cause) => cause.title).join(". ")}.`}>
+            Other launch causes: {otherCauses.map((cause) => cause.title).join("; ")}. These are environment, not a build slider.
+          </NarratedText>
+        )}
         <div className="evidence">
           <span>Mission mass delivered {(flight.config.payloadDryMassKg / 1000).toFixed(2)} t</span>
           <span>Payload propellant {(flight.config.payloadPropellantKg / 1000).toFixed(2)} t</span>
@@ -285,6 +290,8 @@ export function DebriefScreen() {
               : "Checking Python backend…"}
         </p>
       </section>
+
+      <SpaceWeatherPanel snapshot={flight.weather} />
 
       {lunar && (
         <section className="analysis">

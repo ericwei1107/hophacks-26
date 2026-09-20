@@ -1,6 +1,7 @@
 import type { DerivedRocket } from "../../domain/derive";
 import type { FlightOutcome } from "../ascent/flight";
-import { ASSESSMENT_VERSION, type Diagnosis, type FlightAssessment, type FlightEvidence, type MetricAssessment } from "./types";
+import { assessSpaceWeatherEffects, type WeatherSnapshot } from "../orbital/weather";
+import { ASSESSMENT_VERSION, type Diagnosis, type EnvironmentalCause, type FlightAssessment, type FlightEvidence, type MetricAssessment } from "./types";
 
 const diagnosisByOutcome: Partial<Record<FlightOutcome, Omit<Diagnosis, "evidence">>> = {
   insufficient_liftoff_thrust: { id: "underpowered", title: "INSUFFICIENT LIFTOFF THRUST", explanation: "The rocket could not leave the pad because liftoff thrust was below its weight.", recommendedExperiment: { control: "stage1EngineCount", direction: "increase", metric: "liftoff_twr", label: "Add a stage-1 engine" } },
@@ -24,7 +25,12 @@ function metric(id: MetricAssessment["id"], label: string, value: number | null,
   return { id, label, value, unit, band, threshold, hint };
 }
 
-export function evaluateFlightOutcome(rocket: DerivedRocket, rawOutcome: FlightOutcome, evidence: FlightEvidence): FlightAssessment {
+export function evaluateFlightOutcome(
+  rocket: DerivedRocket,
+  rawOutcome: FlightOutcome,
+  evidence: FlightEvidence,
+  weather?: WeatherSnapshot,
+): FlightAssessment {
   const metrics: MetricAssessment[] = [
     metric("liftoff_twr", "Liftoff TWR", rocket.liftoffTwr, "ratio", rocket.liftoffTwr <= 1 ? "outside_limit" : rocket.liftoffTwr < 1.15 ? "marginal" : "within_range", "must exceed 1.00", "Low thrust-to-weight delays or prevents liftoff."),
     // Lunar requirement (LUNAR_MISSION_PLAN.md §2.2): a Hohmann-style
@@ -37,5 +43,7 @@ export function evaluateFlightOutcome(rocket: DerivedRocket, rawOutcome: FlightO
   ];
   const template = diagnosisByOutcome[rawOutcome];
   const primaryDiagnosis = template ? { ...template, evidence: rawOutcome === "aerodynamic_instability" ? "Observed terminal result under the simplified static-margin rule." : `Observed terminal result: ${rawOutcome.replaceAll("_", " ")}.` } : null;
-  return { assessmentVersion: ASSESSMENT_VERSION, rawOutcome, metrics, evidence, primaryDiagnosis, contributingDiagnoses: [] };
+  const effects = weather?.effects ?? (weather ? assessSpaceWeatherEffects(weather.weather) : null);
+  const environmentalCauses: EnvironmentalCause[] = effects?.causes ?? [];
+  return { assessmentVersion: ASSESSMENT_VERSION, rawOutcome, metrics, evidence, primaryDiagnosis, contributingDiagnoses: [], environmentalCauses };
 }

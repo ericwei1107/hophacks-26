@@ -70,6 +70,8 @@ describe("fetchNoaaSnapshot", () => {
     expect(snapshot.weather.solar_wind_temperature).toBe(153_000);
     expect(snapshot.sourceTimestamps["kp"]).toBe("2026-09-19T13:00:00Z");
     expect(snapshot.freshnessMs).not.toBeNull();
+    expect(snapshot.effects?.computedBy).toBe("typescript");
+    expect(snapshot.effects?.causes.some((cause) => cause.id === "geomagnetic")).toBe(true);
   });
 
   it("throws on HTTP failure so callers fall back", async () => {
@@ -92,5 +94,54 @@ describe("loadWeatherSnapshot fallback", () => {
     // Default fetch in the test environment has no network; must not throw.
     const snapshot = await loadWeatherSnapshot();
     expect(validateWeather(snapshot.weather)).toBe(true);
+  });
+
+  it("keeps Python-precomputed thermosphere effects", async () => {
+    const fetchImpl = (async (url: string | URL | Request) => {
+      if (String(url).includes("/api/weather")) {
+        return {
+          ok: true,
+          json: async () => ({
+            weather: {
+              kp: 6.3,
+              f107: 210,
+              solar_wind_speed: 720,
+              solar_wind_density: 18,
+              solar_wind_temperature: 220_000,
+            },
+            source: "noaa",
+            sourceTimestamps: { kp: "2026-09-20T00:00:00Z" },
+            retrievedAt: "2026-09-20T00:01:00Z",
+            freshnessMs: 12,
+            effects: {
+              scaleHeightKm: 61.2,
+              weatherFactor: 2.4,
+              referenceWeatherFactor: 1,
+              densityAt150Km: 2e-9,
+              densityAt400Km: 3e-12,
+              referenceDensityAt150Km: 8e-10,
+              densityRatioVsReference: 2.5,
+              overallSeverity: "storm",
+              computedBy: "python",
+              causes: [
+                {
+                  id: "geomagnetic",
+                  title: "From Python",
+                  severity: "storm",
+                  explanation: "precomputed",
+                  evidence: "Kp 6.3",
+                },
+              ],
+            },
+          }),
+        };
+      }
+      return { ok: false, status: 500 };
+    }) as unknown as typeof fetch;
+    const snapshot = await loadWeatherSnapshot(fetchImpl);
+    expect(snapshot.source).toBe("python");
+    expect(snapshot.effects?.computedBy).toBe("python");
+    expect(snapshot.effects?.scaleHeightKm).toBe(61.2);
+    expect(snapshot.effects?.causes[0]?.title).toBe("From Python");
   });
 });

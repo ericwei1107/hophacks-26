@@ -11,7 +11,6 @@ def skip_network_side_effects(monkeypatch):
     monkeypatch.setattr("payload_analysis.get_latest_debris_rules", lambda **_: [])
     monkeypatch.setattr("payload_analysis._safe_footprint", lambda _mission: None)
     monkeypatch.setattr("payload_analysis.briefing_configured", lambda: False)
-    monkeypatch.setattr("payload_analysis.persist_mission_analysis", lambda *a, **k: None)
 
 HANDOFF = {
     "payloadWetMassKg": 5000,
@@ -60,3 +59,27 @@ def test_analyze_rejects_non_positive_payload_mass():
     bad = dict(HANDOFF, payloadWetMassKg=0)
     response = client.post("/api/analyze", json={"handoff": bad, "runs": 20, "sensitivity_runs": 10})
     assert response.status_code == 422
+
+
+def test_weather_endpoint_attaches_python_precomputed_effects(monkeypatch):
+    live = {
+        "weather": {
+            "kp": 6.0,
+            "f107": 210.0,
+            "solar_wind_speed": 720.0,
+            "solar_wind_density": 16.0,
+            "solar_wind_temperature": 220000.0,
+        },
+        "source": "noaa",
+        "sourceTimestamps": {"kp": "2026-09-20T00:00:00Z"},
+        "retrievedAt": "2026-09-20T00:01:00+00:00",
+        "freshnessMs": 1000,
+    }
+    monkeypatch.setattr("payload_analysis.fetch_noaa_snapshot", lambda: live)
+    response = client.get("/api/weather")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["source"] == "python"
+    assert body["effects"]["computedBy"] == "python"
+    assert body["effects"]["causes"]
+    assert body["effects"]["densityRatioVsReference"] > 1.0

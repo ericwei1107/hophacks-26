@@ -1,9 +1,7 @@
 /// <reference types="vitest/config" />
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import glsl from "vite-plugin-glsl";
-import { sites } from "@openai/sites-vite-plugin";
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig } from "vite";
 import { fileURLToPath, URL } from "node:url";
 
 export default defineConfig({
@@ -23,6 +21,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/domain/**", "src/sim/**", "src/workers/**"],
+    },
+  },
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+      },
     },
   },
 });

@@ -1,6 +1,9 @@
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from threading import Lock
+from time import monotonic
 from typing import Any, Optional
 
 import requests
@@ -25,6 +28,25 @@ class SpaceWeather:
             self.solar_wind_temperature,
         ]
         return all(value is not None and value >= 0 for value in values)
+
+
+REFERENCE_WEATHER = SpaceWeather(
+    kp=3.0,
+    f107=150.0,
+    solar_wind_speed=400.0,
+    solar_wind_density=5.0,
+    solar_wind_temperature=100_000.0,
+)
+
+_SNAPSHOT_CACHE: tuple[float, dict[str, Any]] | None = None
+_SNAPSHOT_LOCK = Lock()
+SNAPSHOT_CACHE_TTL_S = 90.0
+
+
+def clear_weather_cache() -> None:
+    global _SNAPSHOT_CACHE
+    with _SNAPSHOT_LOCK:
+        _SNAPSHOT_CACHE = None
 
 
 def fetch_noaa(endpoint: str) -> Any:
@@ -103,7 +125,25 @@ def get_solar_wind() -> dict:
 
 
 def fetch_noaa_snapshot() -> dict[str, Any]:
-    """Live NOAA snapshot in the shape the FastAPI weather endpoint returns."""
+    """Live NOAA snapshot in the shape the FastAPI weather endpoint returns.
+
+    Callers within SNAPSHOT_CACHE_TTL_S reuse one freeze so TypeScript ascent
+    and Python analysis see the same precomputed products.
+    """
+    global _SNAPSHOT_CACHE
+    now = monotonic()
+    with _SNAPSHOT_LOCK:
+        cached = _SNAPSHOT_CACHE
+        if cached is not None and now - cached[0] < SNAPSHOT_CACHE_TTL_S:
+            return deepcopy(cached[1])
+
+    snapshot = _fetch_live_noaa_snapshot()
+    with _SNAPSHOT_LOCK:
+        _SNAPSHOT_CACHE = (monotonic(), snapshot)
+    return deepcopy(snapshot)
+
+
+def _fetch_live_noaa_snapshot() -> dict[str, Any]:
     with ThreadPoolExecutor(max_workers=3) as pool:
         kp_data = pool.submit(fetch_noaa, "/products/noaa-planetary-k-index.json").result()
         f107_data = pool.submit(fetch_noaa, "/json/f107_cm_flux.json").result()

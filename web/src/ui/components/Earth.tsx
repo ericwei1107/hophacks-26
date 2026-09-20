@@ -9,10 +9,10 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
 import type { RenderFrame } from "../../protocol";
-import planetVertex from "../shaders/planet.vert";
-import earthFragment from "../shaders/earth.frag";
-import cloudFragment from "../shaders/clouds.frag";
-import atmosphereFragment from "../shaders/atmosphere.frag";
+import planetVertex from "../shaders/planet.vert?raw";
+import earthFragment from "../shaders/earth.frag?raw";
+import cloudFragment from "../shaders/clouds.frag?raw";
+import atmosphereFragment from "../shaders/atmosphere.frag?raw";
 
 const EARTH_RADIUS_KM = 6371;
 
