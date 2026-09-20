@@ -20,6 +20,7 @@
 
 import { EARTH_RADIUS, MU_EARTH } from "../physics/constants";
 import type { OrbitalElements } from "../physics/orbital";
+import { evaluateDeorbitCompliance, type DebrisComplianceResult } from "./compliance";
 import { estimatePropellantConsumed, simulate } from "./simulate";
 import {
   GAME_MISSION_RULES,
@@ -64,6 +65,11 @@ export interface PayloadAnalysis {
   /** The mission passed to the preserved model (null when unaffordable). */
   mission: SpacecraftMission | null;
   result: SimulationResult | null;
+  /**
+   * Five-year post-mission disposal screening (static rule, no Federal
+   * Register lookup). Null when there is no mission to evaluate.
+   */
+  compliance: DebrisComplianceResult | null;
   /** Deterministic, evidence-tied explanations for the report. */
   explanations: string[];
 }
@@ -120,7 +126,7 @@ export function analyzePayload(
   const circPropellant = estimatePropellantConsumed(circSpec as SpacecraftMission, circDv);
   const insertionBudgetOk = circPropellant <= onboardPropellantKg;
 
-  const base: Omit<PayloadAnalysis, "mission" | "result" | "explanations"> = {
+  const base: Omit<PayloadAnalysis, "mission" | "result" | "compliance" | "explanations"> = {
     handoff,
     rules,
     dryMassKg,
@@ -138,6 +144,7 @@ export function analyzePayload(
       ...base,
       mission: null,
       result: null,
+      compliance: null,
       explanations: [
         `Circularizing the achieved ${handoff.achievedPerigeeKm.toFixed(0)} x ${handoff.achievedApogeeKm.toFixed(0)} km orbit needs ${circDv.toFixed(0)} m/s, but the payload's onboard propellant affords less. Insertion-budget failure: the launch left the payload too elliptical.`,
       ],
@@ -156,14 +163,18 @@ export function analyzePayload(
     isp: PAYLOAD_ISP_S,
   };
   const result = simulate(mission, handoff.weather.weather, undefined, rules);
+  // Screening input, not a physical estimate: the model exposes mission
+  // lifespan but not a separate post-disposal decay time (see compliance.ts).
+  const compliance = evaluateDeorbitCompliance("Payload three-year mission", mission.lifespan);
 
-  return { ...base, mission, result, explanations: explainPayload(base, mission, result) };
+  return { ...base, mission, result, compliance, explanations: explainPayload(base, mission, result, compliance) };
 }
 
 function explainPayload(
-  base: Omit<PayloadAnalysis, "mission" | "result" | "explanations">,
+  base: Omit<PayloadAnalysis, "mission" | "result" | "compliance" | "explanations">,
   mission: SpacecraftMission,
   result: SimulationResult,
+  compliance: DebrisComplianceResult,
 ): string[] {
   const lines: string[] = [
     `Payload ${(base.handoff.payloadWetMassKg / 1000).toFixed(1)} t: dry ${(base.dryMassKg / 1000).toFixed(2)} t, onboard propellant ${(base.onboardPropellantKg / 1000).toFixed(2)} t, Isp ${base.ispS} s, area ${base.crossSectionAreaM2.toFixed(1)} m^2, ${base.missionYears}-year mission at ${mission.target_altitude.toFixed(0)} km circularized (cost ${base.circularizationDeltaVMs.toFixed(0)} m/s).`,
@@ -188,5 +199,10 @@ function explainPayload(
       `Note: ${(base.handoff.stage2PropellantRemainingKg / 1000).toFixed(2)} t of upper-stage propellant was left over at cutoff — it stays with the spent stage and is not available to the payload.`,
     );
   }
+  lines.push(
+    compliance.compliant
+      ? `Deorbit compliance: within the five-year post-mission disposal screening rule.`
+      : `Deorbit compliance: NOT COMPLIANT — ${compliance.violations.join(" ")}`,
+  );
   return lines;
 }

@@ -121,6 +121,29 @@ describe("analyzePayload", () => {
     expect(analysis.explanations[0]).toContain("Insertion-budget failure");
   });
 
+  it("evaluates deorbit compliance statically, with no network lookup", () => {
+    const handoff = createPayloadHandoff(toHandoffSource(flyReference()))!;
+    const analysis = analyzePayload(handoff);
+    // The three-year mission is under the five-year screening limit.
+    expect(analysis.compliance).toEqual({
+      missionName: "Payload three-year mission",
+      compliant: true,
+      violations: [],
+    });
+    expect(analysis.explanations.at(-1)).toContain("Deorbit compliance");
+  });
+
+  it("has no compliance verdict when the insertion budget fails", () => {
+    const handoff = createPayloadHandoff(toHandoffSource(flyReference()))!;
+    const wild: typeof handoff = {
+      ...handoff,
+      achievedPerigeeKm: 150,
+      achievedApogeeKm: 10_000,
+    };
+    const analysis = analyzePayload(wild);
+    expect(analysis.compliance).toBeNull();
+  });
+
   it("a successful launch can still have poor three-year survival at low altitude", () => {
     // A barely-sustained 150-160 km perigee orbit circularized low faces
     // strong drag over three years.
