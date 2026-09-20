@@ -23,8 +23,6 @@ import simulate as s
 PAYLOAD_ISP_S = 325.0
 PAYLOAD_DRAG_COEFFICIENT = 2.2
 PAYLOAD_MISSION_YEARS = 3.0
-PAYLOAD_DRY_FRACTION = 0.8
-PAYLOAD_PROPELLANT_FRACTION = 0.2
 GAME_MIN_OPERATING_ALTITUDE_KM = 150.0
 
 GAME_PAYLOAD_CONSTRAINTS = MissionConstraints(
@@ -49,13 +47,18 @@ GAME_PAYLOAD_CONSTRAINTS = MissionConstraints(
 
 @dataclass(frozen=True)
 class PayloadHandoff:
-    payload_wet_mass_kg: float
+    payload_dry_mass_kg: float
+    payload_propellant_kg: float
     achieved_perigee_km: float
     achieved_apogee_km: float
     achieved_inclination_deg: float
     stage2_propellant_remaining_kg: float
     weather: SpaceWeather
     seed: int = 0
+
+    @property
+    def payload_wet_mass_kg(self) -> float:
+        return self.payload_dry_mass_kg + self.payload_propellant_kg
 
 
 def circularization_delta_v(perigee_km: float, apogee_km: float) -> float:
@@ -67,9 +70,8 @@ def circularization_delta_v(perigee_km: float, apogee_km: float) -> float:
     return max(0.0, v_circular - v_apogee)
 
 
-def spacecraft_from_wet_mass(wet_mass_kg: float) -> tuple[float, float, float]:
-    dry_mass_kg = wet_mass_kg * PAYLOAD_DRY_FRACTION
-    onboard_propellant_kg = wet_mass_kg * PAYLOAD_PROPELLANT_FRACTION
+def spacecraft_from_masses(dry_mass_kg: float, onboard_propellant_kg: float) -> tuple[float, float, float]:
+    wet_mass_kg = dry_mass_kg + onboard_propellant_kg
     cross_section_area_m2 = 5.0 * (wet_mass_kg / 1000.0) ** (2.0 / 3.0)
     return dry_mass_kg, onboard_propellant_kg, cross_section_area_m2
 
@@ -101,8 +103,8 @@ def analyze_launched_payload(
     if runs <= 0 or sensitivity_runs <= 0:
         raise ValueError("Monte Carlo run counts must be positive.")
 
-    dry_mass_kg, onboard_propellant_kg, area_m2 = spacecraft_from_wet_mass(
-        handoff.payload_wet_mass_kg
+    dry_mass_kg, onboard_propellant_kg, area_m2 = spacecraft_from_masses(
+        handoff.payload_dry_mass_kg, handoff.payload_propellant_kg
     )
     circ_dv = circularization_delta_v(
         handoff.achieved_perigee_km, handoff.achieved_apogee_km

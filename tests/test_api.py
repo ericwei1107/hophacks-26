@@ -13,7 +13,8 @@ def skip_network_side_effects(monkeypatch):
     monkeypatch.setattr("payload_analysis.briefing_configured", lambda: False)
 
 HANDOFF = {
-    "payloadWetMassKg": 5000,
+    "payloadDryMassKg": 4000,
+    "payloadPropellantKg": 1000,
     "achievedPerigeeKm": 190,
     "achievedApogeeKm": 210,
     "achievedInclinationDeg": 5,
@@ -57,9 +58,29 @@ def test_analyze_returns_python_payload_report():
 
 
 def test_analyze_rejects_non_positive_payload_mass():
-    bad = dict(HANDOFF, payloadWetMassKg=0)
+    bad = dict(HANDOFF, payloadDryMassKg=0)
     response = client.post("/api/analyze", json={"handoff": bad, "runs": 20, "sensitivity_runs": 10})
     assert response.status_code == 422
+
+
+def test_analyze_accepts_the_browser_handoff_shape():
+    browser = dict(
+        HANDOFF,
+        modelVersion="2.0.0",
+        weather={
+            **HANDOFF["weather"],
+            "sourceTimestamps": {"kp": "2026-09-20T06:00:00"},
+            "retrievedAt": "2026-09-20T11:27:19.466350+00:00",
+            "freshnessMs": 314466.35,
+            "effects": {"computedBy": "python", "causes": []},
+        },
+    )
+    response = client.post(
+        "/api/analyze",
+        json={"handoff": browser, "runs": 5, "sensitivity_runs": 5},
+    )
+    assert response.status_code == 200
+    assert response.json()["source"] == "python"
 
 
 def test_weather_endpoint_attaches_python_precomputed_effects(monkeypatch):

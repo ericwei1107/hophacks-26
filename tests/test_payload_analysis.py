@@ -1,7 +1,7 @@
 from payload_analysis import (
     PayloadHandoff,
     circularization_delta_v,
-    spacecraft_from_wet_mass,
+    spacecraft_from_masses,
     analyze_launched_payload,
 )
 from environment import SpaceWeather
@@ -15,9 +15,10 @@ def skip_network_side_effects(monkeypatch):
     monkeypatch.setattr("payload_analysis.briefing_configured", lambda: False)
 
 
-def _handoff(apogee=200.0, perigee=190.0, wet=5000.0) -> PayloadHandoff:
+def _handoff(apogee=200.0, perigee=190.0, dry=4000.0, propellant=1000.0) -> PayloadHandoff:
     return PayloadHandoff(
-        payload_wet_mass_kg=wet,
+        payload_dry_mass_kg=dry,
+        payload_propellant_kg=propellant,
         achieved_perigee_km=perigee,
         achieved_apogee_km=apogee,
         achieved_inclination_deg=5.0,
@@ -38,7 +39,7 @@ def test_circularization_is_zero_when_already_circular():
 
 
 def test_spacecraft_spec_matches_the_typescript_handoff_rule():
-    dry, fuel, area = spacecraft_from_wet_mass(5000.0)
+    dry, fuel, area = spacecraft_from_masses(4000.0, 1000.0)
     assert dry == 4000.0
     assert fuel == 1000.0
     assert abs(area - 5.0 * 5.0 ** (2.0 / 3.0)) < 1e-9
@@ -58,7 +59,7 @@ def test_analyze_runs_python_mission_stack_on_a_game_orbit():
 
 def test_elliptical_insertion_can_exhaust_onboard_propellant():
     report = analyze_launched_payload(
-        _handoff(apogee=2000.0, perigee=150.0, wet=500.0),
+        _handoff(apogee=2000.0, perigee=150.0, dry=400.0, propellant=100.0),
         runs=20,
         sensitivity_runs=10,
     )

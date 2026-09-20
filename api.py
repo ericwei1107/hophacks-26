@@ -42,12 +42,15 @@ class WeatherBody(BaseModel):
 
 
 class WeatherSnapshotBody(BaseModel):
+    model_config = {"extra": "ignore"}
     weather: WeatherBody
     source: str = "reference"
 
 
 class HandoffBody(BaseModel):
-    payloadWetMassKg: float = Field(gt=0)
+    model_config = {"extra": "ignore"}
+    payloadDryMassKg: float = Field(gt=0)
+    payloadPropellantKg: float = Field(ge=0)
     achievedPerigeeKm: float
     achievedApogeeKm: float
     achievedInclinationDeg: float
@@ -85,7 +88,8 @@ def weather() -> dict:
 def analyze(request: AnalyzeRequest) -> dict:
     wx = request.handoff.weather.weather
     handoff = PayloadHandoff(
-        payload_wet_mass_kg=request.handoff.payloadWetMassKg,
+        payload_dry_mass_kg=request.handoff.payloadDryMassKg,
+        payload_propellant_kg=request.handoff.payloadPropellantKg,
         achieved_perigee_km=request.handoff.achievedPerigeeKm,
         achieved_apogee_km=request.handoff.achievedApogeeKm,
         achieved_inclination_deg=request.handoff.achievedInclinationDeg,
